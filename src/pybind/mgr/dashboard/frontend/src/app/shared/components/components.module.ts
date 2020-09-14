@@ -21,6 +21,7 @@ import { DirectivesModule } from '../directives/directives.module';
 import { PipesModule } from '../pipes/pipes.module';
 import { AlertPanelComponent } from './alert-panel/alert-panel.component';
 import { BackButtonComponent } from './back-button/back-button.component';
+import { BottomLinksComponent } from './bottom-links/bottom-links.component';
 import { ConfigOptionComponent } from './config-option/config-option.component';
 import { ConfirmationModalComponent } from './confirmation-modal/confirmation-modal.component';
 import { CriticalConfirmationModalComponent } from './critical-confirmation-modal/critical-confirmation-modal.component';
@@ -87,7 +88,8 @@ import { UsageBarComponent } from './usage-bar/usage-bar.component';
     TelemetryNotificationComponent,
     OrchestratorDocPanelComponent,
     DateTimePickerComponent,
-    DocComponent
+    DocComponent,
+    BottomLinksComponent
   ],
   providers: [],
   exports: [
@@ -110,7 +112,8 @@ import { UsageBarComponent } from './usage-bar/usage-bar.component';
     TelemetryNotificationComponent,
     OrchestratorDocPanelComponent,
     DateTimePickerComponent,
-    DocComponent
+    DocComponent,
+    BottomLinksComponent
   ]
 })
 export class ComponentsModule {}

@@ -1,0 +1,10 @@
+<ul class="list-inline">
+  <li class="list-inline-item p-2"
+      *ngFor="let docTitle of docTitles">
+    <cd-doc section="{{ docTitle.section }}"
+            docText="{{ docTitle.docText }}"
+            noSubscribe="true"
+            i18n-docText></cd-doc>
+  </li>
+</ul>
+

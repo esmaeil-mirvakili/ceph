@@ -23,7 +23,7 @@ export class DocService {
     });
   }
 
-  urlGenerator(release: string, section: string): string {
+  urlGenerator(section: string, release?: string): string {
     const domain = `http://docs.ceph.com/docs/${release}/`;
 
     const sections = {
@@ -35,7 +35,10 @@ export class DocService {
       dashboard: `${domain}mgr/dashboard`,
       grafana: `${domain}mgr/dashboard/#enabling-the-embedding-of-grafana-dashboards`,
       orch: `${domain}mgr/orchestrator`,
-      pgs: `http://ceph.com/pgcalc`
+      pgs: `http://ceph.com/pgcalc`,
+      help: `https://ceph.io/help/`,
+      security: `https://ceph.io/security/`,
+      trademarks: `https://ceph.io/legal-page/trademarks/`
     };
 
     return sections[section];
@@ -49,7 +52,7 @@ export class DocService {
     return this.releaseData$
       .pipe(
         filter((value) => !!value),
-        map((release) => this.urlGenerator(release, section)),
+        map((release) => this.urlGenerator(section, release)),
         first()
       )
       .subscribe(next, error);
