@@ -1,8 +1,0 @@
-/snap/clion/126/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" "/home/esmaeil/CROSS/Bluestore Scheduler/ceph"
-CMake Error at CMakeLists.txt:64 (message):
-  Can't find sphinx-build.
-
-
--- Configuring incomplete, errors occurred!
-See also "/home/esmaeil/CROSS/Bluestore Scheduler/ceph/cmake-build-debug/CMakeFiles/CMakeOutput.log".
-See also "/home/esmaeil/CROSS/Bluestore Scheduler/ceph/cmake-build-debug/CMakeFiles/CMakeError.log".
