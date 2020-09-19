@@ -43,6 +43,7 @@
 #include "common/Finisher.h"
 #include "common/ceph_mutex.h"
 #include "common/Throttle.h"
+#include "common/CoDel.h"
 #include "common/perf_counters.h"
 #include "common/PriorityCache.h"
 #include "compressor/Compressor.h"
@@ -1808,6 +1809,33 @@ public:
 #endif
     }
   } throttle;
+
+  /**
+   * CoDel algorithm to calculate the incoming batch size to kv by using Throttle mechanism
+   */
+  class BlueStoreCoDel: public CoDel {
+  public:
+      BlueStoreCoDel(CephContext *cct,
+                     BlueStoreThrottle _throttle) : throttle(_throttle){
+          init(cct->_conf);
+      }
+
+      void register_transaction(mono_clock::duration queuing_latency, int64_t queue_length);
+      void init(const ConfigProxy &conf);
+      int64_t get_batch_size();
+
+  protected:
+      int64_t initial_batch_size = 100;
+      double batch_size_limit_ratio = 1.5;
+      bool adaptive_down_sizing = true;
+      int64_t batch_size;
+      int64_t max_queue_length = 0;
+      Throttle throttle;
+      mutable std::mutex lock;
+
+      void on_min_latency_violation();
+      void on_no_violation();
+  } codel;
 
   typedef boost::intrusive::list<
     TransContext,

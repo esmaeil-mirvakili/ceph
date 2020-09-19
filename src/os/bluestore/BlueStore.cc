@@ -4442,6 +4442,11 @@ const char **BlueStore::get_tracked_conf_keys() const
     "bluestore_warn_on_legacy_statfs",
     "bluestore_warn_on_no_per_pool_omap",
     "bluestore_max_defer_interval",
+    "bluestore_codel_target_latency",
+    "bluestore_codel_interval",
+    "bluestore_codel_init_batch_size",
+    "bluestore_codel_batch_size_limit_ratio",
+    "bluestore_codel_adaptive_down_sizing",
     NULL
   };
   return KEYS;
@@ -4510,6 +4515,15 @@ void BlueStore::handle_conf_change(const ConfigProxy& conf,
       changed.count("osd_memory_cache_min") ||
       changed.count("osd_memory_expected_fragmentation")) {
     _update_osd_memory_options();
+  }
+  if (changed.count("bluestore_codel_target_latency") ||
+      changed.count("bluestore_codel_interval") ||
+      changed.count("bluestore_codel_init_batch_size") ||
+      changed.count("bluestore_codel_batch_size_limit_ratio") ||
+      changed.count("bluestore_codel_adaptive_down_sizing")) {
+    if (bdev) {
+        codel.init(conf);
+    }
   }
 }
 
@@ -11759,8 +11773,10 @@ void BlueStore::_kv_sync_thread()
 	dout(10) << __func__ << " new_blobid_max " << new_blobid_max << dendl;
       }
 
+      auto kv_queue_length = kv_committing.size();
       for (auto txc : kv_committing) {
-	throttle.log_state_latency(*txc, logger, l_bluestore_state_kv_queued_lat);
+	auto queue_latency = throttle.log_state_latency(*txc, logger, l_bluestore_state_kv_queued_lat);
+	codel.register_transaction(queue_latency, (int64_t) kv_queue_length);
 	if (txc->get_state() == TransContext::STATE_KV_QUEUED) {
 	  _txc_apply_kv(txc, false);
 	  --txc->osr->kv_committing_serially;
@@ -11772,6 +11788,7 @@ void BlueStore::_kv_sync_thread()
 	}
       }
 
+      throttle.reset_max(codel.get_batch_size());
       // release throttle *before* we commit.  this allows new ops
       // to be prepared and enter pipeline while we are waiting on
       // the kv commit sync/flush.  then hopefully on the next
@@ -15306,6 +15323,61 @@ void BlueStore::BlueStoreThrottle::complete(TransContext &txc)
   }
 }
 #endif
+
+void BlueStore::BlueStoreCoDel::register_transaction(mono_clock::duration queuing_latency, int64_t queue_length) {
+    std::lock_guard<std::mutex> l(lock);
+    if(max_queue_length < queue_length){
+        max_queue_length = queue_length;
+    }
+    register_queue_latency(queuing_latency);
+}
+
+void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
+    if (adaptive_down_sizing) {
+        auto diff = target_latency - min_latency;
+        auto error_ratio = ((double) diff.count()) / min_latency.count();
+        ceph_assert(error_ratio <= 1 && error_ratio >= 0);
+        batch_size *= 1 - error_ratio;
+    } else {
+        batch_size /= 2;
+    }
+    if(batch_size <= 0){
+        batch_size = 1;
+    }
+}
+
+void BlueStore::BlueStoreCoDel::on_no_violation() {
+    if(batch_size < max_queue_length * batch_size_limit_ratio){
+        batch_size++;
+    }
+}
+
+void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
+    std::lock_guard<std::mutex> l(lock);
+    if (conf->bluestore_codel_target_latency) {
+        mono_clock::duration init_target_latency(conf->bluestore_codel_target_latency);
+        initial_target_latency = init_target_latency;
+    }
+    if (conf->bluestore_codel_interval) {
+        mono_clock::duration init_interval(conf->bluestore_codel_interval);
+        initial_interval = init_interval;
+    }
+    if (conf->bluestore_codel_init_batch_size) {
+        initial_batch_size = conf->bluestore_codel_init_batch_size;
+    }
+    if (conf->bluestore_codel_batch_size_limit_ratio) {
+        batch_size_limit_ratio = conf->bluestore_codel_batch_size_limit_ratio;
+    }
+    if (conf->bluestore_codel_adaptive_down_sizing) {
+        adaptive_down_sizing = conf->bluestore_codel_adaptive_down_sizing;
+    }
+    reset();
+}
+
+int64_t BlueStore::BlueStoreCoDel::get_batch_size() {
+    std::lock_guard<std::mutex> l(lock);
+    return batch_size;
+}
 
 // DB key value Histogram
 #define KEY_SLAB 32
