@@ -4373,6 +4373,7 @@ BlueStore::BlueStore(CephContext *cct,
   uint64_t _min_alloc_size)
   : ObjectStore(cct, path),
     throttle(cct),
+    codel(cct),
     finisher(cct, "commit_finisher", "cfin"),
     kv_sync_thread(this),
     kv_finalize_thread(this),
@@ -15334,8 +15335,8 @@ void BlueStore::BlueStoreCoDel::register_transaction(mono_clock::duration queuin
 
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
     if (adaptive_down_sizing) {
-        auto diff = target_latency - min_latency;
-        auto error_ratio = ((double) diff.count()) / min_latency.count();
+        auto diff = *target_latency - *min_latency;
+        auto error_ratio = ((double) diff.count()) / min_latency->count();
         ceph_assert(error_ratio <= 1 && error_ratio >= 0);
         batch_size *= 1 - error_ratio;
     } else {
@@ -15356,11 +15357,11 @@ void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
     std::lock_guard<std::mutex> l(lock);
     if (conf->bluestore_codel_target_latency) {
         mono_clock::duration init_target_latency(conf->bluestore_codel_target_latency);
-        initial_target_latency = init_target_latency;
+        initial_target_latency = &init_target_latency;
     }
     if (conf->bluestore_codel_interval) {
         mono_clock::duration init_interval(conf->bluestore_codel_interval);
-        initial_interval = init_interval;
+        initial_interval = &init_interval;
     }
     if (conf->bluestore_codel_init_batch_size) {
         initial_batch_size = conf->bluestore_codel_init_batch_size;

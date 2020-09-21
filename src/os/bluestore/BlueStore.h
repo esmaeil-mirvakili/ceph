@@ -1808,6 +1808,10 @@ public:
       trace_period_mcs = rate > 0 ? floor((1/rate) * 1000000.0) : 0;
 #endif
     }
+
+    void reset_max(int64_t m) {
+        throttle_bytes.reset_max(m);
+    }
   } throttle;
 
   /**
@@ -1815,10 +1819,10 @@ public:
    */
   class BlueStoreCoDel: public CoDel {
   public:
-      BlueStoreCoDel(CephContext *cct,
-                     BlueStoreThrottle _throttle) : throttle(_throttle){
+      BlueStoreCoDel(CephContext *cct){
           init(cct->_conf);
       }
+      ~BlueStoreCoDel();
 
       void register_transaction(mono_clock::duration queuing_latency, int64_t queue_length);
       void init(const ConfigProxy &conf);
@@ -1830,7 +1834,6 @@ public:
       bool adaptive_down_sizing = true;
       int64_t batch_size;
       int64_t max_queue_length = 0;
-      Throttle throttle;
       mutable std::mutex lock;
 
       void on_min_latency_violation();
