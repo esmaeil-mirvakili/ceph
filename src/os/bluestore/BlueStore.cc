@@ -11788,6 +11788,7 @@ void BlueStore::_kv_sync_thread()
     codel.kvq_lat_vec.push_back(queue_latency.to_nsec());
     codel.batch_size_vec.push_back((int) codel.get_batch_size());
     codel.kvq_size_vec.push_back((int) kv_queue_length);
+    codel.flush_log();
 
 	if (txc->get_state() == TransContext::STATE_KV_QUEUED) {
 	  _txc_apply_kv(txc, false);
@@ -15383,12 +15384,29 @@ void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
     if (conf->bluestore_codel_adaptive_down_sizing) {
         adaptive_down_sizing = conf->bluestore_codel_adaptive_down_sizing;
     }
-    reset();
+    this->reset();
+
+    dout(10) << "codel init:" << dendl;
+    dout(10) << "\tinitial_target_latency:" << initial_target_latency.to_nsec() << dendl;
+    dout(10) << "\tinitial_interval:" << initial_interval.to_nsec() << dendl;
+    dout(10) << "\tinitial_batch_size:" << initial_batch_size.to_nsec() << dendl;
+    dout(10) << "\tbatch_size_limit_ratio:" << batch_size_limit_ratio.to_nsec() << dendl;
+    dout(10) << "\tadaptive_down_sizing:" << adaptive_down_sizing.to_nsec() << dendl;
 }
 
 int64_t BlueStore::BlueStoreCoDel::get_batch_size() {
     std::lock_guard<std::mutex> l(lock);
     return batch_size;
+}
+
+void BlueStore::BlueStoreCoDel::flush_log() {
+    if(time_stamp_vec.size() >= 1000){
+        auto now = mono_clock::now();
+        std::string filename = "codel_log_" + now.to_nsec() + ".csv";
+        dump_log_data(filename);
+        clear_log_data();
+        dout(10) << "codel log flushed: " << filename << dendl;
+    }
 }
 
 void BlueStore::BlueStoreCoDel::clear_log_data() {
@@ -15398,11 +15416,11 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     kvq_size_vec.clear();
 }
 
-void BlueStore::BlueStoreCoDel::dump_log_data() {
+void BlueStore::BlueStoreCoDel::dump_log_data(std::string filename) {
     if(time_stamp_vec.empty())
         return;
     // create an filestream object
-    std::ofstream csvfile("codel_log.csv");
+    std::ofstream csvfile(filename);
     // add column names
     csvfile << "time, kv_q, batch_size, kv_q_size" << "\n";
 
