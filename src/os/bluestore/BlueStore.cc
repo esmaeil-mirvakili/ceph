@@ -10914,7 +10914,8 @@ void BlueStore::_txc_calc_cost(TransContext *txc)
   // one "io" for the kv commit
   auto ios = 1 + txc->ioc.get_num_ios();
   auto cost = throttle_cost_per_io.load();
-  txc->cost = ios * cost + txc->bytes;
+//  txc->cost = ios * cost + txc->bytes;
+  txc->cost = 1;
   txc->ios = ios;
   dout(10) << __func__ << " " << txc << " cost " << txc->cost << " ("
 	   << ios << " ios * " << cost << " + " << txc->bytes
@@ -11024,6 +11025,10 @@ void BlueStore::_txc_state_proc(TransContext *txc)
       {
 	std::lock_guard l(kv_lock);
 	kv_queue.push_back(txc);
+
+	// kv queued time
+	txc->kv_queued_time = mono_clock::now();
+
 	if (!kv_sync_in_progress) {
 	  kv_sync_in_progress = true;
 	  kv_cond.notify_one();
@@ -11776,8 +11781,14 @@ void BlueStore::_kv_sync_thread()
 
       auto kv_queue_length = kv_committing.size();
       for (auto txc : kv_committing) {
-	auto queue_latency = throttle.log_state_latency(*txc, logger, l_bluestore_state_kv_queued_lat);
-	codel.register_transaction(queue_latency, (int64_t) kv_queue_length);
+	throttle.log_state_latency(*txc, logger, l_bluestore_state_kv_queued_lat);
+    auto queue_latency = mono_clock::now() - txc->kv_queued_time;
+    codel.register_transaction(queue_latency, (int64_t) kv_queue_length);
+    codel.time_stamp_vec.push_back(mono_clock::now().to_nsec());
+    codel.kvq_lat_vec.push_back(queue_latency.to_nsec());
+    codel.batch_size_vec.push_back((int) codel.get_batch_size());
+    codel.kvq_size_vec.push_back((int) kv_queue_length);
+
 	if (txc->get_state() == TransContext::STATE_KV_QUEUED) {
 	  _txc_apply_kv(txc, false);
 	  --txc->osr->kv_committing_serially;
@@ -15378,6 +15389,34 @@ void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
 int64_t BlueStore::BlueStoreCoDel::get_batch_size() {
     std::lock_guard<std::mutex> l(lock);
     return batch_size;
+}
+
+void BlueStore::BlueStoreCoDel::clear_log_data() {
+    time_stamp_vec.clear();
+    kvq_lat_vec.clear();
+    batch_size_vec.clear();
+    kvq_size_vec.clear();
+}
+
+void BlueStore::BlueStoreCoDel::dump_log_data() {
+    if(time_stamp_vec.empty())
+        return;
+    // create an filestream object
+    std::ofstream csvfile("codel_log.csv");
+    // add column names
+    csvfile << "time, kv_q, batch_size, kv_q_size" << "\n";
+
+    for (int i = 0; i < time_stamp_vec.size(); i++){
+        csvfile << time_stamp_vec[i];
+        csvfile << ",";
+        csvfile << kvq_lat_vec[i];
+        csvfile << ",";
+        csvfile << batch_size_vec[i];
+        csvfile << ",";
+        csvfile << kvq_size_vec[i];
+        csvfile << "\n";
+    }
+    csvfile.close();
 }
 
 // DB key value Histogram

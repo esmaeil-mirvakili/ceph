@@ -26,3 +26,13 @@ void CoDel::register_queue_latency(mono_clock::duration queuing_latency) {
         reset_interval();
     }
 }
+
+CoDel::~CoDel() {
+    // delete pointers
+    delete initial_interval;
+    delete initial_target_latency;
+    delete interval;
+    delete target_latency;
+    delete min_latency;
+    delete interval_start;
+}

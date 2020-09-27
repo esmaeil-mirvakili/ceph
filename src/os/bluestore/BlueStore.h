@@ -1620,6 +1620,9 @@ public:
     ceph::mono_clock::time_point start;
     ceph::mono_clock::time_point last_stamp;
 
+    ceph::mono_clock::time_point kv_queued_time;
+
+
     uint64_t last_nid = 0;     ///< if non-zero, highest new nid we allocated
     uint64_t last_blobid = 0;  ///< if non-zero, highest new blobid we allocated
 
@@ -1824,9 +1827,17 @@ public:
       }
       ~BlueStoreCoDel();
 
+      // log data
+      vector<double> time_stamp_vec;
+      vector<double> kvq_lat_vec;
+      vector<int> batch_size_vec;
+      vector<int> kvq_size_vec;
+
       void register_transaction(mono_clock::duration queuing_latency, int64_t queue_length);
       void init(const ConfigProxy &conf);
       int64_t get_batch_size();
+      void dump_log_data();
+      void clear_log_data();
 
   protected:
       int64_t initial_batch_size = 100;
