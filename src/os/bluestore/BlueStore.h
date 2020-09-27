@@ -1832,6 +1832,7 @@ public:
       vector<double> kvq_lat_vec;
       vector<int> batch_size_vec;
       vector<int> kvq_size_vec;
+      std::chrono::time_point<mono_clock> created_time = mono_clock::now();
 
       void register_transaction(mono_clock::duration queuing_latency, int64_t queue_length);
       void init(const ConfigProxy &conf);

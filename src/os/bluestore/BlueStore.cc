@@ -17,6 +17,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <iostream>
+#include <string>
+#include <fstream>
 
 #include <boost/container/flat_set.hpp>
 #include "boost/algorithm/string.hpp"
@@ -4384,6 +4387,13 @@ BlueStore::BlueStore(CephContext *cct,
   _init_logger();
   cct->_conf.add_observer(this);
   set_cache_shards(1);
+
+    dout(10) << "codel init:" << dendl;
+    dout(10) << "\tinitial_target_latency:" << cct->_conf->bluestore_codel_target_latency << dendl;
+    dout(10) << "\tinitial_interval:" << cct->_conf->bluestore_codel_interval << dendl;
+    dout(10) << "\tinitial_batch_size:" << cct->_conf->bluestore_codel_init_batch_size << dendl;
+    dout(10) << "\tbatch_size_limit_ratio:" << cct->_conf->bluestore_codel_batch_size_limit_ratio << dendl;
+    dout(10) << "\tadaptive_down_sizing:" << cct->_conf->bluestore_codel_adaptive_down_sizing << dendl;
 }
 
 BlueStore::~BlueStore()
@@ -11784,8 +11794,8 @@ void BlueStore::_kv_sync_thread()
 	throttle.log_state_latency(*txc, logger, l_bluestore_state_kv_queued_lat);
     auto queue_latency = mono_clock::now() - txc->kv_queued_time;
     codel.register_transaction(queue_latency, (int64_t) kv_queue_length);
-    codel.time_stamp_vec.push_back(mono_clock::now().to_nsec());
-    codel.kvq_lat_vec.push_back(queue_latency.to_nsec());
+    codel.time_stamp_vec.push_back((mono_clock::now() - codel.created_time).count());
+    codel.kvq_lat_vec.push_back(queue_latency.count());
     codel.batch_size_vec.push_back((int) codel.get_batch_size());
     codel.kvq_size_vec.push_back((int) kv_queue_length);
     codel.flush_log();
@@ -15386,12 +15396,12 @@ void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
     }
     this->reset();
 
-    dout(10) << "codel init:" << dendl;
-    dout(10) << "\tinitial_target_latency:" << initial_target_latency.to_nsec() << dendl;
-    dout(10) << "\tinitial_interval:" << initial_interval.to_nsec() << dendl;
-    dout(10) << "\tinitial_batch_size:" << initial_batch_size.to_nsec() << dendl;
-    dout(10) << "\tbatch_size_limit_ratio:" << batch_size_limit_ratio.to_nsec() << dendl;
-    dout(10) << "\tadaptive_down_sizing:" << adaptive_down_sizing.to_nsec() << dendl;
+//    std::cout << "codel init:" << dendl;
+//    std::cout << "\tinitial_target_latency:" << ceph::to_<double>(initial_target_latency) << dendl;
+//    std::cout << "\tinitial_interval:" << initial_interval.count() << dendl;
+//    std::cout << "\tinitial_batch_size:" << initial_batch_size << dendl;
+//    std::cout << "\tbatch_size_limit_ratio:" << batch_size_limit_ratio << dendl;
+//    std::cout << "\tadaptive_down_sizing:" << adaptive_down_sizing << dendl;
 }
 
 int64_t BlueStore::BlueStoreCoDel::get_batch_size() {
@@ -15402,10 +15412,9 @@ int64_t BlueStore::BlueStoreCoDel::get_batch_size() {
 void BlueStore::BlueStoreCoDel::flush_log() {
     if(time_stamp_vec.size() >= 1000){
         auto now = mono_clock::now();
-        std::string filename = "codel_log_" + now.to_nsec() + ".csv";
+        std::string filename = "codel_log_" + std::to_string((now - created_time).count()) + ".csv";
         dump_log_data(filename);
         clear_log_data();
-        dout(10) << "codel log flushed: " << filename << dendl;
     }
 }
 
@@ -15424,7 +15433,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data(std::string filename) {
     // add column names
     csvfile << "time, kv_q, batch_size, kv_q_size" << "\n";
 
-    for (int i = 0; i < time_stamp_vec.size(); i++){
+    for (unsigned int i = 0; i < time_stamp_vec.size(); i++){
         csvfile << time_stamp_vec[i];
         csvfile << ",";
         csvfile << kvq_lat_vec[i];
