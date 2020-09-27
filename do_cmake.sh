@@ -66,6 +66,13 @@ cat <<EOF > ceph.conf
 [global]
 plugin dir = lib
 erasure code dir = lib
+
+[osd]
+bluestore_codel_target_latency = 50000
+bluestore_codel_interval = 1000
+bluestore_codel_init_batch_size = 100
+bluestore_codel_batch_size_limit_ratio = 15
+bluestore_codel_adaptive_down_sizing = true
 EOF
 
 echo done.
