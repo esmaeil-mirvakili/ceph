@@ -1084,12 +1084,12 @@ OPTION(filestore_wbthrottle_xfs_ios_start_flusher, OPT_U64)
 OPTION(filestore_wbthrottle_xfs_ios_hard_limit, OPT_U64)
 OPTION(filestore_wbthrottle_xfs_inodes_start_flusher, OPT_U64)
 
-/// CoDel configs
-OPTION(bluestore_codel_target_latency, OPT_U64)
-OPTION(bluestore_codel_interval, OPT_U64)
-OPTION(bluestore_codel_init_batch_size, OPT_U64)
-OPTION(bluestore_codel_batch_size_limit_ratio, OPT_U64)
-OPTION(bluestore_codel_adaptive_down_sizing, OPT_U64)
+///// CoDel configs
+//OPTION(bluestore_codel_target_latency, OPT_U64)
+//OPTION(bluestore_codel_interval, OPT_U64)
+//OPTION(bluestore_codel_init_batch_size, OPT_U64)
+//OPTION(bluestore_codel_batch_size_limit_ratio, OPT_U64)
+//OPTION(bluestore_codel_adaptive_down_sizing, OPT_U64)
 
 /// These must be less than the fd limit
 OPTION(filestore_wbthrottle_btrfs_inodes_hard_limit, OPT_U64)
