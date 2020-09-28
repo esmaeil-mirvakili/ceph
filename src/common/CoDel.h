@@ -30,10 +30,10 @@ private:
 
     void _update_interval() {
         auto sqrt = (int) std::round(std::sqrt(violation_count));
-        interval = initial_interval;
-        *interval /= sqrt;
-        if((*interval).count() <= 0){
-            *interval = mono_clock::duration(1);
+        auto t = initial_interval->count() / sqrt;
+        interval = new mono_clock::duration(t);
+        if(interval->count() <= 0){
+            interval = new mono_clock::duration(1);
         }
     }
 
@@ -60,8 +60,9 @@ protected:
      * reset the algorithm
      */
     void reset() {
-        interval = initial_interval;
-        target_latency = initial_target_latency;
+        auto d = mono_clock::duration(initial_interval->count());
+        interval = &d;
+        auto d = mono_clock::duration(initial_target_latency->count());
         interval_start = nullptr;
         min_latency = nullptr;
     }
@@ -71,7 +72,8 @@ protected:
      */
     void reset_interval() {
         min_latency = nullptr;
-        *interval_start = mono_clock::now();
+        auto now = mono_clock::now();
+        interval_start = &now;
     }
 
     void register_queue_latency(mono_clock::duration queuing_latency);
