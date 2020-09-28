@@ -15460,6 +15460,7 @@ void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
     initial_interval = &init_interval;
 
     initial_batch_size = 100;
+    batch_size = initial_batch_size;
 
     batch_size_limit_ratio = 1.5;
 
