@@ -15352,7 +15352,7 @@ void BlueStore::BlueStoreCoDel::register_transaction(mono_clock::duration queuin
     if(max_queue_length < queue_length){
         max_queue_length = queue_length;
     }
-    register_queue_latency(queuing_latency);
+    CoDel::register_queue_latency(queuing_latency);
 }
 
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
