@@ -15453,7 +15453,7 @@ void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
 //        adaptive_down_sizing = conf->bluestore_codel_adaptive_down_sizing;
 //    }
 
-    mono_clock::duration init_target_latency(15000);
+    mono_clock::duration init_target_latency(800000);
     initial_target_latency = &init_target_latency;
 
     mono_clock::duration init_interval(1000);

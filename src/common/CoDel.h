@@ -22,11 +22,11 @@ private:
      */
     bool _is_cur_interval_finished() {
         auto current_time = mono_clock::now();
-        return current_time - *interval_start >= *interval;
+        return (current_time - interval_start->count()) >= interval->count();
     }
 
     bool _check_latency_violation() {
-        return *min_latency > *target_latency;
+        return min_latency->count() > target_latency->count();
     }
 
     void _update_interval() {
@@ -61,10 +61,8 @@ protected:
      * reset the algorithm
      */
     void reset() {
-        auto d = mono_clock::duration(initial_interval->count());
-        interval = &d;
-        auto t = mono_clock::duration(initial_target_latency->count());
-        target_latency = &t;
+        interval = new mono_clock::duration(initial_interval->count());
+        target_latency = new mono_clock::duration(initial_target_latency->count());
         std::cout << "target init:" << initial_target_latency->count() << std::endl;
         std::cout << "target:" << target_latency->count() << std::endl;
         interval_start = nullptr;
