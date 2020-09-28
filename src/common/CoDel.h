@@ -13,8 +13,8 @@ using ceph::mono_clock;
 class CoDel {
 public:
     CoDel(){
-        initial_interval = new mono_clock::duration(1000);
-        initial_target_latency = new mono_clock::duration(500);
+        initial_interval = 1000;
+        initial_target_latency = 500;
     }
     ~CoDel();
 private:
@@ -24,19 +24,18 @@ private:
      */
     bool _is_cur_interval_finished() {
         auto current_time = mono_clock::now();
-        return (current_time - *interval_start).count() >= interval->count();
+        return (current_time - *interval_start).count() >= interval;
     }
 
     bool _check_latency_violation() {
-        return min_latency->count() > target_latency->count();
+        return min_latency > target_latency;
     }
 
     void _update_interval() {
         auto sqrt = (int) std::round(std::sqrt(violation_count));
-        auto t = initial_interval->count() / sqrt;
-        interval = new mono_clock::duration(t);
-        if(interval->count() <= 0){
-            interval = new mono_clock::duration(1);
+        interval = initial_interval / sqrt;
+        if(interval <= 0){
+            interval = 1;
         }
     }
 
@@ -63,10 +62,10 @@ protected:
      * reset the algorithm
      */
     void reset() {
-        interval = new mono_clock::duration(initial_interval->count());
-        target_latency = new mono_clock::duration(initial_target_latency->count());
-        std::cout << "target init:" << initial_target_latency->count() << std::endl;
-        std::cout << "target:" << target_latency->count() << std::endl;
+        interval = initial_interval;
+        target_latency = initial_target_latency;
+        std::cout << "target init:" << initial_target_latency << std::endl;
+        std::cout << "target:" << target_latency << std::endl;
         interval_start = nullptr;
         min_latency = INT_NULL;
     }
