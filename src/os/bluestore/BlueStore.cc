@@ -15411,11 +15411,11 @@ void BlueStore::BlueStoreCoDel::register_transaction(mono_clock::duration queuin
 
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
     if (adaptive_down_sizing && target_latency->count() > 0) {
-        auto diff = target_latency->count() - min_latency->count();
+        double diff = target_latency->count() - min_latency->count();
         std::cout << "min_latency: " << min_latency->count() << std::endl;
         std::cout << "target_latency: " << target_latency->count() << std::endl;
         std::cout << "diff: " << diff << std::endl;
-        auto error_ratio = std::abs((double) diff) / min_latency->count();
+        auto error_ratio = std::abs(diff) / min_latency->count();
         std::cout << "error_ratio: " << error_ratio << std::endl;
         ceph_assert(error_ratio <= 1 && error_ratio >= 0);
         batch_size *= 1 - error_ratio;
