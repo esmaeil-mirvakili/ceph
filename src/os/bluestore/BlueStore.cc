@@ -15406,16 +15406,16 @@ void BlueStore::BlueStoreCoDel::register_transaction(mono_clock::duration queuin
     if(max_queue_length < queue_length){
         max_queue_length = queue_length;
     }
-    CoDel::register_queue_latency(queuing_latency);
+    register_queue_latency(queuing_latency);
 }
 
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
     if (adaptive_down_sizing && target_latency->count() > 0) {
-        double diff = target_latency->count() - min_latency->count();
-        std::cout << "min_latency: " << min_latency->count() << std::endl;
-        std::cout << "target_latency: " << target_latency->count() << std::endl;
+        double diff = (double)(target_latency - min_latency);
+        std::cout << "min_latency: " << min_latency << std::endl;
+        std::cout << "target_latency: " << target_latency << std::endl;
         std::cout << "diff: " << diff << std::endl;
-        auto error_ratio = std::abs(diff) / min_latency->count();
+        auto error_ratio = std::abs(diff) / min_latency;
         std::cout << "error_ratio: " << error_ratio << std::endl;
         ceph_assert(error_ratio <= 1 && error_ratio >= 0);
         batch_size *= 1 - error_ratio;
@@ -15453,11 +15453,9 @@ void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
 //        adaptive_down_sizing = conf->bluestore_codel_adaptive_down_sizing;
 //    }
 
-    mono_clock::duration init_target_latency(800000);
-    initial_target_latency = &init_target_latency;
+    initial_target_latency = 800000;
 
-    mono_clock::duration init_interval(1000);
-    initial_interval = &init_interval;
+    initial_interval = 1000;
 
     initial_batch_size = 100;
     batch_size = initial_batch_size;

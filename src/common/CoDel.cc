@@ -2,8 +2,8 @@
 #include "CoDel.h"
 
 void CoDel::register_queue_latency(mono_clock::duration queuing_latency) {
-    if(!min_latency || queuing_latency.count() < min_latency->count()){
-        min_latency = new mono_clock::duration(queuing_latency.count());
+    if(min_latency == INT_NULL || queuing_latency.count() < min_latency){
+        min_latency = queuing_latency.count();
     }
     if(!interval_start){
         auto now = mono_clock::now();
@@ -17,8 +17,7 @@ void CoDel::register_queue_latency(mono_clock::duration queuing_latency) {
         } else{
             // no latency violation
             violation_count = 0;
-            auto d = mono_clock::duration(initial_interval->count());
-            interval = &d;
+            interval = initial_interval;
             on_no_violation();
         }
         // reset interval

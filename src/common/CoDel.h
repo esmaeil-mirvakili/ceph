@@ -6,6 +6,8 @@
 #include <iostream>
 #include "ceph_time.h"
 
+#define INT_NULL -1
+
 using ceph::mono_clock;
 
 class CoDel {
@@ -39,12 +41,12 @@ private:
     }
 
 protected:
-    mono_clock::duration *initial_interval;     // Initial interval to start the algorithm
-    mono_clock::duration *initial_target_latency;     // Initial target latency to start the algorithm
-    mono_clock::duration *interval = nullptr;       // current interval that algorithm is using
-    mono_clock::duration *target_latency = nullptr;       // current target latency that algorithm is using
-    mono_clock::duration *min_latency = nullptr;       // min latency in the current interval
-    mono_clock::time_point *interval_start = nullptr;      // beginning of current interval
+    int64_t initial_interval;     // Initial interval to start the algorithm
+    int64_t initial_target_latency;     // Initial target latency to start the algorithm
+    int64_t interval = INT_NULL;       // current interval that algorithm is using
+    int64_t target_latency = INT_NULL;       // current target latency that algorithm is using
+    int64_t min_latency = INT_NULL;       // min latency in the current interval
+    mono_clock::time_point *interval_start = INT_NULL;      // beginning of current interval
     int64_t violation_count = 0;       // number of consecutive violations
 
     /**
@@ -66,14 +68,14 @@ protected:
         std::cout << "target init:" << initial_target_latency->count() << std::endl;
         std::cout << "target:" << target_latency->count() << std::endl;
         interval_start = nullptr;
-        min_latency = nullptr;
+        min_latency = INT_NULL;
     }
 
     /**
      * reset the interval
      */
     void reset_interval() {
-        min_latency = nullptr;
+        min_latency = INT_NULL;
         auto now = mono_clock::now();
         interval_start = &now;
     }
