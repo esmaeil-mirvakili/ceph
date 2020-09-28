@@ -13,7 +13,7 @@ public:
         initial_interval = new mono_clock::duration(1000);
         initial_target_latency = new mono_clock::duration(500);
     }
-    virtual ~CoDel() = default;
+    ~CoDel();
 private:
     /**
      * check if the current interval is finished
