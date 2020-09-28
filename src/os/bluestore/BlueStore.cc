@@ -15357,9 +15357,7 @@ void BlueStore::BlueStoreCoDel::register_transaction(mono_clock::duration queuin
 }
 
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
-    if (adaptive_down_sizing) {
-        if(min_latency->count() <= 0)
-            return;
+    if (adaptive_down_sizing && target_latency->count() > 0) {
         auto diff = target_latency->count() - min_latency->count();
         std::cout << "min_latency: " << min_latency->count() << std::endl;
         std::cout << "target_latency: " << target_latency->count() << std::endl;
