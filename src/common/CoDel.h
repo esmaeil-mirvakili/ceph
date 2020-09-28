@@ -45,7 +45,7 @@ protected:
     int64_t interval = INT_NULL;       // current interval that algorithm is using
     int64_t target_latency = INT_NULL;       // current target latency that algorithm is using
     int64_t min_latency = INT_NULL;       // min latency in the current interval
-    mono_clock::time_point *interval_start = INT_NULL;      // beginning of current interval
+    mono_clock::time_point *interval_start = nullptr;      // beginning of current interval
     int64_t violation_count = 0;       // number of consecutive violations
 
     /**
