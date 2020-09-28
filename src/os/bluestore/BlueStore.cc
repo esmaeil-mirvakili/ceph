@@ -15401,10 +15401,10 @@ void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
 //    }
 
     mono_clock::duration init_target_latency(15000);
-    CoDel::initial_target_latency = &init_target_latency;
+    initial_target_latency = &init_target_latency;
 
     mono_clock::duration init_interval(1000);
-    CoDel::initial_interval = &init_interval;
+    initial_interval = &init_interval;
 
     initial_batch_size = 100;
 

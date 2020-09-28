@@ -1,6 +1,5 @@
 
 #include "CoDel.h"
-#include <iostream>
 
 void CoDel::register_queue_latency(mono_clock::duration queuing_latency) {
     std::cout << "1" << std::endl;
@@ -43,10 +42,10 @@ void CoDel::register_queue_latency(mono_clock::duration queuing_latency) {
 
 CoDel::~CoDel() {
     // delete pointers
-    delete initial_interval;
-    delete initial_target_latency;
-    delete interval;
-    delete target_latency;
-    delete min_latency;
-    delete interval_start;
+//    delete initial_interval;
+//    delete initial_target_latency;
+//    delete interval;
+//    delete target_latency;
+//    delete min_latency;
+//    delete interval_start;
 }

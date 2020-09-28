@@ -3,6 +3,7 @@
 #define CEPH_CODEL_H
 
 #include <cmath>
+#include <iostream>
 #include "ceph_time.h"
 
 using ceph::mono_clock;
@@ -64,6 +65,8 @@ protected:
         interval = &d;
         auto t = mono_clock::duration(initial_target_latency->count());
         target_latency = &t;
+        std::cout << "target init:" << initial_target_latency->count() << std::endl;
+        std::cout << "target:" << target_latency->count() << std::endl;
         interval_start = nullptr;
         min_latency = nullptr;
     }
