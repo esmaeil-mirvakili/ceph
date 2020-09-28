@@ -62,7 +62,8 @@ protected:
     void reset() {
         auto d = mono_clock::duration(initial_interval->count());
         interval = &d;
-        auto d = mono_clock::duration(initial_target_latency->count());
+        auto t = mono_clock::duration(initial_target_latency->count());
+        target_latency = &t;
         interval_start = nullptr;
         min_latency = nullptr;
     }
