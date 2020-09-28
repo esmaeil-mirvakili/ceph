@@ -1837,6 +1837,8 @@ public:
       void init(const ConfigProxy &conf);
       int64_t get_batch_size();
       void flush_log();
+      void dump_log_data(std::string filename);
+      void clear_log_data();
 
   protected:
       int64_t initial_batch_size = 100;
@@ -1848,8 +1850,6 @@ public:
 
       void on_min_latency_violation();
       void on_no_violation();
-      void dump_log_data(std::string filename);
-      void clear_log_data();
   } codel;
 
   typedef boost::intrusive::list<
