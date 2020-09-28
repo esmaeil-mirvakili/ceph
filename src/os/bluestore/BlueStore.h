@@ -1825,7 +1825,6 @@ public:
       BlueStoreCoDel(CephContext *cct){
           init(cct->_conf);
       }
-      ~BlueStoreCoDel();
 
       // log data
       vector<double> time_stamp_vec;

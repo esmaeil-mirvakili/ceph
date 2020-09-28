@@ -4388,12 +4388,12 @@ BlueStore::BlueStore(CephContext *cct,
   cct->_conf.add_observer(this);
   set_cache_shards(1);
 
-    dout(10) << "codel init:" << dendl;
-    dout(10) << "\tinitial_target_latency:" << cct->_conf->bluestore_codel_target_latency << dendl;
-    dout(10) << "\tinitial_interval:" << cct->_conf->bluestore_codel_interval << dendl;
-    dout(10) << "\tinitial_batch_size:" << cct->_conf->bluestore_codel_init_batch_size << dendl;
-    dout(10) << "\tbatch_size_limit_ratio:" << cct->_conf->bluestore_codel_batch_size_limit_ratio << dendl;
-    dout(10) << "\tadaptive_down_sizing:" << cct->_conf->bluestore_codel_adaptive_down_sizing << dendl;
+//    dout(10) << "codel init:" << dendl;
+//    dout(10) << "\tinitial_target_latency:" << cct->_conf->bluestore_codel_target_latency << dendl;
+//    dout(10) << "\tinitial_interval:" << cct->_conf->bluestore_codel_interval << dendl;
+//    dout(10) << "\tinitial_batch_size:" << cct->_conf->bluestore_codel_init_batch_size << dendl;
+//    dout(10) << "\tbatch_size_limit_ratio:" << cct->_conf->bluestore_codel_batch_size_limit_ratio << dendl;
+//    dout(10) << "\tadaptive_down_sizing:" << cct->_conf->bluestore_codel_adaptive_down_sizing << dendl;
 }
 
 BlueStore::~BlueStore()
@@ -4453,11 +4453,11 @@ const char **BlueStore::get_tracked_conf_keys() const
     "bluestore_warn_on_legacy_statfs",
     "bluestore_warn_on_no_per_pool_omap",
     "bluestore_max_defer_interval",
-    "bluestore_codel_target_latency",
-    "bluestore_codel_interval",
-    "bluestore_codel_init_batch_size",
-    "bluestore_codel_batch_size_limit_ratio",
-    "bluestore_codel_adaptive_down_sizing",
+//    "bluestore_codel_target_latency",
+//    "bluestore_codel_interval",
+//    "bluestore_codel_init_batch_size",
+//    "bluestore_codel_batch_size_limit_ratio",
+//    "bluestore_codel_adaptive_down_sizing",
     NULL
   };
   return KEYS;
@@ -4527,15 +4527,15 @@ void BlueStore::handle_conf_change(const ConfigProxy& conf,
       changed.count("osd_memory_expected_fragmentation")) {
     _update_osd_memory_options();
   }
-  if (changed.count("bluestore_codel_target_latency") ||
-      changed.count("bluestore_codel_interval") ||
-      changed.count("bluestore_codel_init_batch_size") ||
-      changed.count("bluestore_codel_batch_size_limit_ratio") ||
-      changed.count("bluestore_codel_adaptive_down_sizing")) {
-    if (bdev) {
-        codel.init(conf);
-    }
-  }
+//  if (changed.count("bluestore_codel_target_latency") ||
+//      changed.count("bluestore_codel_interval") ||
+//      changed.count("bluestore_codel_init_batch_size") ||
+//      changed.count("bluestore_codel_batch_size_limit_ratio") ||
+//      changed.count("bluestore_codel_adaptive_down_sizing")) {
+//    if (bdev) {
+//        codel.init(conf);
+//    }
+//  }
 }
 
 void BlueStore::_set_compression()
@@ -15377,23 +15377,35 @@ void BlueStore::BlueStoreCoDel::on_no_violation() {
 
 void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
     std::lock_guard<std::mutex> l(lock);
-    if (conf->bluestore_codel_target_latency) {
-        mono_clock::duration init_target_latency(conf->bluestore_codel_target_latency);
-        initial_target_latency = &init_target_latency;
-    }
-    if (conf->bluestore_codel_interval) {
-        mono_clock::duration init_interval(conf->bluestore_codel_interval);
-        initial_interval = &init_interval;
-    }
-    if (conf->bluestore_codel_init_batch_size) {
-        initial_batch_size = conf->bluestore_codel_init_batch_size;
-    }
-    if (conf->bluestore_codel_batch_size_limit_ratio) {
-        batch_size_limit_ratio = conf->bluestore_codel_batch_size_limit_ratio;
-    }
-    if (conf->bluestore_codel_adaptive_down_sizing) {
-        adaptive_down_sizing = conf->bluestore_codel_adaptive_down_sizing;
-    }
+//    if (conf->bluestore_codel_target_latency) {
+//        mono_clock::duration init_target_latency(conf->bluestore_codel_target_latency);
+//        initial_target_latency = &init_target_latency;
+//    }
+//    if (conf->bluestore_codel_interval) {
+//        mono_clock::duration init_interval(conf->bluestore_codel_interval);
+//        initial_interval = &init_interval;
+//    }
+//    if (conf->bluestore_codel_init_batch_size) {
+//        initial_batch_size = conf->bluestore_codel_init_batch_size;
+//    }
+//    if (conf->bluestore_codel_batch_size_limit_ratio) {
+//        batch_size_limit_ratio = conf->bluestore_codel_batch_size_limit_ratio;
+//    }
+//    if (conf->bluestore_codel_adaptive_down_sizing) {
+//        adaptive_down_sizing = conf->bluestore_codel_adaptive_down_sizing;
+//    }
+
+    mono_clock::duration init_target_latency(15000);
+    CoDel::initial_target_latency = &init_target_latency;
+
+    mono_clock::duration init_interval(1000);
+    CoDel::initial_interval = &init_interval;
+
+    initial_batch_size = 100;
+
+    batch_size_limit_ratio = 1.5;
+
+    adaptive_down_sizing = true;
     this->reset();
 
 //    std::cout << "codel init:" << dendl;
