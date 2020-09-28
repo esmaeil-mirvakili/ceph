@@ -49,6 +49,7 @@
 #include "common/blkdev.h"
 #include "common/numa.h"
 #include "common/pretty_binary.h"
+#include "common/admin_socket.h"
 
 #if defined(WITH_LTTNG)
 #define TRACEPOINT_DEFINE
@@ -4369,6 +4370,57 @@ void BlueStore::handle_discard(interval_set<uint64_t>& to_release)
   shared_alloc.a->release(to_release);
 }
 
+class BlueStore::SocketHook : public AdminSocketHook
+{
+    BlueStore *store;
+
+public:
+    static BlueStore::SocketHook *create(BlueStore *store)
+    {
+        BlueStore::SocketHook *hook = nullptr;
+        AdminSocket *admin_socket = store->cct->get_admin_socket();
+        if (admin_socket)
+        {
+            hook = new BlueStore::SocketHook(store);
+            int r = admin_socket->register_command("dump kvq vector",
+                                                   hook,
+                                                   "dump vectors contains kvq_lat");
+            r = admin_socket->register_command("reset kvq vector",
+                                               hook,
+                                               "reset vectors contains kvq_lat");
+            if (r != 0)
+            {
+                delete hook;
+                hook = nullptr;
+            }
+        }
+        return hook;
+    }
+    ~SocketHook()
+    {
+        AdminSocket *admin_socket = store->cct->get_admin_socket();
+        admin_socket->unregister_commands(this);
+    }
+
+private:
+    SocketHook(BlueStore *store) : store(store) {}
+    int call(std::string_view command, const cmdmap_t &cmdmap,
+             Formatter *f,
+             std::ostream &ss,
+             bufferlist &out) override
+    {
+        if (command == "dump kvq vector")
+        {
+            store->codel.dump_log_data("codel_log.csv");
+        }
+        else if (command == "reset kvq vector")
+        {
+            store->clear_log_data();
+        }
+        return 0;
+    }
+};
+
 BlueStore::BlueStore(CephContext *cct, const string& path)
   : BlueStore(cct, path, 0) {}
 
@@ -4388,7 +4440,8 @@ BlueStore::BlueStore(CephContext *cct,
   _init_logger();
   cct->_conf.add_observer(this);
   set_cache_shards(1);
-
+  throttle.reset_max(codel.get_batch_size());
+  asok_hook = SocketHook::create(this);
 //    dout(10) << "codel init:" << dendl;
 //    dout(10) << "\tinitial_target_latency:" << cct->_conf->bluestore_codel_target_latency << dendl;
 //    dout(10) << "\tinitial_interval:" << cct->_conf->bluestore_codel_interval << dendl;
@@ -4516,6 +4569,7 @@ void BlueStore::handle_conf_change(const ConfigProxy& conf,
       changed.count("bluestore_throttle_deferred_bytes") ||
       changed.count("bluestore_throttle_trace_rate")) {
     throttle.reset_throttle(conf);
+    throttle.reset_max(codel.get_batch_size());
   }
   if (changed.count("bluestore_max_defer_interval")) {
     if (bdev) {
@@ -11799,7 +11853,6 @@ void BlueStore::_kv_sync_thread()
     codel.kvq_lat_vec.push_back(queue_latency.count());
     codel.batch_size_vec.push_back((int) codel.get_batch_size());
     codel.kvq_size_vec.push_back((int) kv_queue_length);
-    codel.flush_log();
 
 	if (txc->get_state() == TransContext::STATE_KV_QUEUED) {
 	  _txc_apply_kv(txc, false);
@@ -15424,15 +15477,6 @@ void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
 int64_t BlueStore::BlueStoreCoDel::get_batch_size() {
     std::lock_guard<std::mutex> l(lock);
     return batch_size;
-}
-
-void BlueStore::BlueStoreCoDel::flush_log() {
-    if(time_stamp_vec.size() >= 1000){
-        auto now = mono_clock::now();
-        std::string filename = "codel_log_" + std::to_string((now - created_time).count()) + ".csv";
-        dump_log_data(filename);
-        clear_log_data();
-    }
 }
 
 void BlueStore::BlueStoreCoDel::clear_log_data() {
