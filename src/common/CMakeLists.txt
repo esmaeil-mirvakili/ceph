@@ -35,6 +35,7 @@ set(common_srcs
   SloppyCRCMap.cc
   Thread.cc
   Throttle.cc
+  CoDel.cc
   Timer.cc
   TracepointProvider.cc
   TrackedOp.cc

@@ -20,6 +20,7 @@ list(APPEND crimson_alien_srcs
   ${PROJECT_SOURCE_DIR}/src/common/RefCountedObj.cc
   ${PROJECT_SOURCE_DIR}/src/common/shared_mutex_debug.cc
   ${PROJECT_SOURCE_DIR}/src/common/Throttle.cc
+  ${PROJECT_SOURCE_DIR}/src/common/CoDel.cc
   ${PROJECT_SOURCE_DIR}/src/common/Timer.cc
   ${PROJECT_SOURCE_DIR}/src/common/TrackedOp.cc
   ${PROJECT_SOURCE_DIR}/src/common/WorkQueue.cc
