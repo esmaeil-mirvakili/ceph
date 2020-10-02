@@ -15462,7 +15462,7 @@ void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
 
     batch_size_limit_ratio = 1.5;
 
-    adaptive_down_sizing = <<adaptive>>;
+    adaptive_down_sizing = true;
     this->reset();
 
 //    std::cout << "codel init:" << dendl;
