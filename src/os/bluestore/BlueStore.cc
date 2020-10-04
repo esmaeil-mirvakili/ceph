@@ -15455,14 +15455,14 @@ void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
 
     initial_target_latency = 800000;
 
-    initial_interval = 200;
+    initial_interval = 500000;
 
     initial_batch_size = 100;
     batch_size = initial_batch_size;
 
     batch_size_limit_ratio = 1.5;
 
-    adaptive_down_sizing = <<adaptive>>;
+    adaptive_down_sizing = false;
     this->reset();
 
 //    std::cout << "codel init:" << dendl;

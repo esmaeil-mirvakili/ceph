@@ -12,10 +12,7 @@ using ceph::mono_clock;
 
 class CoDel {
 public:
-    CoDel(){
-        initial_interval = 1000;
-        initial_target_latency = 500;
-    }
+    CoDel(){}
     ~CoDel();
 private:
     /**
@@ -35,7 +32,7 @@ private:
         auto sqrt = (int) std::round(std::sqrt(violation_count));
         interval = initial_interval / sqrt;
         if(interval <= 0){
-            interval = 1;
+            interval = 1000;
         }
     }
 
@@ -66,6 +63,8 @@ protected:
         target_latency = initial_target_latency;
         std::cout << "target init:" << initial_target_latency << std::endl;
         std::cout << "target:" << target_latency << std::endl;
+        std::cout << "interval init:" << initial_interval << std::endl;
+        std::cout << "interval:" << interval << std::endl;
         interval_start = nullptr;
         min_latency = INT_NULL;
     }
