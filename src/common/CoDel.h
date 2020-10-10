@@ -21,7 +21,7 @@ private:
      */
     bool _is_cur_interval_finished() {
         auto current_time = mono_clock::now();
-        return (current_time - *interval_start).count() >= interval;
+        return std::chrono::nanoseconds(current_time - *interval_start).count() >= interval;
     }
 
     bool _check_latency_violation() {

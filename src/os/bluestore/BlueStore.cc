@@ -11849,7 +11849,7 @@ void BlueStore::_kv_sync_thread()
 	throttle.log_state_latency(*txc, logger, l_bluestore_state_kv_queued_lat);
     auto queue_latency = mono_clock::now() - txc->kv_queued_time;
     codel.register_transaction(queue_latency, (int64_t) kv_queue_length);
-    codel.time_stamp_vec.push_back((mono_clock::now() - codel.created_time).count());
+    codel.time_stamp_vec.push_back(std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count());
     codel.kvq_lat_vec.push_back(queue_latency.count());
     codel.batch_size_vec.push_back((int) codel.get_batch_size());
     codel.kvq_size_vec.push_back((int) kv_queue_length);
@@ -15412,11 +15412,7 @@ void BlueStore::BlueStoreCoDel::register_transaction(mono_clock::duration queuin
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
     if (adaptive_down_sizing && target_latency > 0) {
         double diff = (double)(target_latency - min_latency);
-        std::cout << "min_latency: " << min_latency << std::endl;
-        std::cout << "target_latency: " << target_latency << std::endl;
-        std::cout << "diff: " << diff << std::endl;
         auto error_ratio = std::abs(diff) / min_latency;
-        std::cout << "error_ratio: " << error_ratio << std::endl;
         ceph_assert(error_ratio <= 1 && error_ratio >= 0);
         batch_size *= 1 - error_ratio;
     } else {
