@@ -15490,13 +15490,13 @@ void BlueStore::BlueStoreCoDel::dump_log_data(std::string filename) {
     csvfile << "time, kv_q, batch_size, kv_q_size" << "\n";
 
     for (unsigned int i = 0; i < time_stamp_vec.size(); i++){
-        csvfile << time_stamp_vec[i];
+        csvfile << std::fixed << time_stamp_vec[i];
         csvfile << ",";
-        csvfile << kvq_lat_vec[i];
+        csvfile << std::fixed << kvq_lat_vec[i];
         csvfile << ",";
-        csvfile << batch_size_vec[i];
+        csvfile << std::fixed << batch_size_vec[i];
         csvfile << ",";
-        csvfile << kvq_size_vec[i];
+        csvfile << std::fixed << kvq_size_vec[i];
         csvfile << "\n";
     }
     csvfile.close();
