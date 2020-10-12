@@ -15481,6 +15481,8 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     kvq_lat_vec.clear();
     batch_size_vec.clear();
     kvq_size_vec.clear();
+    batches_vec.clear();
+    lat_vec.clear();
 }
 
 void BlueStore::BlueStoreCoDel::dump_log_data() {
