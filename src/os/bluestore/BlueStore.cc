@@ -4411,7 +4411,7 @@ private:
     {
         if (command == "dump kvq vector")
         {
-            store->codel.dump_log_data("codel_log.csv");
+            store->codel.dump_log_data();
         }
         else if (command == "reset kvq vector")
         {
@@ -11765,6 +11765,7 @@ void BlueStore::_kv_sync_thread()
 	       << " deferred done " << deferred_done_queue.size()
 	       << " stable " << deferred_stable_queue.size()
 	       << dendl;
+      auto batch_process_start = mono_clock::now();
       kv_committing.swap(kv_queue);
       kv_submitting.swap(kv_queue_unsubmitted);
       deferred_done.swap(deferred_done_queue);
@@ -11850,7 +11851,7 @@ void BlueStore::_kv_sync_thread()
     auto queue_latency = mono_clock::now() - txc->kv_queued_time;
     codel.register_transaction(queue_latency, (int64_t) kv_queue_length);
     codel.time_stamp_vec.push_back(std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count());
-    codel.kvq_lat_vec.push_back(queue_latency.count());
+    codel.kvq_lat_vec.push_back(std::chrono::nanoseconds(queue_latency).count());
     codel.batch_size_vec.push_back((int) codel.get_batch_size());
     codel.kvq_size_vec.push_back((int) kv_queue_length);
 
@@ -11864,7 +11865,8 @@ void BlueStore::_kv_sync_thread()
 	  --txc->osr->txc_with_unstable_io;
 	}
       }
-
+      codel.batches_vec.push_back((int) kv_queue_length);
+      codel.kvq_lat_vec.push_back((mono_clock::now() - batch_process_start).count());
       throttle.reset_max(codel.get_batch_size());
       // release throttle *before* we commit.  this allows new ops
       // to be prepared and enter pipeline while we are waiting on
@@ -15481,11 +15483,12 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     kvq_size_vec.clear();
 }
 
-void BlueStore::BlueStoreCoDel::dump_log_data(std::string filename) {
+void BlueStore::BlueStoreCoDel::dump_log_data() {
     if(time_stamp_vec.empty())
         return;
     // create an filestream object
-    std::ofstream csvfile(filename);
+    std::string name = "codel_log_" + std::to_string(initial_target_latency/1000) + "_" + std::to_string(initial_interval/1000);
+    std::ofstream csvfile(name + ".csv");
     // add column names
     csvfile << "time, kv_q, batch_size, kv_q_size" << "\n";
 
@@ -15500,6 +15503,18 @@ void BlueStore::BlueStoreCoDel::dump_log_data(std::string filename) {
         csvfile << "\n";
     }
     csvfile.close();
+
+    std::ofstream csvfile2(name + "_latency.csv");
+    // add column names
+    csvfile2 << "batch_size, latency" << "\n";
+
+    for (unsigned int i = 0; i < batches_vec.size(); i++){
+        csvfile2 << std::fixed << batches_vec[i];
+        csvfile2 << ",";
+        csvfile2 << std::fixed << lat_vec[i];
+        csvfile2 << "\n";
+    }
+    csvfile2.close();
 }
 
 // DB key value Histogram
