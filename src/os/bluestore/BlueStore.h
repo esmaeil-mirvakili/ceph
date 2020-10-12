@@ -1839,7 +1839,7 @@ public:
       void init(const ConfigProxy &conf);
       int64_t get_batch_size();
       void flush_log();
-      void dump_log_data(std::string filename);
+      void dump_log_data();
       void clear_log_data();
 
   protected:
