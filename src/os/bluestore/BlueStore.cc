@@ -15431,7 +15431,6 @@ void BlueStore::BlueStoreCoDel::on_no_violation() {
 }
 
 void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
-    std::lock_guard<std::mutex> l(lock);
 //    if (conf->bluestore_codel_target_latency) {
 //        mono_clock::duration init_target_latency(conf->bluestore_codel_target_latency);
 //        initial_target_latency = &init_target_latency;
