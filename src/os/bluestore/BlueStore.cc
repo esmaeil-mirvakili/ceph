@@ -11865,8 +11865,6 @@ void BlueStore::_kv_sync_thread()
 	  --txc->osr->txc_with_unstable_io;
 	}
       }
-      codel.batches_vec.push_back((int) kv_queue_length);
-      codel.lat_vec.push_back(std::chrono::nanoseconds(mono_clock::now() - batch_process_start).count());
       throttle.reset_max(codel.get_batch_size());
       // release throttle *before* we commit.  this allows new ops
       // to be prepared and enter pipeline while we are waiting on
@@ -15404,7 +15402,6 @@ void BlueStore::BlueStoreThrottle::complete(TransContext &txc)
 #endif
 
 void BlueStore::BlueStoreCoDel::register_transaction(mono_clock::duration queuing_latency, int64_t queue_length) {
-    std::lock_guard<std::mutex> l(lock);
     if(max_queue_length < queue_length){
         max_queue_length = queue_length;
     }
@@ -15474,7 +15471,6 @@ void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
 }
 
 int64_t BlueStore::BlueStoreCoDel::get_batch_size() {
-    std::lock_guard<std::mutex> l(lock);
     return batch_size;
 }
 
@@ -15483,8 +15479,6 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     kvq_lat_vec.clear();
     batch_size_vec.clear();
     kvq_size_vec.clear();
-    batches_vec.clear();
-    lat_vec.clear();
 }
 
 void BlueStore::BlueStoreCoDel::dump_log_data() {
@@ -15507,18 +15501,6 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
         csvfile << "\n";
     }
     csvfile.close();
-
-    std::ofstream csvfile2(name + "_latency.csv");
-    // add column names
-    csvfile2 << "batch_size, latency" << "\n";
-
-    for (unsigned int i = 0; i < batches_vec.size(); i++){
-        csvfile2 << std::fixed << batches_vec[i];
-        csvfile2 << ",";
-        csvfile2 << std::fixed << lat_vec[i];
-        csvfile2 << "\n";
-    }
-    csvfile2.close();
 }
 
 // DB key value Histogram

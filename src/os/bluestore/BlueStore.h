@@ -1831,8 +1831,6 @@ public:
       vector<double> kvq_lat_vec;
       vector<int> batch_size_vec;
       vector<int> kvq_size_vec;
-      vector<double> lat_vec;
-      vector<int> batches_vec;
       std::chrono::time_point<mono_clock> created_time = mono_clock::now();
 
       void register_transaction(mono_clock::duration queuing_latency, int64_t queue_length);
@@ -1848,7 +1846,6 @@ public:
       bool adaptive_down_sizing = true;
       int64_t batch_size;
       int64_t max_queue_length = 0;
-      mutable std::mutex lock;
 
       void on_min_latency_violation();
       void on_no_violation();
