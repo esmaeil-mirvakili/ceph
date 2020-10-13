@@ -15416,9 +15416,8 @@ void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
         double diff = (double)(target_latency - min_latency);
         auto error_ratio = std::abs(diff) / min_latency;
         if(error_ratio > 0.5){
-          error_ratio =0.5;
+          error_ratio = 0.5;
         }
-        ceph_assert(error_ratio <= 1 && error_ratio >= 0.5);
         batch_size *= 1 - error_ratio;
     } else {
         batch_size /= 2;
