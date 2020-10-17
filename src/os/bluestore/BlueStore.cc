@@ -11866,7 +11866,7 @@ void BlueStore::_kv_sync_thread()
       codel.kvq_lat_vec.push_back(std::chrono::nanoseconds(kv_batch_latency).count());
       codel.batch_size_vec.push_back((int) codel.get_batch_size());
       codel.kvq_size_vec.push_back((int) kv_queue_length);
-      codel.register_batch(queue_latency, (int64_t) kv_queue_length);
+      codel.register_batch(kv_batch_latency, (int64_t) kv_queue_length);
       throttle.reset_max(codel.get_batch_size());
       // release throttle *before* we commit.  this allows new ops
       // to be prepared and enter pipeline while we are waiting on
