@@ -1833,7 +1833,7 @@ public:
       vector<int> kvq_size_vec;
       std::chrono::time_point<mono_clock> created_time = mono_clock::now();
 
-      void register_transaction(mono_clock::duration queuing_latency, int64_t queue_length);
+      void register_batch(mono_clock::duration queuing_latency, int64_t batch_size);
       void init(const ConfigProxy &conf);
       int64_t get_batch_size();
       void flush_log();

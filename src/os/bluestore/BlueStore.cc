@@ -11846,14 +11846,9 @@ void BlueStore::_kv_sync_thread()
       }
 
       auto kv_queue_length = kv_committing.size();
+      auto batch_start_time = mono_clock::now();
       for (auto txc : kv_committing) {
 	throttle.log_state_latency(*txc, logger, l_bluestore_state_kv_queued_lat);
-    auto queue_latency = mono_clock::now() - txc->kv_queued_time;
-    codel.register_transaction(queue_latency, (int64_t) kv_queue_length);
-    codel.time_stamp_vec.push_back(std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count());
-    codel.kvq_lat_vec.push_back(std::chrono::nanoseconds(queue_latency).count());
-    codel.batch_size_vec.push_back((int) codel.get_batch_size());
-    codel.kvq_size_vec.push_back((int) kv_queue_length);
 
 	if (txc->get_state() == TransContext::STATE_KV_QUEUED) {
 	  _txc_apply_kv(txc, false);
@@ -11865,6 +11860,13 @@ void BlueStore::_kv_sync_thread()
 	  --txc->osr->txc_with_unstable_io;
 	}
       }
+
+      auto kv_batch_latency = batch_start_time - txc->kv_queued_time;
+      codel.time_stamp_vec.push_back(std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count());
+      codel.kvq_lat_vec.push_back(std::chrono::nanoseconds(queue_latency).count());
+      codel.batch_size_vec.push_back((int) codel.get_batch_size());
+      codel.kvq_size_vec.push_back((int) kv_queue_length);
+      codel.register_batch(queue_latency, (int64_t) kv_queue_length);
       throttle.reset_max(codel.get_batch_size());
       // release throttle *before* we commit.  this allows new ops
       // to be prepared and enter pipeline while we are waiting on
@@ -15401,7 +15403,7 @@ void BlueStore::BlueStoreThrottle::complete(TransContext &txc)
 }
 #endif
 
-void BlueStore::BlueStoreCoDel::register_transaction(mono_clock::duration queuing_latency, int64_t queue_length) {
+void BlueStore::BlueStoreCoDel::register_batch(mono_clock::duration queuing_latency, int64_t batch_size) {
     if(max_queue_length < queue_length){
         max_queue_length = queue_length;
     }
