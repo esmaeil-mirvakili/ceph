@@ -11863,7 +11863,7 @@ void BlueStore::_kv_sync_thread()
 
       auto kv_batch_latency = mono_clock::now() - batch_start_time;
       codel.time_stamp_vec.push_back(std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count());
-      codel.kvq_lat_vec.push_back(std::chrono::nanoseconds(queue_latency).count());
+      codel.kvq_lat_vec.push_back(std::chrono::nanoseconds(kv_batch_latency).count());
       codel.batch_size_vec.push_back((int) codel.get_batch_size());
       codel.kvq_size_vec.push_back((int) kv_queue_length);
       codel.register_batch(queue_latency, (int64_t) kv_queue_length);
@@ -15404,8 +15404,8 @@ void BlueStore::BlueStoreThrottle::complete(TransContext &txc)
 #endif
 
 void BlueStore::BlueStoreCoDel::register_batch(mono_clock::duration queuing_latency, int64_t batch_size) {
-    if(max_queue_length < queue_length){
-        max_queue_length = queue_length;
+    if(max_queue_length < batch_size){
+        max_queue_length = batch_size;
     }
     register_queue_latency(queuing_latency);
 }
