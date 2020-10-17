@@ -11861,7 +11861,7 @@ void BlueStore::_kv_sync_thread()
 	}
       }
 
-      auto kv_batch_latency = batch_start_time - txc->kv_queued_time;
+      auto kv_batch_latency = mono_clock::now() - batch_start_time;
       codel.time_stamp_vec.push_back(std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count());
       codel.kvq_lat_vec.push_back(std::chrono::nanoseconds(queue_latency).count());
       codel.batch_size_vec.push_back((int) codel.get_batch_size());
