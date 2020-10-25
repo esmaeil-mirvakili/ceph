@@ -1829,6 +1829,7 @@ public:
       // log data
       vector<double> time_stamp_vec;
       vector<double> kvq_lat_vec;
+      vector<double> lat_vec;
       vector<int> batch_size_vec;
       vector<int> kvq_size_vec;
       std::chrono::time_point<mono_clock> created_time = mono_clock::now();
