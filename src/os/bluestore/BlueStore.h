@@ -1847,6 +1847,7 @@ public:
       bool adaptive_down_sizing = true;
       int64_t batch_size;
       int64_t max_queue_length = 0;
+      bool activated = true;
 
       void on_min_latency_violation();
       void on_no_violation();

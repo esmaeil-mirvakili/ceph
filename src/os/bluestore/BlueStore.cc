@@ -11847,7 +11847,7 @@ void BlueStore::_kv_sync_thread()
       }
 
       auto kv_queue_length = kv_committing.size();
-      double lat_sum = 0;
+      std::chrono::time_point<mono_clock> txc_time;
       for (auto txc : kv_committing) {
 	throttle.log_state_latency(*txc, logger, l_bluestore_state_kv_queued_lat);
 
@@ -11860,10 +11860,8 @@ void BlueStore::_kv_sync_thread()
 	if (txc->had_ios) {
 	  --txc->osr->txc_with_unstable_io;
 	}
-  lat_sum += std::chrono::nanoseconds(mono_clock::now() - txc->start).count();
+  txc_time = txc->start;
       }
-      codel.kvq_size_vec.push_back((int) kv_queue_length);
-      codel.lat_vec.push_back(lat_sum / (int) kv_queue_length);
       // release throttle *before* we commit.  this allows new ops
       // to be prepared and enter pipeline while we are waiting on
       // the kv commit sync/flush.  then hopefully on the next
@@ -11871,6 +11869,8 @@ void BlueStore::_kv_sync_thread()
       // end up going to sleep, and then wake up when the very first
       // transaction is ready for commit.
       throttle.release_kv_throttle(costs);
+      codel.kvq_size_vec.push_back((int) kv_queue_length);
+      codel.lat_vec.push_back(std::chrono::nanoseconds(mono_clock::now() - txc_time).count());
 
       // cleanup sync deferred keys
       for (auto b : deferred_stable) {
@@ -11983,12 +11983,12 @@ void BlueStore::_kv_sync_thread()
       // commit cycle.
       deferred_stable_queue.swap(deferred_done);
 
+      codel.register_batch(kv_batch_latency, (int64_t) kv_queue_length);
+      throttle.reset_max(codel.get_batch_size());
       auto kv_batch_latency = mono_clock::now() - batch_start_time;
       codel.time_stamp_vec.push_back(std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count());
       codel.kvq_lat_vec.push_back(std::chrono::nanoseconds(kv_batch_latency).count());
       codel.batch_size_vec.push_back((int) codel.get_batch_size());
-      codel.register_batch(kv_batch_latency, (int64_t) kv_queue_length);
-      throttle.reset_max(codel.get_batch_size());
     }
   }
   dout(10) << __func__ << " finish" << dendl;
@@ -15407,30 +15407,34 @@ void BlueStore::BlueStoreThrottle::complete(TransContext &txc)
 #endif
 
 void BlueStore::BlueStoreCoDel::register_batch(mono_clock::duration queuing_latency, int64_t batch_size) {
-    if(max_queue_length < batch_size){
-        max_queue_length = batch_size;
+    if(activated){
+      if(max_queue_length < batch_size){
+          max_queue_length = batch_size;
+      }
+      register_queue_latency(queuing_latency);
     }
-    register_queue_latency(queuing_latency);
 }
 
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
-    if (adaptive_down_sizing && target_latency > 0) {
-        double diff = (double)(target_latency - min_latency);
-        auto error_ratio = std::abs(diff) / min_latency;
-        if(error_ratio > 0.5){
-          error_ratio = 0.5;
-        }
-        batch_size *= 1 - error_ratio;
-    } else {
-        batch_size /= 2;
-    }
-    if(batch_size <= 0){
-        batch_size = 1;
+    if(activated){
+      if (adaptive_down_sizing && target_latency > 0) {
+          double diff = (double)(target_latency - min_latency);
+          auto error_ratio = std::abs(diff) / min_latency;
+          if(error_ratio > 0.5){
+            error_ratio = 0.5;
+          }
+          batch_size *= 1 - error_ratio;
+      } else {
+          batch_size /= 2;
+      }
+      if(batch_size <= 0){
+          batch_size = 1;
+      }
     }
 }
 
 void BlueStore::BlueStoreCoDel::on_no_violation() {
-    if(batch_size < max_queue_length * batch_size_limit_ratio){
+    if(activated && batch_size < max_queue_length * batch_size_limit_ratio){
         batch_size++;
     }
 }
@@ -15453,7 +15457,7 @@ void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
 //    if (conf->bluestore_codel_adaptive_down_sizing) {
 //        adaptive_down_sizing = conf->bluestore_codel_adaptive_down_sizing;
 //    }
-
+    activated = true;
     initial_target_latency = 800* 1000;
 
     initial_interval = 500 * 1000;
@@ -15489,7 +15493,10 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     if(time_stamp_vec.empty())
         return;
     // create an filestream object
-    std::string name = "codel_log_" + std::to_string(initial_target_latency/1000) + "_" + std::to_string(initial_interval/1000);
+    std::string name = "codel_log_";
+    if(activated){
+      name = name + std::to_string(initial_target_latency/1000) + "_" + std::to_string(initial_interval/1000);
+    }
     std::ofstream csvfile(name + ".csv");
     // add column names
     csvfile << "time, kv_lat, batch_size, kv_q_size, lat" << "\n";
