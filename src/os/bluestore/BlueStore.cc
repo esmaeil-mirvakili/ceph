@@ -15439,6 +15439,10 @@ void BlueStore::BlueStoreCoDel::on_no_violation() {
     }
 }
 
+void BlueStore::BlueStoreCoDel::on_interval_finished() {
+    max_queue_length = 0;
+}
+
 void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
 //    if (conf->bluestore_codel_target_latency) {
 //        mono_clock::duration init_target_latency(conf->bluestore_codel_target_latency);

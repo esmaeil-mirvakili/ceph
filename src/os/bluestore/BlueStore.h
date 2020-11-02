@@ -1851,6 +1851,7 @@ public:
 
       void on_min_latency_violation();
       void on_no_violation();
+      void on_interval_finished();
   } codel;
 
   typedef boost::intrusive::list<

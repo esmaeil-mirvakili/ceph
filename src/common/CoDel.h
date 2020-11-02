@@ -55,6 +55,8 @@ protected:
      */
     virtual void on_no_violation() = 0;
 
+    virtual void on_interval_finished() = 0;
+
     /**
      * reset the algorithm
      */
@@ -76,6 +78,7 @@ protected:
         min_latency = INT_NULL;
         auto now = mono_clock::now();
         interval_start = &now;
+        on_interval_finished();
     }
 
     void register_queue_latency(mono_clock::duration queuing_latency);
