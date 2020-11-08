@@ -4507,11 +4507,12 @@ const char **BlueStore::get_tracked_conf_keys() const
     "bluestore_warn_on_legacy_statfs",
     "bluestore_warn_on_no_per_pool_omap",
     "bluestore_max_defer_interval",
-//    "bluestore_codel_target_latency",
-//    "bluestore_codel_interval",
-//    "bluestore_codel_init_batch_size",
-//    "bluestore_codel_batch_size_limit_ratio",
-//    "bluestore_codel_adaptive_down_sizing",
+    "bluestore_codel",
+    "bluestore_codel_target_latency",
+    "bluestore_codel_interval",
+    "bluestore_codel_init_batch_size",
+    "bluestore_codel_batch_size_limit_ratio",
+    "bluestore_codel_adaptive_down_sizing",
     NULL
   };
   return KEYS;
@@ -4582,15 +4583,16 @@ void BlueStore::handle_conf_change(const ConfigProxy& conf,
       changed.count("osd_memory_expected_fragmentation")) {
     _update_osd_memory_options();
   }
-//  if (changed.count("bluestore_codel_target_latency") ||
-//      changed.count("bluestore_codel_interval") ||
-//      changed.count("bluestore_codel_init_batch_size") ||
-//      changed.count("bluestore_codel_batch_size_limit_ratio") ||
-//      changed.count("bluestore_codel_adaptive_down_sizing")) {
-//    if (bdev) {
-//        codel.init(conf);
-//    }
-//  }
+ if (changed.count("bluestore_codel_target_latency") ||
+     changed.count("bluestore_codel") ||
+     changed.count("bluestore_codel_interval") ||
+     changed.count("bluestore_codel_init_batch_size") ||
+     changed.count("bluestore_codel_batch_size_limit_ratio") ||
+     changed.count("bluestore_codel_adaptive_down_sizing")) {
+   if (bdev) {
+       codel.init(conf);
+   }
+ }
 }
 
 void BlueStore::_set_compression()
@@ -10980,7 +10982,7 @@ void BlueStore::_txc_calc_cost(TransContext *txc)
   auto ios = 1 + txc->ioc.get_num_ios();
   auto cost = throttle_cost_per_io.load();
 //  txc->cost = ios * cost + txc->bytes;
-  txc->cost = 1;
+  txc->cost = txc->bytes / 1024;
   txc->ios = ios;
   dout(10) << __func__ << " " << txc << " cost " << txc->cost << " ("
 	   << ios << " ios * " << cost << " + " << txc->bytes
@@ -11027,6 +11029,7 @@ void BlueStore::_txc_state_proc(TransContext *txc)
 	     << " " << txc->get_state_name() << dendl;
     switch (txc->get_state()) {
     case TransContext::STATE_PREPARE:
+      txc->start_time = mono_clock::now();
       throttle.log_state_latency(*txc, logger, l_bluestore_state_prepare_lat);
       if (txc->ioc.has_pending_aios()) {
 	txc->set_state(TransContext::STATE_AIO_WAIT);
@@ -11846,7 +11849,6 @@ void BlueStore::_kv_sync_thread()
 	dout(10) << __func__ << " new_blobid_max " << new_blobid_max << dendl;
       }
 
-      auto kv_queue_length = kv_committing.size();
       std::chrono::time_point<mono_clock> txc_time;
       for (auto txc : kv_committing) {
 	throttle.log_state_latency(*txc, logger, l_bluestore_state_kv_queued_lat);
@@ -11860,7 +11862,12 @@ void BlueStore::_kv_sync_thread()
 	if (txc->had_ios) {
 	  --txc->osr->txc_with_unstable_io;
 	}
-  txc_time = txc->start;
+  mono_clock::duration lat = now - txc->start;
+  codel.register_batch(lat, throttle.get_current());
+  codel.lat_vec.push_back(std::chrono::nanoseconds(lat).count());
+  codel.kvq_size_vec.push_back(throttle.get_current());
+  codel.batch_size_vec.push_back((int) codel.get_batch_size());
+  codel.time_stamp_vec.push_back(std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count());
       }
       // release throttle *before* we commit.  this allows new ops
       // to be prepared and enter pipeline while we are waiting on
@@ -11869,8 +11876,7 @@ void BlueStore::_kv_sync_thread()
       // end up going to sleep, and then wake up when the very first
       // transaction is ready for commit.
       throttle.release_kv_throttle(costs);
-      codel.kvq_size_vec.push_back((int) kv_queue_length);
-      codel.lat_vec.push_back(std::chrono::nanoseconds(mono_clock::now() - txc_time).count());
+      throttle.reset_max(codel.get_batch_size());    
 
       // cleanup sync deferred keys
       for (auto b : deferred_stable) {
@@ -11982,13 +11988,6 @@ void BlueStore::_kv_sync_thread()
       // previously deferred "done" are now "stable" by virtue of this
       // commit cycle.
       deferred_stable_queue.swap(deferred_done);
-
-      auto kv_batch_latency = mono_clock::now() - batch_start_time;
-      codel.register_batch(kv_batch_latency, (int64_t) kv_queue_length);
-      throttle.reset_max(codel.get_batch_size());
-      codel.time_stamp_vec.push_back(std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count());
-      codel.kvq_lat_vec.push_back(std::chrono::nanoseconds(kv_batch_latency).count());
-      codel.batch_size_vec.push_back((int) codel.get_batch_size());
     }
   }
   dout(10) << __func__ << " finish" << dendl;
@@ -15393,9 +15392,10 @@ void BlueStore::BlueStoreThrottle::complete(TransContext &txc)
   if (txc.deferred_txn) {
     pending_deferred_ios -= 1;
   }
+  mono_clock::time_point now = mono_clock::now();
+  mono_clock::duration lat = now - txc.start;
+
   if (txc.tracing) {
-    mono_clock::time_point now = mono_clock::now();
-    mono_clock::duration lat = now - txc.start;
     tracepoint(
       bluestore,
       transaction_total_duration,
@@ -15444,34 +15444,25 @@ void BlueStore::BlueStoreCoDel::on_interval_finished() {
 }
 
 void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
-//    if (conf->bluestore_codel_target_latency) {
-//        mono_clock::duration init_target_latency(conf->bluestore_codel_target_latency);
-//        initial_target_latency = &init_target_latency;
-//    }
-//    if (conf->bluestore_codel_interval) {
-//        mono_clock::duration init_interval(conf->bluestore_codel_interval);
-//        initial_interval = &init_interval;
-//    }
-//    if (conf->bluestore_codel_init_batch_size) {
-//        initial_batch_size = conf->bluestore_codel_init_batch_size;
-//    }
-//    if (conf->bluestore_codel_batch_size_limit_ratio) {
-//        batch_size_limit_ratio = conf->bluestore_codel_batch_size_limit_ratio;
-//    }
-//    if (conf->bluestore_codel_adaptive_down_sizing) {
-//        adaptive_down_sizing = conf->bluestore_codel_adaptive_down_sizing;
-//    }
-    activated = true;
-    initial_target_latency = 800* 1000;
-
-    initial_interval = 500 * 1000;
-
-    initial_batch_size = 100;
-    batch_size = initial_batch_size;
-
-    batch_size_limit_ratio = 1.5;
-
-    adaptive_down_sizing = true;
+    if (conf->bluestore_codel) {
+        activated = conf->bluestore_codel;
+    }
+    if (conf->bluestore_codel_target_latency) {
+        initial_target_latency = conf->bluestore_codel_target_latency;
+    }
+    if (conf->bluestore_codel_interval) {
+        initial_interval = conf->bluestore_codel_interval;
+    }
+    if (conf->bluestore_codel_init_batch_size) {
+        initial_batch_size = conf->bluestore_codel_init_batch_size;
+        batch_size = initial_batch_size;
+    }
+    if (conf->bluestore_codel_batch_size_limit_ratio) {
+        batch_size_limit_ratio = conf->bluestore_codel_batch_size_limit_ratio;
+    }
+    if (conf->bluestore_codel_adaptive_down_sizing) {
+        adaptive_down_sizing = conf->bluestore_codel_adaptive_down_sizing;
+    }
     this->reset();
 
 //    std::cout << "codel init:" << dendl;

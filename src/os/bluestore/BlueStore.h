@@ -1801,6 +1801,9 @@ public:
     bool should_submit_deferred() {
       return throttle_deferred_bytes.past_midpoint();
     }
+    int64_t get_current(){
+      return throttle_bytes.get_current();
+    }
     void reset_throttle(const ConfigProxy &conf) {
       throttle_bytes.reset_max(conf->bluestore_throttle_bytes);
       throttle_deferred_bytes.reset_max(
