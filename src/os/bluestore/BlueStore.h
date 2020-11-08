@@ -1826,7 +1826,7 @@ public:
   class BlueStoreCoDel: public CoDel {
   public:
       BlueStoreCoDel(CephContext *cct){
-          init(cct->_conf);
+          init(cct);
       }
 
       // log data
