@@ -1838,7 +1838,7 @@ public:
       std::chrono::time_point<mono_clock> created_time = mono_clock::now();
 
       void register_batch(mono_clock::duration queuing_latency, int64_t batch_size);
-      void init(const ConfigProxy &conf);
+      void init(CephContext* cct);
       int64_t get_batch_size();
       void flush_log();
       void dump_log_data();
