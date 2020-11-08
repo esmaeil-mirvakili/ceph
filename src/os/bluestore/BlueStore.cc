@@ -15478,7 +15478,7 @@ int64_t BlueStore::BlueStoreCoDel::get_batch_size() {
 
 void BlueStore::BlueStoreCoDel::clear_log_data() {
     time_stamp_vec.clear();
-    kvq_lat_vec.clear();
+    lat_vec.clear();
     batch_size_vec.clear();
     kvq_size_vec.clear();
 }
@@ -15493,12 +15493,10 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     }
     std::ofstream csvfile(name + ".csv");
     // add column names
-    csvfile << "time, kv_lat, batch_size, kv_q_size, lat" << "\n";
+    csvfile << "time, batch_size, kv_q_size, lat" << "\n";
 
     for (unsigned int i = 0; i < time_stamp_vec.size(); i++){
         csvfile << std::fixed << time_stamp_vec[i];
-        csvfile << ",";
-        csvfile << std::fixed << kvq_lat_vec[i];
         csvfile << ",";
         csvfile << std::fixed << batch_size_vec[i];
         csvfile << ",";
