@@ -1833,11 +1833,12 @@ public:
       vector<double> time_stamp_vec;
       vector<double> kvq_lat_vec;
       vector<double> lat_vec;
+      vector<double> normal_lat_vec;
       vector<int> batch_size_vec;
       vector<int> kvq_size_vec;
       std::chrono::time_point<mono_clock> created_time = mono_clock::now();
 
-      void register_batch(mono_clock::duration queuing_latency, int64_t batch_size);
+      void register_batch(int64_t queuing_latency, int64_t batch_size);
       void init(CephContext* cct);
       int64_t get_batch_size();
       void flush_log();

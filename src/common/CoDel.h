@@ -81,7 +81,7 @@ protected:
         on_interval_finished();
     }
 
-    void register_queue_latency(mono_clock::duration queuing_latency);
+    void register_queue_latency(int64_t queuing_latency);
 };
 
 

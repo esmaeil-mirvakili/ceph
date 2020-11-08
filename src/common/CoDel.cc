@@ -1,9 +1,9 @@
 
 #include "CoDel.h"
 
-void CoDel::register_queue_latency(mono_clock::duration queuing_latency) {
-    if(min_latency == INT_NULL || std::chrono::nanoseconds(queuing_latency).count() < min_latency){
-        min_latency = std::chrono::nanoseconds(queuing_latency).count();
+void CoDel::register_queue_latency(int64_t queuing_latency) {
+    if(min_latency == INT_NULL || queuing_latency < min_latency){
+        min_latency = queuing_latency;
     }
     if(!interval_start){
         auto now = mono_clock::now();

@@ -10982,7 +10982,7 @@ void BlueStore::_txc_calc_cost(TransContext *txc)
   auto ios = 1 + txc->ioc.get_num_ios();
   auto cost = throttle_cost_per_io.load();
 //  txc->cost = ios * cost + txc->bytes;
-  txc->cost = txc->bytes / 1024;
+  txc->cost = ceil(txc->bytes / 1024);
   txc->ios = ios;
   dout(10) << __func__ << " " << txc << " cost " << txc->cost << " ("
 	   << ios << " ios * " << cost << " + " << txc->bytes
@@ -11849,6 +11849,8 @@ void BlueStore::_kv_sync_thread()
       }
 
       std::chrono::time_point<mono_clock> txc_time;
+      mono_clock::duration max_lat = mono_clock::zero() - mono_clock::zero();
+      int64_t bytes = 0;
       for (auto txc : kv_committing) {
 	throttle.log_state_latency(*txc, logger, l_bluestore_state_kv_queued_lat);
 
@@ -11862,11 +11864,9 @@ void BlueStore::_kv_sync_thread()
 	  --txc->osr->txc_with_unstable_io;
 	}
   mono_clock::duration lat = mono_clock::now() - txc->start;
-  codel.register_batch(lat, throttle.get_current());
-  codel.lat_vec.push_back(std::chrono::nanoseconds(lat).count());
-  codel.kvq_size_vec.push_back(throttle.get_current());
-  codel.batch_size_vec.push_back((int) codel.get_batch_size());
-  codel.time_stamp_vec.push_back(std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count());
+  if(lat > max_lat)
+    max_lat = lat;
+  bytes = bytes + txc->bytes;
       }
       // release throttle *before* we commit.  this allows new ops
       // to be prepared and enter pipeline while we are waiting on
@@ -11874,8 +11874,16 @@ void BlueStore::_kv_sync_thread()
       // iteration there will already be ops awake.  otherwise, we
       // end up going to sleep, and then wake up when the very first
       // transaction is ready for commit.
+      double io_units = ceil(bytes / 1024.0);
+      double normalized_lat = std::chrono::nanoseconds(max_lat).count() / io_units;
+      codel.register_batch((int64_t)normalized_lat, throttle.get_current());
+      codel.lat_vec.push_back(std::chrono::nanoseconds(max_lat).count());
+      codel.normal_lat_vec.push_back(normalized_lat);
+      codel.kvq_size_vec.push_back(throttle.get_current());
+      codel.batch_size_vec.push_back((int) codel.get_batch_size());
+      codel.time_stamp_vec.push_back(std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count());
+      throttle.reset_max(codel.get_batch_size());
       throttle.release_kv_throttle(costs);
-      throttle.reset_max(codel.get_batch_size());    
 
       // cleanup sync deferred keys
       for (auto b : deferred_stable) {
@@ -15405,7 +15413,7 @@ void BlueStore::BlueStoreThrottle::complete(TransContext &txc)
 }
 #endif
 
-void BlueStore::BlueStoreCoDel::register_batch(mono_clock::duration queuing_latency, int64_t batch_size) {
+void BlueStore::BlueStoreCoDel::register_batch(int64_t queuing_latency, int64_t batch_size) {
     if(activated){
       if(max_queue_length < batch_size){
           max_queue_length = batch_size;
@@ -15462,6 +15470,14 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     if (cct->_conf.get_val<bool>("bluestore_codel_adaptive_down_sizing")) {
         adaptive_down_sizing = cct->_conf.get_val<bool>("bluestore_codel_adaptive_down_sizing");
     }
+
+    activated = true;
+    initial_target_latency = 5 * 1000 * 1000;
+    initial_interval = 5 * 1000 * 1000;
+    initial_batch_size = 48 * 4;
+    batch_size = initial_batch_size;
+    batch_size_limit_ratio = 1.5;
+    adaptive_down_sizing = true;
     this->reset();
 
 //    std::cout << "codel init:" << dendl;
@@ -15481,6 +15497,7 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     lat_vec.clear();
     batch_size_vec.clear();
     kvq_size_vec.clear();
+    normal_lat_vec.clear();
 }
 
 void BlueStore::BlueStoreCoDel::dump_log_data() {
@@ -15493,7 +15510,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     }
     std::ofstream csvfile(name + ".csv");
     // add column names
-    csvfile << "time, batch_size, kv_q_size, lat" << "\n";
+    csvfile << "time, batch_size, kv_q_size, lat, normal_lat" << "\n";
 
     for (unsigned int i = 0; i < time_stamp_vec.size(); i++){
         csvfile << std::fixed << time_stamp_vec[i];
@@ -15503,6 +15520,8 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
         csvfile << std::fixed << kvq_size_vec[i];
         csvfile << ",";
         csvfile << std::fixed << lat_vec[i];
+        csvfile << ",";
+        csvfile << std::fixed << normal_lat_vec[i];
         csvfile << "\n";
     }
     csvfile.close();
