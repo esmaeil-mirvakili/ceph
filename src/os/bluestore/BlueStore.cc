@@ -4590,7 +4590,7 @@ void BlueStore::handle_conf_change(const ConfigProxy& conf,
      changed.count("bluestore_codel_batch_size_limit_ratio") ||
      changed.count("bluestore_codel_adaptive_down_sizing")) {
    if (bdev) {
-       codel.init(conf);
+       codel.init(cct);
    }
  }
 }
@@ -15442,7 +15442,7 @@ void BlueStore::BlueStoreCoDel::on_interval_finished() {
     max_queue_length = 0;
 }
 
-void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
+void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     if (cct->_conf->get_val<bool>("bluestore_codel")) {
         activated = cct->_conf->get_val<bool>("bluestore_codel");
     }
