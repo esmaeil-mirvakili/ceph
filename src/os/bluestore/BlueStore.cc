@@ -15456,8 +15456,8 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
         initial_batch_size = cct->_conf.get_val<int64_t>("bluestore_codel_init_batch_size");
         batch_size = initial_batch_size;
     }
-    if (cct->_conf.get_val<float>("bluestore_codel_batch_size_limit_ratio")) {
-        batch_size_limit_ratio = cct->_conf.get_val<float>("bluestore_codel_batch_size_limit_ratio");
+    if (cct->_conf.get_val<double>("bluestore_codel_batch_size_limit_ratio")) {
+        batch_size_limit_ratio = cct->_conf.get_val<double>("bluestore_codel_batch_size_limit_ratio");
     }
     if (cct->_conf.get_val<bool>("bluestore_codel_adaptive_down_sizing")) {
         adaptive_down_sizing = cct->_conf.get_val<bool>("bluestore_codel_adaptive_down_sizing");
