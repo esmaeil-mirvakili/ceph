@@ -15443,24 +15443,24 @@ void BlueStore::BlueStoreCoDel::on_interval_finished() {
 }
 
 void BlueStore::BlueStoreCoDel::init(const ConfigProxy &conf) {
-    if (conf->get_val<bool>("bluestore_codel")) {
-        activated = conf->get_val<bool>("bluestore_codel");
+    if (cct->_conf->get_val<bool>("bluestore_codel")) {
+        activated = cct->_conf->get_val<bool>("bluestore_codel");
     }
-    if (conf->get_val<int>("bluestore_codel_target_latency")) {
-        initial_target_latency = conf->get_val<int>("bluestore_codel_target_latency");
+    if (cct->_conf->get_val<int>("bluestore_codel_target_latency")) {
+        initial_target_latency = cct->_conf->get_val<int>("bluestore_codel_target_latency");
     }
-    if (conf->get_val<int>("bluestore_codel_interval")) {
-        initial_interval = conf->get_val<int>("bluestore_codel_interval");
+    if (cct->_conf->get_val<int>("bluestore_codel_interval")) {
+        initial_interval = cct->_conf->get_val<int>("bluestore_codel_interval");
     }
-    if (conf->get_val<int>("bluestore_codel_init_batch_size")) {
-        initial_batch_size = conf->get_val<int>("bluestore_codel_init_batch_size");
+    if (cct->_conf->get_val<int>("bluestore_codel_init_batch_size")) {
+        initial_batch_size = cct->_conf->get_val<int>("bluestore_codel_init_batch_size");
         batch_size = initial_batch_size;
     }
-    if (conf->get_val<float>("bluestore_codel_batch_size_limit_ratio")) {
-        batch_size_limit_ratio = conf->get_val<float>("bluestore_codel_batch_size_limit_ratio");
+    if (cct->_conf->get_val<float>("bluestore_codel_batch_size_limit_ratio")) {
+        batch_size_limit_ratio = cct->_conf->get_val<float>("bluestore_codel_batch_size_limit_ratio");
     }
-    if (conf->get_val<bool>("bluestore_codel_adaptive_down_sizing")) {
-        adaptive_down_sizing = conf->get_val<bool>("bluestore_codel_adaptive_down_sizing");
+    if (cct->_conf->get_val<bool>("bluestore_codel_adaptive_down_sizing")) {
+        adaptive_down_sizing = cct->_conf->get_val<bool>("bluestore_codel_adaptive_down_sizing");
     }
     this->reset();
 
