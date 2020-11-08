@@ -15442,7 +15442,7 @@ void BlueStore::BlueStoreCoDel::on_interval_finished() {
     max_queue_length = 0;
 }
 
-void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
+void BlueStore::BlueStoreCoDel::init(CephContext* cct1) {
     if (cct->_conf->get_val<bool>("bluestore_codel")) {
         activated = cct->_conf->get_val<bool>("bluestore_codel");
     }
