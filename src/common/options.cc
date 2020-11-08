@@ -4433,7 +4433,7 @@ std::vector<Option> get_global_options() {
     .set_default(100)
     .set_description("BlueStore codel parameter"),
 
-    Option("bluestore_codel_batch_size_limit_ratio", Option::TYPE_INT, Option::LEVEL_DEV)
+    Option("bluestore_codel_batch_size_limit_ratio", Option::TYPE_FLOAT, Option::LEVEL_DEV)
     .set_default(1.5)
     .set_description("BlueStore codel parameter"),
 
