@@ -4440,7 +4440,8 @@ BlueStore::BlueStore(CephContext *cct,
   _init_logger();
   cct->_conf.add_observer(this);
   set_cache_shards(1);
-  throttle.reset_max(codel.get_batch_size());
+  if(codel.activated)
+    throttle.reset_max(codel.get_batch_size());
   asok_hook = SocketHook::create(this);
 //    dout(10) << "codel init:" << dendl;
 //    dout(10) << "\tinitial_target_latency:" << cct->_conf->bluestore_codel_target_latency << dendl;
@@ -4570,7 +4571,8 @@ void BlueStore::handle_conf_change(const ConfigProxy& conf,
       changed.count("bluestore_throttle_deferred_bytes") ||
       changed.count("bluestore_throttle_trace_rate")) {
     throttle.reset_throttle(conf);
-    throttle.reset_max(codel.get_batch_size());
+    if(codel.activated)
+      throttle.reset_max(codel.get_batch_size());
   }
   if (changed.count("bluestore_max_defer_interval")) {
     if (bdev) {
@@ -11879,7 +11881,8 @@ void BlueStore::_kv_sync_thread()
       // iteration there will already be ops awake.  otherwise, we
       // end up going to sleep, and then wake up when the very first
       // transaction is ready for commit.
-      throttle.reset_max(codel.get_batch_size());
+      if(codel.activated)
+        throttle.reset_max(codel.get_batch_size());
       throttle.release_kv_throttle(costs);
 
       // cleanup sync deferred keys
