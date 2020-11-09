@@ -11864,9 +11864,13 @@ void BlueStore::_kv_sync_thread()
 	  --txc->osr->txc_with_unstable_io;
 	}
   mono_clock::duration lat = mono_clock::now() - txc->start;
-  if(lat > max_lat)
-    max_lat = lat;
-  bytes = bytes + txc->bytes;
+  double normalized_lat = std::chrono::nanoseconds(lat).count() / txc->cost;
+  codel.register_batch((int64_t)normalized_lat, throttle.get_current());
+  codel.lat_vec.push_back(std::chrono::nanoseconds(lat).count());
+  codel.normal_lat_vec.push_back(normalized_lat);
+  codel.kvq_size_vec.push_back(throttle.get_current());
+  codel.batch_size_vec.push_back((int) codel.get_batch_size());
+  codel.time_stamp_vec.push_back(std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count());
       }
       // release throttle *before* we commit.  this allows new ops
       // to be prepared and enter pipeline while we are waiting on
@@ -11874,14 +11878,6 @@ void BlueStore::_kv_sync_thread()
       // iteration there will already be ops awake.  otherwise, we
       // end up going to sleep, and then wake up when the very first
       // transaction is ready for commit.
-      double io_units = ceil(bytes / 1024.0);
-      double normalized_lat = std::chrono::nanoseconds(max_lat).count() / io_units;
-      codel.register_batch((int64_t)normalized_lat, throttle.get_current());
-      codel.lat_vec.push_back(std::chrono::nanoseconds(max_lat).count());
-      codel.normal_lat_vec.push_back(normalized_lat);
-      codel.kvq_size_vec.push_back(throttle.get_current());
-      codel.batch_size_vec.push_back((int) codel.get_batch_size());
-      codel.time_stamp_vec.push_back(std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count());
       throttle.reset_max(codel.get_batch_size());
       throttle.release_kv_throttle(costs);
 
