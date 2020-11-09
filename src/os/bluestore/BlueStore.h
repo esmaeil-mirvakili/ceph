@@ -1618,6 +1618,7 @@ public:
 
     uint64_t seq = 0;
     ceph::mono_clock::time_point start;
+    ceph::mono_clock::time_point start_time;
     ceph::mono_clock::time_point last_stamp;
 
     ceph::mono_clock::time_point kv_queued_time;

@@ -11029,6 +11029,7 @@ void BlueStore::_txc_state_proc(TransContext *txc)
 	     << " " << txc->get_state_name() << dendl;
     switch (txc->get_state()) {
     case TransContext::STATE_PREPARE:
+      txc->start_time = mono_clock::now();
       throttle.log_state_latency(*txc, logger, l_bluestore_state_prepare_lat);
       if (txc->ioc.has_pending_aios()) {
 	txc->set_state(TransContext::STATE_AIO_WAIT);
@@ -11863,7 +11864,7 @@ void BlueStore::_kv_sync_thread()
 	if (txc->had_ios) {
 	  --txc->osr->txc_with_unstable_io;
 	}
-  mono_clock::duration lat = mono_clock::now() - txc->start;
+  mono_clock::duration lat = mono_clock::now() - txc->start_time;
   double normalized_lat = std::chrono::nanoseconds(lat).count() / ceil(txc->bytes / 1024);
   codel.register_batch((int64_t)normalized_lat, throttle.get_current());
   codel.lat_vec.push_back(std::chrono::nanoseconds(lat).count());
