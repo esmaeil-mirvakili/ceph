@@ -11878,7 +11878,7 @@ void BlueStore::_kv_sync_thread()
       // iteration there will already be ops awake.  otherwise, we
       // end up going to sleep, and then wake up when the very first
       // transaction is ready for commit.
-      throttle.reset_max(.get_batch_size());
+      throttle.reset_max(codel.get_batch_size());
       throttle.release_kv_throttle(costs);
 
       // cleanup sync deferred keys
