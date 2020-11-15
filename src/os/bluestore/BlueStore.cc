@@ -15499,7 +15499,7 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
         adaptive_down_sizing = cct->_conf.get_val<bool>("bluestore_codel_adaptive_down_sizing");
     }
 
-    activated = flase;
+    activated = false;
     initial_target_latency = 5 * 1000 * 1000;
     initial_interval = 5 * 1000 * 1000;
     initial_batch_size = 48 * 4;
@@ -15531,7 +15531,7 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
 }
 
 void BlueStore::BlueStoreCoDel::dump_log_data() {
-    if(time_stamp_vec.empty())
+    if(batch_time_stamp_vec.empty())
         return;
     // create an filestream object
     std::string prefix = "codel_log_";
@@ -15543,8 +15543,8 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     // add column names
     batch_file << "time, lat, normal_lat, bs, throttle_size" << "\n";
 
-    for (unsigned int i = 0; i < time_stamp_vec.size(); i++){
-        batch_file << std::fixed << time_stamp_vec[i];
+    for (unsigned int i = 0; i < batch_time_stamp_vec.size(); i++){
+        batch_file << std::fixed << batch_time_stamp_vec[i];
         batch_file << ",";
         batch_file << std::fixed << batch_lat_vec[i];
         batch_file << ",";
