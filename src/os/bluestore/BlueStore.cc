@@ -11868,12 +11868,7 @@ void BlueStore::_kv_sync_thread()
 	}
   mono_clock::duration lat = mono_clock::now() - txc->start_time;
   double normalized_lat = std::chrono::nanoseconds(lat).count() / ceil(txc->bytes / 1024);
-  codel.register_batch((int64_t)normalized_lat, throttle.get_current());
-  codel.lat_vec.push_back(std::chrono::nanoseconds(lat).count());
-  codel.normal_lat_vec.push_back(normalized_lat);
-  codel.kvq_size_vec.push_back(throttle.get_current());
-  codel.batch_size_vec.push_back((int) codel.get_batch_size());
-  codel.time_stamp_vec.push_back(std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count());
+  codel.register_txc(txc, throttle.get_current());
       }
       // release throttle *before* we commit.  this allows new ops
       // to be prepared and enter pipeline while we are waiting on
@@ -15422,6 +15417,39 @@ void BlueStore::BlueStoreCoDel::register_batch(int64_t queuing_latency, int64_t 
     }
 }
 
+void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, int64_t trottle_size){
+  if(!activated)
+    return;
+  if(!batch_started){
+    batch_started = true;
+    first_txc_start = txc->start;
+  }
+  mono_clock::time_point now = mono_clock::now();
+  if(txc->cost + registered >= batch_size){
+    if(max_queue_length < trottle_size){
+      max_queue_length = trottle_size;
+    }
+    mono_clock::duration lat = now - first_txc_start;
+    int64_t latency = std::chrono::nanoseconds(lat).count();
+    int64_t normalized_latency = (int64_t)(latency / (txc->cost + registered));
+    register_queue_latency(latency);
+    registered = 0;
+    batch_started = false;
+
+    // log batch
+    batch_time_stamp_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
+    batch_lat_vec.push_back(latency);
+    batch_normal_lat_vec.push_back(normalized_latency);
+    batch_size_vec.push_back(batch_size);
+    throttle_size_vec.push_back(trottle_size);
+  }else{
+    registered += txc->cost;
+  }
+  // log txc
+  txc_start_vec.push_back(std::chrono::nanoseconds(txc->start - mono_clock::zero()).count());
+  txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
+}
+
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
     if(activated){
       if (adaptive_down_sizing && target_latency > 0) {
@@ -15471,7 +15499,7 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
         adaptive_down_sizing = cct->_conf.get_val<bool>("bluestore_codel_adaptive_down_sizing");
     }
 
-    activated = true;
+    activated = flase;
     initial_target_latency = 5 * 1000 * 1000;
     initial_interval = 5 * 1000 * 1000;
     initial_batch_size = 48 * 4;
@@ -15493,38 +15521,53 @@ int64_t BlueStore::BlueStoreCoDel::get_batch_size() {
 }
 
 void BlueStore::BlueStoreCoDel::clear_log_data() {
-    time_stamp_vec.clear();
-    lat_vec.clear();
+    txc_start_vec.clear();
+    txc_end_vec.clear();
+    batch_time_stamp_vec.clear();
+    batch_lat_vec.clear();
+    batch_normal_lat_vec.clear();
     batch_size_vec.clear();
-    kvq_size_vec.clear();
-    normal_lat_vec.clear();
+    throttle_size_vec.clear();
 }
 
 void BlueStore::BlueStoreCoDel::dump_log_data() {
     if(time_stamp_vec.empty())
         return;
     // create an filestream object
-    std::string name = "codel_log_";
+    std::string prefix = "codel_log_";
+    std::string index = "";
     if(activated){
-      name = name + std::to_string(initial_target_latency/1000) + "_" + std::to_string(initial_interval/1000);
+      index = "_" + std::to_string(initial_target_latency/1000) + "_" + std::to_string(initial_interval/1000);
     }
-    std::ofstream csvfile(name + ".csv");
+    std::ofstream batch_file(prefix + "batch" + index + ".csv");
     // add column names
-    csvfile << "time, batch_size, kv_q_size, lat, normal_lat" << "\n";
+    batch_file << "time, lat, normal_lat, bs, throttle_size" << "\n";
 
     for (unsigned int i = 0; i < time_stamp_vec.size(); i++){
-        csvfile << std::fixed << time_stamp_vec[i];
-        csvfile << ",";
-        csvfile << std::fixed << batch_size_vec[i];
-        csvfile << ",";
-        csvfile << std::fixed << kvq_size_vec[i];
-        csvfile << ",";
-        csvfile << std::fixed << lat_vec[i];
-        csvfile << ",";
-        csvfile << std::fixed << normal_lat_vec[i];
-        csvfile << "\n";
+        batch_file << std::fixed << time_stamp_vec[i];
+        batch_file << ",";
+        batch_file << std::fixed << batch_lat_vec[i];
+        batch_file << ",";
+        batch_file << std::fixed << batch_normal_lat_vec[i];
+        batch_file << ",";
+        batch_file << std::fixed << throttle_size_vec[i];
+        batch_file << ",";
+        batch_file << std::fixed << batch_size_vec[i];
+        batch_file << "\n";
     }
-    csvfile.close();
+    batch_file.close();
+
+    std::ofstream txc_file(prefix + "txc" + index + ".csv");
+    // add column names
+    txc_file << "start, end" << "\n";
+
+    for (unsigned int i = 0; i < txc_start_vec.size(); i++){
+        txc_file << std::fixed << txc_start_vec[i];
+        txc_file << ",";
+        txc_file << std::fixed << txc_end_vec[i];
+        txc_file << "\n";
+    }
+    txc_file.close();
 }
 
 // DB key value Histogram

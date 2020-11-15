@@ -1831,15 +1831,19 @@ public:
       }
 
       // log data
-      vector<double> time_stamp_vec;
-      vector<double> kvq_lat_vec;
-      vector<double> lat_vec;
-      vector<double> normal_lat_vec;
+      vector<double> txc_start_vec;
+      vector<double> txc_end_vec;
+
+      vector<double> batch_time_stamp_vec;
+      vector<double> batch_lat_vec;
+      vector<double> batch_normal_lat_vec;
       vector<int> batch_size_vec;
-      vector<int> kvq_size_vec;
+      vector<int> throttle_size_vec;
+
       std::chrono::time_point<mono_clock> created_time = mono_clock::now();
 
       void register_batch(int64_t queuing_latency, int64_t batch_size);
+      void register_txc(TransContext *txc, int64_t trottle_size);
       void init(CephContext* cct);
       int64_t get_batch_size();
       void flush_log();
@@ -1852,7 +1856,10 @@ public:
       double batch_size_limit_ratio = 1.5;
       bool adaptive_down_sizing = true;
       int64_t batch_size;
+      int64_t registered = 0;
+      mono_clock::time_point first_txc_start;
       int64_t max_queue_length = 0;
+      bool batch_started = false;
 
       void on_min_latency_violation();
       void on_no_violation();
