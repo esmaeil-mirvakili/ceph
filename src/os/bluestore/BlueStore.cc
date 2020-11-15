@@ -15530,8 +15530,6 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
 }
 
 void BlueStore::BlueStoreCoDel::dump_log_data() {
-    if(batch_time_stamp_vec.empty())
-        return;
     // create an filestream object
     std::string prefix = "codel_log_";
     std::string index = "";
