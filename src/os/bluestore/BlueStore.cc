@@ -15418,33 +15418,32 @@ void BlueStore::BlueStoreCoDel::register_batch(int64_t queuing_latency, int64_t 
 }
 
 void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, int64_t trottle_size){
-  if(!activated)
-    return;
   if(!batch_started){
     batch_started = true;
     first_txc_start = txc->start;
   }
   mono_clock::time_point now = mono_clock::now();
-  if(txc->cost + registered >= batch_size){
-    if(max_queue_length < trottle_size){
-      max_queue_length = trottle_size;
-    }
-    mono_clock::duration lat = now - first_txc_start;
-    int64_t latency = std::chrono::nanoseconds(lat).count();
-    int64_t normalized_latency = (int64_t)(latency / (txc->cost + registered));
-    register_queue_latency(latency);
-    registered = 0;
-    batch_started = false;
+  if(activated)
+    if(txc->cost + registered >= batch_size){
+      if(max_queue_length < trottle_size){
+        max_queue_length = trottle_size;
+      }
+      mono_clock::duration lat = now - first_txc_start;
+      int64_t latency = std::chrono::nanoseconds(lat).count();
+      int64_t normalized_latency = (int64_t)(latency / (txc->cost + registered));
+      register_queue_latency(latency);
+      registered = 0;
+      batch_started = false;
 
-    // log batch
-    batch_time_stamp_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
-    batch_lat_vec.push_back(latency);
-    batch_normal_lat_vec.push_back(normalized_latency);
-    batch_size_vec.push_back(batch_size);
-    throttle_size_vec.push_back(trottle_size);
-  }else{
-    registered += txc->cost;
-  }
+      // log batch
+      batch_time_stamp_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
+      batch_lat_vec.push_back(latency);
+      batch_normal_lat_vec.push_back(normalized_latency);
+      batch_size_vec.push_back(batch_size);
+      throttle_size_vec.push_back(trottle_size);
+    }else{
+      registered += txc->cost;
+    }
   // log txc
   txc_start_vec.push_back(std::chrono::nanoseconds(txc->start - mono_clock::zero()).count());
   txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
