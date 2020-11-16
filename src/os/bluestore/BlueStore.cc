@@ -15438,7 +15438,7 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, int64_t trottle_
     latency += latency_sum;
     int64_t normalized_latency = (int64_t)(latency / (txc->cost + registered));
     if(activated)
-      register_queue_latency(latency);
+      register_queue_latency(normalized_latency);
     registered = 0;
     batch_started = false;
     latency_sum = 0;
