@@ -10984,7 +10984,7 @@ void BlueStore::_txc_calc_cost(TransContext *txc)
   auto ios = 1 + txc->ioc.get_num_ios();
   auto cost = throttle_cost_per_io.load();
 //  txc->cost = ios * cost + txc->bytes;
-  txc->cost = ceil(txc->bytes / 1024);
+  txc->cost = txc->bytes;
   txc->ios = ios;
   dout(10) << __func__ << " " << txc << " cost " << txc->cost << " ("
 	   << ios << " ios * " << cost << " + " << txc->bytes
@@ -11866,8 +11866,6 @@ void BlueStore::_kv_sync_thread()
 	if (txc->had_ios) {
 	  --txc->osr->txc_with_unstable_io;
 	}
-  mono_clock::duration lat = mono_clock::now() - txc->start_time;
-  double normalized_lat = std::chrono::nanoseconds(lat).count() / ceil(txc->bytes / 1024);
   codel.register_txc(txc, throttle.get_current());
       }
       // release throttle *before* we commit.  this allows new ops
@@ -15418,22 +15416,32 @@ void BlueStore::BlueStoreCoDel::register_batch(int64_t queuing_latency, int64_t 
 }
 
 void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, int64_t trottle_size){
+  mono_clock::time_point now = mono_clock::now();
   if(!batch_started){
     batch_started = true;
     first_txc_start = txc->start;
+    last_txc_end = now;
+  }else{
+    if(txc->start > last_txc_end){
+      int64_t latency = std::chrono::nanoseconds(last_txc_end - first_txc_start).count();
+      latency_sum += latency;
+      first_txc_start = txc->start;
+    }
+    last_txc_end = now;
   }
-  mono_clock::time_point now = mono_clock::now();
   if(txc->cost + registered >= batch_size){
     if(max_queue_length < trottle_size){
       max_queue_length = trottle_size;
     }
     mono_clock::duration lat = now - first_txc_start;
     int64_t latency = std::chrono::nanoseconds(lat).count();
+    latency += latency_sum;
     int64_t normalized_latency = (int64_t)(latency / (txc->cost + registered));
     if(activated)
       register_queue_latency(latency);
     registered = 0;
     batch_started = false;
+    latency_sum = 0;
 
     // log batch
     batch_time_stamp_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
@@ -15501,7 +15509,7 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     activated = false;
     initial_target_latency = 5 * 1000 * 1000;
     initial_interval = 5 * 1000 * 1000;
-    initial_batch_size = 48 * 4;
+    initial_batch_size = 16 * 4096;
     batch_size = initial_batch_size;
     batch_size_limit_ratio = 1.5;
     adaptive_down_sizing = true;

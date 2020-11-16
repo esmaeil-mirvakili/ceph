@@ -1858,6 +1858,8 @@ public:
       int64_t batch_size;
       int64_t registered = 0;
       mono_clock::time_point first_txc_start;
+      mono_clock::time_point last_txc_end;
+      int64_t latency_sum = 0;
       int64_t max_queue_length = 0;
       bool batch_started = false;
 
