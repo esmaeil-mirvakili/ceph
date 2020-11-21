@@ -15534,7 +15534,7 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     txc_start_vec.clear();
     txc_end_vec.clear();
 
-    raed_start_vec.clear();
+    read_start_vec.clear();
     read_end_vec.clear();
     
     batch_time_stamp_vec.clear();
