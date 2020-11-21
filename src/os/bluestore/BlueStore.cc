@@ -9341,6 +9341,9 @@ int BlueStore::read(
     l_bluestore_read_lat,
     mono_clock::now() - start,
     cct->_conf->bluestore_log_op_age);
+    auto end = mono_clock::now();
+    codel.read_start_vec.push_back(std::chrono::nanoseconds(start - mono_clock::zero()).count());
+    codel.read_end_vec.push_back(std::chrono::nanoseconds(end - mono_clock::zero()).count());
   return r;
 }
 
@@ -15530,6 +15533,10 @@ int64_t BlueStore::BlueStoreCoDel::get_batch_size() {
 void BlueStore::BlueStoreCoDel::clear_log_data() {
     txc_start_vec.clear();
     txc_end_vec.clear();
+
+    raed_start_vec.clear();
+    read_end_vec.clear();
+    
     batch_time_stamp_vec.clear();
     batch_lat_vec.clear();
     batch_normal_lat_vec.clear();
@@ -15542,7 +15549,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     std::string prefix = "codel_log_";
     std::string index = "";
     if(activated){
-      index = "_" + std::to_string(initial_target_latency/1000) + "_" + std::to_string(initial_interval/1000);
+      index = "_" + std::to_string(initial_target_latency) + "_" + std::to_string(initial_interval);
     }
     std::ofstream batch_file(prefix + "batch" + index + ".csv");
     // add column names
@@ -15573,6 +15580,18 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
         txc_file << "\n";
     }
     txc_file.close();
+
+    std::ofstream read_file(prefix + "read" + index + ".csv");
+    // add column names
+    read_file << "start, end" << "\n";
+
+    for (unsigned int i = 0; i < txc_start_vec.size(); i++){
+        read_file << std::fixed << read_start_vec[i];
+        read_file << ",";
+        read_file << std::fixed << read_end_vec[i];
+        read_file << "\n";
+    }
+    read_file.close();
 }
 
 // DB key value Histogram

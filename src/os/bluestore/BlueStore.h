@@ -1834,6 +1834,9 @@ public:
       vector<double> txc_start_vec;
       vector<double> txc_end_vec;
 
+      vector<double> read_start_vec;
+      vector<double> read_end_vec;
+
       vector<double> batch_time_stamp_vec;
       vector<double> batch_lat_vec;
       vector<double> batch_normal_lat_vec;
