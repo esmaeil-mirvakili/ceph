@@ -9341,9 +9341,6 @@ int BlueStore::read(
     l_bluestore_read_lat,
     mono_clock::now() - start,
     cct->_conf->bluestore_log_op_age);
-    auto end = mono_clock::now();
-    codel.read_start_vec.push_back(std::chrono::nanoseconds(start - mono_clock::zero()).count());
-    codel.read_end_vec.push_back(std::chrono::nanoseconds(end - mono_clock::zero()).count());
   return r;
 }
 
@@ -9623,7 +9620,7 @@ int BlueStore::_do_read(
            << " size 0x" << o->onode.size << " (" << std::dec
            << o->onode.size << ")" << dendl;
   bl.clear();
-
+  mono_clock::time_point start_time = mono_clock::now();
   if (offset >= o->onode.size) {
     return r;
   }
@@ -9720,6 +9717,8 @@ int BlueStore::_do_read(
     s << " reads with retries: " << logger->get(l_bluestore_reads_with_retries);
     _set_spurious_read_errors_alert(s.str());
   }
+  codel.read_start_vec.push_back(std::chrono::nanoseconds(start_time - mono_clock::zero()).count());
+  codel.read_end_vec.push_back(std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count());
   return r;
 }
 
