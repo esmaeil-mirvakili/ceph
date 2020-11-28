@@ -1843,7 +1843,7 @@ public:
       vector<int> batch_size_vec;
       vector<int> throttle_size_vec;
 
-      std::ofstream st("codel_log_stack_trace.csv");
+      std::ofstream st = std::ofstream("codel_log_stack_trace.csv");
 
       std::chrono::time_point<mono_clock> created_time = mono_clock::now();
 
