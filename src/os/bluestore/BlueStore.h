@@ -1829,7 +1829,7 @@ public:
   public:
       BlueStoreCoDel(CephContext *cct){
           init(cct);
-          dump_st.open("codel_log_stack_trace.csv")
+          dump_st.open("codel_log_stack_trace.csv");
       }
 
       // log data
