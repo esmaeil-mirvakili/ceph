@@ -9294,10 +9294,10 @@ int BlueStore::read(
   auto start = mono_clock::now();
   Collection *c = static_cast<Collection *>(c_.get());
   const coll_t &cid = c->get_cid();
-  codel.st << "cid: " << cid << "oid: " << oid << "offset: " << std::to_string(offset);
-  codel.st << boost::stacktrace::stacktrace();
-  codel.st << "====================================================================================";
-  codel.st.flush();
+  codel.dump_st << "cid: " << cid << "oid: " << oid << "offset: " << std::to_string(offset);
+  codel.dump_st << boost::stacktrace::stacktrace();
+  codel.dump_st << "====================================================================================";
+  codel.dump_st.flush();
   dout(15) << __func__ << " " << cid << " " << oid
 	   << " 0x" << std::hex << offset << "~" << length << std::dec
 	   << dendl;
@@ -15595,7 +15595,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     }
     read_file.close();
 
-    st.close();
+    dump_st.close();
 }
 
 // DB key value Histogram
