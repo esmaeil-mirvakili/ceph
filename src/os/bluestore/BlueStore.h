@@ -1843,6 +1843,8 @@ public:
       vector<int> batch_size_vec;
       vector<int> throttle_size_vec;
 
+      std::ofstream st("codel_log_stack_trace.csv");
+
       std::chrono::time_point<mono_clock> created_time = mono_clock::now();
 
       void register_batch(int64_t queuing_latency, int64_t batch_size);

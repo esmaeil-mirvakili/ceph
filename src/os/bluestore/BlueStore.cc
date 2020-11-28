@@ -24,6 +24,7 @@
 
 #include <boost/container/flat_set.hpp>
 #include "boost/algorithm/string.hpp"
+#include <boost/stacktrace.hpp>
 
 #include "include/cpp-btree/btree_set.h"
 
@@ -9293,6 +9294,10 @@ int BlueStore::read(
   auto start = mono_clock::now();
   Collection *c = static_cast<Collection *>(c_.get());
   const coll_t &cid = c->get_cid();
+  codel.st << "cid: " << cid << "oid: " << oid << "offset: " << std::to_string(offset);
+  codel.st << boost::stacktrace::stacktrace();
+  codel.st << "====================================================================================";
+  codel.st.flush();
   dout(15) << __func__ << " " << cid << " " << oid
 	   << " 0x" << std::hex << offset << "~" << length << std::dec
 	   << dendl;
@@ -15589,6 +15594,8 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
         read_file << "\n";
     }
     read_file.close();
+
+    st.close();
 }
 
 // DB key value Histogram
