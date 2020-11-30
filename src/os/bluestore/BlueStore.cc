@@ -9294,7 +9294,7 @@ int BlueStore::read(
   auto start = mono_clock::now();
   Collection *c = static_cast<Collection *>(c_.get());
   const coll_t &cid = c->get_cid();
-  codel.dump_st << std::chrono::nanoseconds(now - mono_clock::zero()).count() << "\n";
+  codel.dump_st << std::chrono::nanoseconds(start - mono_clock::zero()).count() << "\n";
   codel.dump_st << "cid: " << cid << " oid: " << oid << " offset: " << std::to_string(offset) << "\n";
   codel.dump_st << boost::stacktrace::stacktrace();
   codel.dump_st << "====================================================================================";
