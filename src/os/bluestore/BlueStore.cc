@@ -4417,6 +4417,7 @@ private:
         else if (command == "reset kvq vector")
         {
             store->codel.clear_log_data();
+            store->codel.recording = true;
         }
         return 0;
     }
@@ -9294,11 +9295,13 @@ int BlueStore::read(
   auto start = mono_clock::now();
   Collection *c = static_cast<Collection *>(c_.get());
   const coll_t &cid = c->get_cid();
-  codel.dump_st << std::chrono::nanoseconds(start - mono_clock::zero()).count() << "\n";
-  codel.dump_st << "cid: " << cid << " oid: " << oid << " offset: " << std::to_string(offset) << "\n";
-  codel.dump_st << boost::stacktrace::stacktrace();
-  codel.dump_st << "====================================================================================";
-  codel.dump_st.flush();
+  if(code.recording){
+    codel.dump_st << std::chrono::nanoseconds(start - mono_clock::zero()).count() << "\n";
+    codel.dump_st << "cid: " << cid << " oid: " << oid << " offset: " << std::to_string(offset) << "\n";
+    codel.dump_st << boost::stacktrace::stacktrace();
+    codel.dump_st << "====================================================================================";
+    codel.dump_st.flush();
+  }
   dout(15) << __func__ << " " << cid << " " << oid
 	   << " 0x" << std::hex << offset << "~" << length << std::dec
 	   << dendl;
@@ -11873,9 +11876,11 @@ void BlueStore::_kv_sync_thread()
 	  --txc->osr->txc_with_unstable_io;
 	}
   codel.register_txc(txc, throttle.get_current());
-  codel.dump_st2 << std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count() << "\n";
-  codel.dump_st2 << boost::stacktrace::stacktrace();
-  codel.dump_st2 << "====================================================================================";
+  if(code.recording){
+    codel.dump_st2 << std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count() << "\n";
+    codel.dump_st2 << boost::stacktrace::stacktrace();
+    codel.dump_st2 << "====================================================================================";
+  }
       }
       codel.dump_st2.flush();
       // release throttle *before* we commit.  this allows new ops

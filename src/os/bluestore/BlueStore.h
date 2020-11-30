@@ -1831,6 +1831,7 @@ public:
           init(cct);
           dump_st.open("codel_log_stack_trace.csv");
           dump_st2.open("codel_log_stack_trace2.csv");
+          recording = false;
       }
 
       // log data
@@ -1848,6 +1849,7 @@ public:
 
       std::ofstream dump_st;
       std::ofstream dump_st2;
+      bool recording;
 
       std::chrono::time_point<mono_clock> created_time = mono_clock::now();
 
