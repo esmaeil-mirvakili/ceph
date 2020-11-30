@@ -9295,7 +9295,7 @@ int BlueStore::read(
   auto start = mono_clock::now();
   Collection *c = static_cast<Collection *>(c_.get());
   const coll_t &cid = c->get_cid();
-  if(code.recording){
+  if(codel.recording){
     codel.dump_st << std::chrono::nanoseconds(start - mono_clock::zero()).count() << "\n";
     codel.dump_st << "cid: " << cid << " oid: " << oid << " offset: " << std::to_string(offset) << "\n";
     codel.dump_st << boost::stacktrace::stacktrace();
@@ -11876,7 +11876,7 @@ void BlueStore::_kv_sync_thread()
 	  --txc->osr->txc_with_unstable_io;
 	}
   codel.register_txc(txc, throttle.get_current());
-  if(code.recording){
+  if(codel.recording){
     codel.dump_st2 << std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count() << "\n";
     codel.dump_st2 << boost::stacktrace::stacktrace();
     codel.dump_st2 << "====================================================================================";
