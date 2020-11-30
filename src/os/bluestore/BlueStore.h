@@ -1830,6 +1830,7 @@ public:
       BlueStoreCoDel(CephContext *cct){
           init(cct);
           dump_st.open("codel_log_stack_trace.csv");
+          dump_st2.open("codel_log_stack_trace2.csv");
       }
 
       // log data
@@ -1846,6 +1847,7 @@ public:
       vector<int> throttle_size_vec;
 
       std::ofstream dump_st;
+      std::ofstream dump_st2;
 
       std::chrono::time_point<mono_clock> created_time = mono_clock::now();
 

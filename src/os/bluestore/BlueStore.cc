@@ -9294,7 +9294,8 @@ int BlueStore::read(
   auto start = mono_clock::now();
   Collection *c = static_cast<Collection *>(c_.get());
   const coll_t &cid = c->get_cid();
-  codel.dump_st << "cid: " << cid << "oid: " << oid << "offset: " << std::to_string(offset);
+  codel.dump_st << std::chrono::nanoseconds(now - mono_clock::zero()).count() << "\n";
+  codel.dump_st << "cid: " << cid << " oid: " << oid << " offset: " << std::to_string(offset) << "\n";
   codel.dump_st << boost::stacktrace::stacktrace();
   codel.dump_st << "====================================================================================";
   codel.dump_st.flush();
@@ -11872,7 +11873,12 @@ void BlueStore::_kv_sync_thread()
 	  --txc->osr->txc_with_unstable_io;
 	}
   codel.register_txc(txc, throttle.get_current());
+  codel.dump_st2 << std::chrono::nanoseconds(now - mono_clock::zero()).count() << "\n";
+  codel.dump_st2 << "txc: " << *txc "\n";
+  codel.dump_st2 << boost::stacktrace::stacktrace();
+  codel.dump_st2 << "====================================================================================";
       }
+      codel.dump_st2.flush();
       // release throttle *before* we commit.  this allows new ops
       // to be prepared and enter pipeline while we are waiting on
       // the kv commit sync/flush.  then hopefully on the next
@@ -15596,6 +15602,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     read_file.close();
 
     dump_st.close();
+    dump_st2.close();
 }
 
 // DB key value Histogram
