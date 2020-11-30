@@ -11873,7 +11873,7 @@ void BlueStore::_kv_sync_thread()
 	  --txc->osr->txc_with_unstable_io;
 	}
   codel.register_txc(txc, throttle.get_current());
-  codel.dump_st2 << std::chrono::nanoseconds(now - mono_clock::zero()).count() << "\n";
+  codel.dump_st2 << std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count() << "\n";
   codel.dump_st2 << "txc: " << *txc "\n";
   codel.dump_st2 << boost::stacktrace::stacktrace();
   codel.dump_st2 << "====================================================================================";
