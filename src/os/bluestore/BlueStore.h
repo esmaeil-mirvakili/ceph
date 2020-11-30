@@ -1831,7 +1831,7 @@ public:
           init(cct);
           dump_st.open("codel_log_stack_trace.csv");
           dump_st2.open("codel_log_stack_trace2.csv");
-          recording = false;
+          recording = true;
       }
 
       // log data
