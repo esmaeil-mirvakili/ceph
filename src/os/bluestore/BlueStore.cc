@@ -9295,13 +9295,13 @@ int BlueStore::read(
   auto start = mono_clock::now();
   Collection *c = static_cast<Collection *>(c_.get());
   const coll_t &cid = c->get_cid();
-  if(codel.recording){
-    codel.dump_st << std::chrono::nanoseconds(start - mono_clock::zero()).count() << "\n";
-    codel.dump_st << "cid: " << cid << " oid: " << oid << " offset: " << std::to_string(offset) << "\n";
-    codel.dump_st << boost::stacktrace::stacktrace();
-    codel.dump_st << "====================================================================================";
-    codel.dump_st.flush();
-  }
+  // if(codel.recording){
+  //   codel.dump_st << std::chrono::nanoseconds(start - mono_clock::zero()).count() << "\n";
+  //   codel.dump_st << "cid: " << cid << " oid: " << oid << " offset: " << std::to_string(offset) << "\n";
+  //   codel.dump_st << boost::stacktrace::stacktrace();
+  //   codel.dump_st << "====================================================================================";
+  //   codel.dump_st.flush();
+  // }
   dout(15) << __func__ << " " << cid << " " << oid
 	   << " 0x" << std::hex << offset << "~" << length << std::dec
 	   << dendl;
@@ -11876,13 +11876,13 @@ void BlueStore::_kv_sync_thread()
 	  --txc->osr->txc_with_unstable_io;
 	}
   codel.register_txc(txc, throttle.get_current());
-  if(codel.recording){
-    codel.dump_st2 << std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count() << "\n";
-    codel.dump_st2 << boost::stacktrace::stacktrace();
-    codel.dump_st2 << "====================================================================================";
-  }
+  // if(codel.recording){
+  //   codel.dump_st2 << std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count() << "\n";
+  //   codel.dump_st2 << boost::stacktrace::stacktrace();
+  //   codel.dump_st2 << "====================================================================================";
+  // }
       }
-      codel.dump_st2.flush();
+      // codel.dump_st2.flush();
       // release throttle *before* we commit.  this allows new ops
       // to be prepared and enter pipeline while we are waiting on
       // the kv commit sync/flush.  then hopefully on the next
@@ -15597,7 +15597,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     // add column names
     read_file << "start, end" << "\n";
 
-    for (unsigned int i = 0; i < txc_start_vec.size(); i++){
+    for (unsigned int i = 0; i < read_start_vec.size(); i++){
         read_file << std::fixed << read_start_vec[i];
         read_file << ",";
         read_file << std::fixed << read_end_vec[i];
@@ -15605,8 +15605,8 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     }
     read_file.close();
 
-    dump_st.close();
-    dump_st2.close();
+    // dump_st.close();
+    // dump_st2.close();
 }
 
 // DB key value Histogram
