@@ -11051,6 +11051,7 @@ void BlueStore::_txc_state_proc(TransContext *txc)
 #endif
 	txc->had_ios = true;
 	_txc_aio_submit(txc);
+    txc->aio_submit_time = mono_clock::now();
 	return;
       }
       // ** fall-thru **
@@ -11070,6 +11071,7 @@ void BlueStore::_txc_state_proc(TransContext *txc)
       return;
 
     case TransContext::STATE_IO_DONE:
+        txc->aio_done_time = mono_clock::now();
       ceph_assert(ceph_mutex_is_locked(txc->osr->qlock));  // see _txc_finish_io
       if (txc->had_ios) {
 	++txc->osr->txc_with_unstable_io;
@@ -11864,6 +11866,7 @@ void BlueStore::_kv_sync_thread()
       mono_clock::duration max_lat = mono_clock::zero() - mono_clock::zero();
       int64_t bytes = 0;
       for (auto txc : kv_committing) {
+          txc->kv_dequeue_time = mono_clock::now();
 	throttle.log_state_latency(*txc, logger, l_bluestore_state_kv_queued_lat);
 
 	if (txc->get_state() == TransContext::STATE_KV_QUEUED) {
@@ -15470,6 +15473,8 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, int64_t trottle_
   // log txc
   txc_start_vec.push_back(std::chrono::nanoseconds(txc->start - mono_clock::zero()).count());
   txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
+  pure_latency.push_back(std::chrono::nanoseconds(txc->start - now).count());
+
 }
 
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
@@ -15545,6 +15550,7 @@ int64_t BlueStore::BlueStoreCoDel::get_batch_size() {
 void BlueStore::BlueStoreCoDel::clear_log_data() {
     txc_start_vec.clear();
     txc_end_vec.clear();
+    pure_latency.clear();
 
     read_start_vec.clear();
     read_end_vec.clear();
@@ -15589,6 +15595,8 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
         txc_file << std::fixed << txc_start_vec[i];
         txc_file << ",";
         txc_file << std::fixed << txc_end_vec[i];
+        txc_file << ",";
+        txc_file << std::fixed << pure_latency[i];
         txc_file << "\n";
     }
     txc_file.close();

@@ -1619,11 +1619,13 @@ public:
 
     uint64_t seq = 0;
     ceph::mono_clock::time_point start;
+    ceph::mono_clock::time_point aio_submit_time;
+    ceph::mono_clock::time_point aio_done_time;
+    ceph::mono_clock::time_point kv_dequeue_time;
     ceph::mono_clock::time_point start_time;
     ceph::mono_clock::time_point last_stamp;
 
     ceph::mono_clock::time_point kv_queued_time;
-
 
     uint64_t last_nid = 0;     ///< if non-zero, highest new nid we allocated
     uint64_t last_blobid = 0;  ///< if non-zero, highest new blobid we allocated
@@ -1837,6 +1839,7 @@ public:
       // log data
       vector<double> txc_start_vec;
       vector<double> txc_end_vec;
+      vector<double> pure_latency;
 
       vector<double> read_start_vec;
       vector<double> read_end_vec;
