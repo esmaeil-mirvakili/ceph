@@ -1840,6 +1840,7 @@ public:
       vector<double> txc_start_vec;
       vector<double> txc_end_vec;
       vector<double> pure_latency;
+      vector<uint64_t> io_size;
 
       vector<double> read_start_vec;
       vector<double> read_end_vec;
@@ -1847,6 +1848,7 @@ public:
       vector<double> batch_time_stamp_vec;
       vector<double> batch_lat_vec;
       vector<double> batch_normal_lat_vec;
+      vector<int> batch_io_size;
       vector<int> batch_size_vec;
       vector<int> throttle_size_vec;
 
@@ -1871,6 +1873,7 @@ public:
       bool adaptive_down_sizing = true;
       int64_t batch_size;
       int64_t registered = 0;
+      int64_t ios_registered = 0;
       mono_clock::time_point first_txc_start;
       mono_clock::time_point last_txc_end;
       int64_t latency_sum = 0;

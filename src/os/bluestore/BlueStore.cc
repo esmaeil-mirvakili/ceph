@@ -15458,6 +15458,7 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, int64_t trottle_
     if(activated)
       register_queue_latency(normalized_latency);
     registered = 0;
+    ios_registered = 0;
     batch_started = false;
     latency_sum = 0;
 
@@ -15467,14 +15468,16 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, int64_t trottle_
     batch_normal_lat_vec.push_back(normalized_latency);
     batch_size_vec.push_back(batch_size);
     throttle_size_vec.push_back(trottle_size);
+    batch_io_size.push_back(txc->ios);
   }else{
     registered += txc->cost;
+    ios_registered += txc->ios;
   }
   // log txc
   txc_start_vec.push_back(std::chrono::nanoseconds(txc->start - mono_clock::zero()).count());
   txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
   pure_latency.push_back(std::chrono::nanoseconds(txc->start - now).count());
-
+  io_size.push_back(txc->ios);
 }
 
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
@@ -15529,7 +15532,7 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     activated = false;
     initial_target_latency = 5 * 1000 * 1000;
     initial_interval = 5 * 1000 * 1000;
-    initial_batch_size = 16 * 4096;
+    initial_batch_size = 100 * 1024 * 1024;
     batch_size = initial_batch_size;
     batch_size_limit_ratio = 1.5;
     adaptive_down_sizing = true;
@@ -15551,6 +15554,7 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     txc_start_vec.clear();
     txc_end_vec.clear();
     pure_latency.clear();
+    io_size.clear();
 
     read_start_vec.clear();
     read_end_vec.clear();
@@ -15560,6 +15564,7 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     batch_normal_lat_vec.clear();
     batch_size_vec.clear();
     throttle_size_vec.clear();
+    batch_io_size.clear();
 }
 
 void BlueStore::BlueStoreCoDel::dump_log_data() {
@@ -15583,6 +15588,8 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
         batch_file << std::fixed << throttle_size_vec[i];
         batch_file << ",";
         batch_file << std::fixed << batch_size_vec[i];
+        batch_file << ",";
+        batch_file << std::fixed << batch_io_size[i];
         batch_file << "\n";
     }
     batch_file.close();
@@ -15597,6 +15604,8 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
         txc_file << std::fixed << txc_end_vec[i];
         txc_file << ",";
         txc_file << std::fixed << pure_latency[i];
+        txc_file << ",";
+        txc_file << std::fixed << io_size[i];
         txc_file << "\n";
     }
     txc_file.close();
