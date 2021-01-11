@@ -15476,7 +15476,7 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, int64_t trottle_
   // log txc
   txc_start_vec.push_back(std::chrono::nanoseconds(txc->start - mono_clock::zero()).count());
   txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
-  pure_latency.push_back(std::chrono::nanoseconds(txc->start - now).count());
+  pure_latency.push_back(std::chrono::nanoseconds(txc->kv_dequeue_time - now).count());
   io_size.push_back(txc->ios);
 }
 
