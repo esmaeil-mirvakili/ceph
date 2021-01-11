@@ -15437,13 +15437,13 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, int64_t trottle_
   mono_clock::time_point now = mono_clock::now();
   if(!batch_started){
     batch_started = true;
-    first_txc_start = txc->start;
+    first_txc_start = txc->kv_dequeue_time;
     last_txc_end = now;
   }else{
-    if(txc->start > last_txc_end){
+    if(txc->kv_dequeue_time > last_txc_end){
       int64_t latency = std::chrono::nanoseconds(last_txc_end - first_txc_start).count();
       latency_sum += latency;
-      first_txc_start = txc->start;
+      first_txc_start = txc->kv_dequeue_time;
     }
     last_txc_end = now;
   }
