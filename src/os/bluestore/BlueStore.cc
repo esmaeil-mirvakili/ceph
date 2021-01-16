@@ -15435,49 +15435,49 @@ void BlueStore::BlueStoreCoDel::register_batch(int64_t queuing_latency, int64_t 
 
 void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, int64_t trottle_size){
   mono_clock::time_point now = mono_clock::now();
-  if(!batch_started){
-    batch_started = true;
-    first_txc_start = txc->kv_dequeue_time;
-    last_txc_end = now;
-  }else{
-    if(txc->kv_dequeue_time > last_txc_end){
-      int64_t latency = std::chrono::nanoseconds(last_txc_end - first_txc_start).count();
-      latency_sum += latency;
-      first_txc_start = txc->kv_dequeue_time;
-    }
-    last_txc_end = now;
-  }
-  if(txc->cost + registered >= batch_size){
-    if(max_queue_length < trottle_size){
-      max_queue_length = trottle_size;
-    }
-    mono_clock::duration lat = now - first_txc_start;
-    int64_t latency = std::chrono::nanoseconds(lat).count();
-    latency += latency_sum;
-    int64_t normalized_latency = (int64_t)(latency / (txc->cost + registered));
-    if(activated)
-      register_queue_latency(normalized_latency);
-    registered = 0;
-    ios_registered = 0;
-    batch_started = false;
-    latency_sum = 0;
+  //if(!batch_started){
+  //  batch_started = true;
+  //  first_txc_start = txc->kv_dequeue_time;
+  //  last_txc_end = now;
+  //}else{
+  //  if(txc->kv_dequeue_time > last_txc_end){
+  //    int64_t latency = std::chrono::nanoseconds(last_txc_end - first_txc_start).count();
+  //    latency_sum += latency;
+  //    first_txc_start = txc->kv_dequeue_time;
+  //  }
+  //  last_txc_end = now;
+  //}
+  //if(txc->cost + registered >= batch_size){
+  //  if(max_queue_length < trottle_size){
+  //    max_queue_length = trottle_size;
+  //  }
+  //  mono_clock::duration lat = now - first_txc_start;
+  //  int64_t latency = std::chrono::nanoseconds(lat).count();
+  //  latency += latency_sum;
+  //  int64_t normalized_latency = (int64_t)(latency / (txc->cost + registered));
+  //  if(activated)
+  //    register_queue_latency(normalized_latency);
+  //  registered = 0;
+  //  ios_registered = 0;
+  //  batch_started = false;
+  //  latency_sum = 0;
 
-    // log batch
-    batch_time_stamp_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
-    batch_lat_vec.push_back(latency);
-    batch_normal_lat_vec.push_back(normalized_latency);
-    batch_size_vec.push_back(batch_size);
-    throttle_size_vec.push_back(trottle_size);
-    batch_io_size.push_back(txc->ios);
-  }else{
-    registered += txc->cost;
-    ios_registered += txc->ios;
-  }
+  //  // log batch
+  //  batch_time_stamp_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
+  //  batch_lat_vec.push_back(latency);
+  //  batch_normal_lat_vec.push_back(normalized_latency);
+  //  batch_size_vec.push_back(batch_size);
+  //  throttle_size_vec.push_back(trottle_size);
+  //  batch_io_size.push_back(txc->ios);
+  //}else{
+  //  registered += txc->cost;
+  //  ios_registered += txc->ios;
+  //}
   // log txc
   txc_start_vec.push_back(std::chrono::nanoseconds(txc->start - mono_clock::zero()).count());
   txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
   pure_latency.push_back(std::chrono::nanoseconds(txc->kv_dequeue_time - now).count());
-  io_size.push_back(txc->ios);
+  io_size.push_back(txc->bytes);
 }
 
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
@@ -15532,7 +15532,7 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     activated = false;
     initial_target_latency = 5 * 1000 * 1000;
     initial_interval = 5 * 1000 * 1000;
-    initial_batch_size = 100 * 1024 * 1024;
+    initial_batch_size = 100 * 1024 * 1024 * 1024;
     batch_size = initial_batch_size;
     batch_size_limit_ratio = 1.5;
     adaptive_down_sizing = true;
@@ -15574,29 +15574,29 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     if(activated){
       index = "_" + std::to_string(initial_target_latency) + "_" + std::to_string(initial_interval);
     }
-    std::ofstream batch_file(prefix + "batch" + index + ".csv");
-    // add column names
-    batch_file << "time, lat, normal_lat, bs, throttle_size" << "\n";
+    //std::ofstream batch_file(prefix + "batch" + index + ".csv");
+    //// add column names
+    //batch_file << "time, lat, normal_lat, bs, throttle_size" << "\n";
 
-    for (unsigned int i = 0; i < batch_time_stamp_vec.size(); i++){
-        batch_file << std::fixed << batch_time_stamp_vec[i];
-        batch_file << ",";
-        batch_file << std::fixed << batch_lat_vec[i];
-        batch_file << ",";
-        batch_file << std::fixed << batch_normal_lat_vec[i];
-        batch_file << ",";
-        batch_file << std::fixed << throttle_size_vec[i];
-        batch_file << ",";
-        batch_file << std::fixed << batch_size_vec[i];
-        batch_file << ",";
-        batch_file << std::fixed << batch_io_size[i];
-        batch_file << "\n";
-    }
-    batch_file.close();
+    //for (unsigned int i = 0; i < batch_time_stamp_vec.size(); i++){
+    //    batch_file << std::fixed << batch_time_stamp_vec[i];
+    //    batch_file << ",";
+    //    batch_file << std::fixed << batch_lat_vec[i];
+    //    batch_file << ",";
+    //    batch_file << std::fixed << batch_normal_lat_vec[i];
+    //    batch_file << ",";
+    //    batch_file << std::fixed << throttle_size_vec[i];
+    //    batch_file << ",";
+    //    batch_file << std::fixed << batch_size_vec[i];
+    //    batch_file << ",";
+    //    batch_file << std::fixed << batch_io_size[i];
+    //    batch_file << "\n";
+    //}
+    //batch_file.close();
 
     std::ofstream txc_file(prefix + "txc" + index + ".csv");
     // add column names
-    txc_file << "start, end" << "\n";
+    txc_file << "start, end, pure, size" << "\n";
 
     for (unsigned int i = 0; i < txc_start_vec.size(); i++){
         txc_file << std::fixed << txc_start_vec[i];
