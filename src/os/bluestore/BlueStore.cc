@@ -15533,7 +15533,16 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     initial_target_latency = 5 * 1000 * 1000;
     initial_interval = 5 * 1000 * 1000;
     initial_batch_size = 100 * 1024 * 1024 * 1024;
+
+    std::string line;
+    std::ifstream settingFile("codel.settings");
+    if (getline(settingFile, line)) {
+        initial_batch_size = std::stoi(line);
+    }
+    settingFile.close();
+
     batch_size = initial_batch_size;
+    std::cout << "batch size:" << batch_size << std::endl;
     batch_size_limit_ratio = 1.5;
     adaptive_down_sizing = true;
     this->reset();
