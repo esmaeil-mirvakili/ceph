@@ -10993,7 +10993,8 @@ void BlueStore::_txc_calc_cost(TransContext *txc)
   auto ios = 1 + txc->ioc.get_num_ios();
   auto cost = throttle_cost_per_io.load();
 //  txc->cost = ios * cost + txc->bytes;
-  txc->cost = txc->bytes;
+  //txc->cost = txc->bytes;
+  txc->cost = 1;
   txc->ios = ios;
   dout(10) << __func__ << " " << txc << " cost " << txc->cost << " ("
 	   << ios << " ios * " << cost << " + " << txc->bytes
