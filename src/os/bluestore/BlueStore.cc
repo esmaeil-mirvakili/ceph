@@ -4442,8 +4442,8 @@ BlueStore::BlueStore(CephContext *cct,
   _init_logger();
   cct->_conf.add_observer(this);
   set_cache_shards(1);
-  if(codel.activated)
-    throttle.reset_max(codel.get_batch_size());
+  //if(codel.activated)
+  throttle.reset_max(codel.get_batch_size());
   asok_hook = SocketHook::create(this);
 //    dout(10) << "codel init:" << dendl;
 //    dout(10) << "\tinitial_target_latency:" << cct->_conf->bluestore_codel_target_latency << dendl;
@@ -4573,8 +4573,8 @@ void BlueStore::handle_conf_change(const ConfigProxy& conf,
       changed.count("bluestore_throttle_deferred_bytes") ||
       changed.count("bluestore_throttle_trace_rate")) {
     throttle.reset_throttle(conf);
-    if(codel.activated)
-      throttle.reset_max(codel.get_batch_size());
+    //if(codel.activated)
+    throttle.reset_max(codel.get_batch_size());
   }
   if (changed.count("bluestore_max_defer_interval")) {
     if (bdev) {
@@ -11865,6 +11865,8 @@ void BlueStore::_kv_sync_thread()
       std::chrono::time_point<mono_clock> txc_time;
       mono_clock::duration max_lat = mono_clock::zero() - mono_clock::zero();
       int64_t bytes = 0;
+      int64_t latency = 0;
+      int64_t txc_num = 0;
       for (auto txc : kv_committing) {
           txc->kv_dequeue_time = mono_clock::now();
 	throttle.log_state_latency(*txc, logger, l_bluestore_state_kv_queued_lat);
@@ -11878,7 +11880,9 @@ void BlueStore::_kv_sync_thread()
 	if (txc->had_ios) {
 	  --txc->osr->txc_with_unstable_io;
 	}
-  codel.register_txc(txc, throttle.get_current());
+  latency += codel.register_txc(txc, throttle.get_current());
+  bytes += txc->bytes;
+  txc_num++;
   // if(codel.recording){
   //   codel.dump_st2 << std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count() << "\n";
   //   codel.dump_st2 << boost::stacktrace::stacktrace();
@@ -11892,8 +11896,9 @@ void BlueStore::_kv_sync_thread()
       // iteration there will already be ops awake.  otherwise, we
       // end up going to sleep, and then wake up when the very first
       // transaction is ready for commit.
-      if(codel.activated)
-        throttle.reset_max(codel.get_batch_size());
+      //if(codel.activated)
+      codel.register_batch(latency, bytes, txc_num);
+      throttle.reset_max(codel.get_batch_size());
       throttle.release_kv_throttle(costs);
 
       // cleanup sync deferred keys
@@ -15424,16 +15429,21 @@ void BlueStore::BlueStoreThrottle::complete(TransContext &txc)
 }
 #endif
 
-void BlueStore::BlueStoreCoDel::register_batch(int64_t queuing_latency, int64_t batch_size) {
+void BlueStore::BlueStoreCoDel::register_batch(int64_t queuing_latency, int64_t batch_size, int64_t txc_num) {
     if(activated){
       if(max_queue_length < batch_size){
           max_queue_length = batch_size;
       }
       register_queue_latency(queuing_latency);
     }
+    mono_clock::time_point now = mono_clock::now();
+    batch_time_stamp_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
+    batch_lat_vec.push_back(queuing_latency);
+    batch_size_vec.push_back(batch_size);
+    batch_sizes.push_back(txc_num);
 }
 
-void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, int64_t trottle_size){
+int64_t BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, int64_t trottle_size){
   mono_clock::time_point now = mono_clock::now();
   //if(!batch_started){
   //  batch_started = true;
@@ -15475,9 +15485,9 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, int64_t trottle_
   //}
   // log txc
   txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
-  txc_end_vec.push_back(std::chrono::nanoseconds(txc->last_stamp - mono_clock::zero()).count());
-  pure_latency.push_back(txc->osd_pool_id);
+  txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
   io_size.push_back(txc->bytes);
+  return std::chrono::nanoseconds(now - txc->start_time).count()
 }
 
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
@@ -15538,6 +15548,7 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     std::ifstream settingFile("codel.settings");
     if (getline(settingFile, line)) {
         initial_batch_size = std::stoi(line);
+        initial_batch_size = initial_batch_size * 1024;
     }
     settingFile.close();
 
@@ -15572,7 +15583,7 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     batch_lat_vec.clear();
     batch_normal_lat_vec.clear();
     batch_size_vec.clear();
-    throttle_size_vec.clear();
+    batch_sizes.clear();
     batch_io_size.clear();
 }
 
@@ -15583,36 +15594,30 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     if(activated){
       index = "_" + std::to_string(initial_target_latency) + "_" + std::to_string(initial_interval);
     }
-    //std::ofstream batch_file(prefix + "batch" + index + ".csv");
-    //// add column names
-    //batch_file << "time, lat, normal_lat, bs, throttle_size" << "\n";
+    std::ofstream batch_file(prefix + "batch" + index + ".csv");
+    // add column names
+    batch_file << "time, lat, batch size, txc num" << "\n";
 
-    //for (unsigned int i = 0; i < batch_time_stamp_vec.size(); i++){
-    //    batch_file << std::fixed << batch_time_stamp_vec[i];
-    //    batch_file << ",";
-    //    batch_file << std::fixed << batch_lat_vec[i];
-    //    batch_file << ",";
-    //    batch_file << std::fixed << batch_normal_lat_vec[i];
-    //    batch_file << ",";
-    //    batch_file << std::fixed << throttle_size_vec[i];
-    //    batch_file << ",";
-    //    batch_file << std::fixed << batch_size_vec[i];
-    //    batch_file << ",";
-    //    batch_file << std::fixed << batch_io_size[i];
-    //    batch_file << "\n";
-    //}
-    //batch_file.close();
+    for (unsigned int i = 0; i < batch_time_stamp_vec.size(); i++){
+        batch_file << std::fixed << batch_time_stamp_vec[i];
+        batch_file << ",";
+        batch_file << std::fixed << batch_lat_vec[i];
+        batch_file << ",";
+        batch_file << std::fixed << batch_size_vec[i];
+        batch_file << ",";
+        batch_file << std::fixed << batch_sizes[i];
+        batch_file << "\n";
+    }
+    batch_file.close();
 
     std::ofstream txc_file(prefix + "txc" + index + ".csv");
     // add column names
-    txc_file << "start, end, pure, size" << "\n";
+    txc_file << "start, end, txc size" << "\n";
 
     for (unsigned int i = 0; i < txc_start_vec.size(); i++){
         txc_file << std::fixed << txc_start_vec[i];
         txc_file << ",";
         txc_file << std::fixed << txc_end_vec[i];
-        txc_file << ",";
-        txc_file << std::fixed << pure_latency[i];
         txc_file << ",";
         txc_file << std::fixed << io_size[i];
         txc_file << "\n";

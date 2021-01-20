@@ -1850,7 +1850,7 @@ public:
       vector<double> batch_normal_lat_vec;
       vector<int> batch_io_size;
       vector<int> batch_size_vec;
-      vector<int> throttle_size_vec;
+      vector<int> batch_sizes;
 
       // std::ofstream dump_st;
       // std::ofstream dump_st2;
@@ -1858,8 +1858,8 @@ public:
 
       std::chrono::time_point<mono_clock> created_time = mono_clock::now();
 
-      void register_batch(int64_t queuing_latency, int64_t batch_size);
-      void register_txc(TransContext *txc, int64_t trottle_size);
+      void register_batch(int64_t queuing_latency, int64_t batch_size, int64_t txc_num);
+      int64_t register_txc(TransContext *txc, int64_t trottle_size);
       void init(CephContext* cct);
       int64_t get_batch_size();
       void flush_log();
