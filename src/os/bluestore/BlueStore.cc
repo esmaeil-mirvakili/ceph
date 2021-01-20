@@ -15487,7 +15487,7 @@ int64_t BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, int64_t trott
   txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
   txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
   io_size.push_back(txc->bytes);
-  return std::chrono::nanoseconds(now - txc->start_time).count()
+  return std::chrono::nanoseconds(now - txc->start_time).count();
 }
 
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
