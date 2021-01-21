@@ -11877,7 +11877,7 @@ void BlueStore::_kv_sync_thread()
 	if (txc->had_ios) {
 	  --txc->osr->txc_with_unstable_io;
 	}
-  codel.register_txc(txc, throttle.get_current(), batch_id);
+  codel.register_txc(txc, throttle.get_current(), codel.batch_id);
   // if(codel.recording){
   //   codel.dump_st2 << std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count() << "\n";
   //   codel.dump_st2 << boost::stacktrace::stacktrace();
@@ -11894,7 +11894,7 @@ void BlueStore::_kv_sync_thread()
       //if(codel.activated)
       //codel.register_batch(latency, bytes, txc_num);
       throttle.reset_max(codel.get_batch_size());
-      batch_id++;
+      codel.batch_id++;
       throttle.release_kv_throttle(costs);
 
       // cleanup sync deferred keys
