@@ -1836,21 +1836,19 @@ public:
           recording = true;
       }
 
+      // kv batch
+      int64_t batch_id = 0;
+
       // log data
       vector<double> txc_start_vec;
       vector<double> txc_end_vec;
-      vector<double> pure_latency;
-      vector<uint64_t> io_size;
+      vector<double> txc_bytes;
+      vector<double> txc_batch_id;
 
       vector<double> read_start_vec;
       vector<double> read_end_vec;
-
-      vector<double> batch_time_stamp_vec;
-      vector<double> batch_lat_vec;
-      vector<double> batch_normal_lat_vec;
-      vector<int> batch_io_size;
-      vector<int> batch_size_vec;
-      vector<int> batch_sizes;
+      vector<double> read_bytes;
+      vector<double> read_batch_id;
 
       // std::ofstream dump_st;
       // std::ofstream dump_st2;
@@ -1859,7 +1857,7 @@ public:
       std::chrono::time_point<mono_clock> created_time = mono_clock::now();
 
       void register_batch(int64_t queuing_latency, int64_t batch_size, int64_t txc_num);
-      int64_t register_txc(TransContext *txc, int64_t trottle_size);
+      int64_t register_txc(TransContext *txc, int64_t trottle_size, int64_t batch_id);
       void init(CephContext* cct);
       int64_t get_batch_size();
       void flush_log();
