@@ -1808,6 +1808,9 @@ public:
     int64_t get_current(){
       return throttle_bytes.get_current();
     }
+    int64_t get_max(){
+        return throttle_bytes.get_max();
+    }
     void reset_throttle(const ConfigProxy &conf) {
       throttle_bytes.reset_max(conf->bluestore_throttle_bytes);
       throttle_deferred_bytes.reset_max(
@@ -1843,12 +1846,15 @@ public:
       vector<double> txc_start_vec;
       vector<double> txc_end_vec;
       vector<double> txc_bytes;
-      vector<double> txc_batch_id;
+      vector<int64_t> txc_batch_id;
+
+      vector<int64_t> throttle_max_vec;
+      vector<int64_t> throttle_current_vec;
 
       vector<double> read_start_vec;
       vector<double> read_end_vec;
       vector<double> read_bytes;
-      vector<double> read_batch_id;
+      vector<int64_t> read_batch_id;
 
       // std::ofstream dump_st;
       // std::ofstream dump_st2;
@@ -1857,7 +1863,7 @@ public:
       std::chrono::time_point<mono_clock> created_time = mono_clock::now();
 
       void register_batch(int64_t queuing_latency, int64_t batch_size, int64_t txc_num);
-      int64_t register_txc(TransContext *txc, int64_t trottle_size, int64_t batch_id);
+      int64_t register_txc(TransContext *txc, int64_t trottle_size, int64_t batch_id, int64_t throttle_current, int64_t throttle_max);
       void init(CephContext* cct);
       int64_t get_batch_size();
       void flush_log();

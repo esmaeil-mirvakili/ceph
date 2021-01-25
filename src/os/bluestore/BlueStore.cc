@@ -11877,7 +11877,7 @@ void BlueStore::_kv_sync_thread()
 	if (txc->had_ios) {
 	  --txc->osr->txc_with_unstable_io;
 	}
-  codel.register_txc(txc, throttle.get_current(), codel.batch_id);
+  codel.register_txc(txc, throttle.get_current(), codel.batch_id, throttle.get_current(), throttle.get_max());
   // if(codel.recording){
   //   codel.dump_st2 << std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count() << "\n";
   //   codel.dump_st2 << boost::stacktrace::stacktrace();
@@ -15439,7 +15439,7 @@ void BlueStore::BlueStoreCoDel::register_batch(int64_t queuing_latency, int64_t 
     //batch_sizes.push_back(txc_num);
 }
 
-int64_t BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, int64_t trottle_size, int64_t batch_id){
+int64_t BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, int64_t trottle_size, int64_t batch_id, int64_t throttle_current, int64_t throttle_max){
   mono_clock::time_point now = mono_clock::now();
   //if(!batch_started){
   //  batch_started = true;
@@ -15484,6 +15484,8 @@ int64_t BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, int64_t trott
   txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
   txc_bytes.push_back(txc->bytes);
   txc_batch_id.push_back(batch_id);
+  throttle_max_vec.push_back(throttle_max);
+  throttle_current_vec.push_back(throttle_current);
   return std::chrono::nanoseconds(now - txc->start_time).count();
 }
 
@@ -15574,6 +15576,9 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     txc_bytes.clear();
     txc_batch_id.clear();
 
+    throttle_max_vec.clear();
+    throttle_current_vec.clear();
+
     read_start_vec.clear();
     read_end_vec.clear();
     read_bytes.clear();
@@ -15590,7 +15595,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
 
     std::ofstream txc_file(prefix + "txc" + index + ".csv");
     // add column names
-    txc_file << "id, start, end, size" << "\n";
+    txc_file << "id, start, end, size, th max, th cur" << "\n";
 
     for (unsigned int i = 0; i < txc_start_vec.size(); i++){
         txc_file << std::fixed << txc_batch_id[i];
@@ -15600,6 +15605,10 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
         txc_file << std::fixed << txc_end_vec[i];
         txc_file << ",";
         txc_file << std::fixed << txc_bytes[i];
+        txc_file << ",";
+        txc_file << std::fixed << throttle_max_vec[i];
+        txc_file << ",";
+        txc_file << std::fixed << throttle_current_vec[i];
         txc_file << "\n";
     }
     txc_file.close();
