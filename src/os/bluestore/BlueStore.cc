@@ -11124,6 +11124,7 @@ void BlueStore::_txc_state_proc(TransContext *txc)
       return;
     case TransContext::STATE_KV_SUBMITTED:
       _txc_committed_kv(txc);
+      codel.register_txc(txc, throttle.get_current(), 0, throttle.get_current(), throttle.get_max());
       // ** fall-thru **
 
     case TransContext::STATE_KV_DONE:
@@ -11876,7 +11877,6 @@ void BlueStore::_kv_sync_thread()
 	if (txc->had_ios) {
 	  --txc->osr->txc_with_unstable_io;
 	}
-  codel.register_txc(txc, throttle.get_current(), codel.batch_id, throttle.get_current(), throttle.get_max());
   // if(codel.recording){
   //   codel.dump_st2 << std::chrono::nanoseconds(mono_clock::now() - mono_clock::zero()).count() << "\n";
   //   codel.dump_st2 << boost::stacktrace::stacktrace();
