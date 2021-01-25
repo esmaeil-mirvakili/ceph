@@ -11040,7 +11040,6 @@ void BlueStore::_txc_state_proc(TransContext *txc)
 	     << " " << txc->get_state_name() << dendl;
     switch (txc->get_state()) {
     case TransContext::STATE_PREPARE:
-      txc->start_time = mono_clock::now();
       throttle.log_state_latency(*txc, logger, l_bluestore_state_prepare_lat);
       if (txc->ioc.has_pending_aios()) {
 	txc->set_state(TransContext::STATE_AIO_WAIT);
@@ -12408,6 +12407,7 @@ int BlueStore::queue_transactions(
   logger->inc(l_bluestore_txc);
 
   // execute (start)
+  txc->start_time = mono_clock::now();
   _txc_state_proc(txc);
 
   if (bdev->is_smr()) {
