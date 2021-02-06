@@ -4459,6 +4459,57 @@ void BlueStore::handle_discard(interval_set<uint64_t>& to_release)
   shared_alloc.a->release(to_release);
 }
 
+class BlueStore::SocketHook : public AdminSocketHook
+{
+    BlueStore *store;
+
+public:
+    static BlueStore::SocketHook *create(BlueStore *store)
+    {
+        BlueStore::SocketHook *hook = nullptr;
+        AdminSocket *admin_socket = store->cct->get_admin_socket();
+        if (admin_socket)
+        {
+            hook = new BlueStore::SocketHook(store);
+            int r = admin_socket->register_command("dump kvq vector",
+                                                   hook,
+                                                   "dump vectors contains kvq_lat");
+            r = admin_socket->register_command("reset kvq vector",
+                                               hook,
+                                               "reset vectors contains kvq_lat");
+            if (r != 0)
+            {
+                delete hook;
+                hook = nullptr;
+            }
+        }
+        return hook;
+    }
+    ~SocketHook()
+    {
+        AdminSocket *admin_socket = store->cct->get_admin_socket();
+        admin_socket->unregister_commands(this);
+    }
+
+private:
+    SocketHook(BlueStore *store) : store(store) {}
+    int call(std::string_view command, const cmdmap_t &cmdmap,
+             Formatter *f,
+             std::ostream &ss,
+             bufferlist &out) override
+    {
+        if (command == "dump kvq vector")
+        {
+            store->codel.dump_log_data();
+        }
+        else if (command == "reset kvq vector")
+        {
+            store->codel.clear_log_data();
+        }
+        return 0;
+    }
+};
+
 BlueStore::BlueStore(CephContext *cct, const string& path)
   : BlueStore(cct, path, 0) {}
 
@@ -4467,6 +4518,7 @@ BlueStore::BlueStore(CephContext *cct,
   uint64_t _min_alloc_size)
   : ObjectStore(cct, path),
     throttle(cct),
+    codel(cct),
     finisher(cct, "commit_finisher", "cfin"),
     kv_sync_thread(this),
     kv_finalize_thread(this),
@@ -4478,6 +4530,9 @@ BlueStore::BlueStore(CephContext *cct,
   _init_logger();
   cct->_conf.add_observer(this);
   set_cache_shards(1);
+  if(codel.activated)
+      throttle.reset_max(codel.get_bluestore_budget());
+  asok_hook = SocketHook::create(this);
 }
 
 BlueStore::~BlueStore()
@@ -4537,6 +4592,10 @@ const char **BlueStore::get_tracked_conf_keys() const
     "bluestore_warn_on_legacy_statfs",
     "bluestore_warn_on_no_per_pool_omap",
     "bluestore_max_defer_interval",
+    "bluestore_codel",
+    "bluestore_codel_target_latency",
+    "bluestore_codel_interval",
+    "bluestore_codel_starting_budget",
     NULL
   };
   return KEYS;
@@ -4594,6 +4653,8 @@ void BlueStore::handle_conf_change(const ConfigProxy& conf,
       changed.count("bluestore_throttle_deferred_bytes") ||
       changed.count("bluestore_throttle_trace_rate")) {
     throttle.reset_throttle(conf);
+    if(codel.activated)
+        throttle.reset_max(codel.get_bluestore_budget());
   }
   if (changed.count("bluestore_max_defer_interval")) {
     if (bdev) {
@@ -4606,6 +4667,14 @@ void BlueStore::handle_conf_change(const ConfigProxy& conf,
       changed.count("osd_memory_expected_fragmentation")) {
     _update_osd_memory_options();
   }
+  if (changed.count("bluestore_codel_target_latency") ||
+      changed.count("bluestore_codel") ||
+      changed.count("bluestore_codel_interval") ||
+      changed.count("bluestore_codel_starting_budget")) {
+      if (bdev) {
+          codel.init(cct);
+      }
+    }
 }
 
 void BlueStore::_set_compression()
@@ -11235,6 +11304,7 @@ void BlueStore::_txc_state_proc(TransContext *txc)
 
     case TransContext::STATE_KV_DONE:
       throttle.log_state_latency(*txc, logger, l_bluestore_state_kv_done_lat);
+      codel.register_txc(txc, throttle.get_current(), throttle.get_max());
       if (txc->deferred_txn) {
 	txc->set_state(TransContext::STATE_DEFERRED_QUEUED);
 	_deferred_queue(txc);
@@ -12007,6 +12077,7 @@ void BlueStore::_kv_sync_thread()
       // iteration there will already be ops awake.  otherwise, we
       // end up going to sleep, and then wake up when the very first
       // transaction is ready for commit.
+      throttle.reset_max(codel.get_bluestore_budget());
       throttle.release_kv_throttle(costs);
 
       // cleanup sync deferred keys
@@ -12604,6 +12675,7 @@ int BlueStore::queue_transactions(
   logger->inc(l_bluestore_txc);
 
   // execute (start)
+  txc->start_time = mono_clock::now();
   _txc_state_proc(txc);
 
   if (bdev->is_smr()) {
@@ -15653,6 +15725,143 @@ void BlueStore::BlueStoreThrottle::complete(TransContext &txc)
   }
 }
 #endif
+
+void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, BlueStoreThrottle throttle){
+    mono_clock::time_point now = mono_clock::now();
+    if(activated){
+        int64_t latency = std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count();
+        register_queue_latency(latency);
+
+        txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
+        txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
+        txc_bytes.push_back(txc->bytes);
+        throttle_max_vec.push_back(throttle.get_max());
+        throttle_current_vec.push_back(throttle.get_current());
+    }
+}
+
+void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
+    if(activated){
+        if (adaptive_down_sizing && target_latency > 0) {
+            double diff = (double)(target_latency - min_latency);
+            auto error_ratio = std::abs(diff) / min_latency;
+            if(error_ratio > 0.5){
+                error_ratio = 0.5;
+            }
+            bluestore_budget *= 1 - error_ratio;
+        } else {
+            bluestore_budget /= 2;
+        }
+        if(bluestore_budget <= 0){
+            bluestore_budget = 1;
+        }
+    }
+}
+
+void BlueStore::BlueStoreCoDel::on_no_violation() {
+    if(activated && bluestore_budget < max_queue_length * bluestore_budget_limit_ratio){
+        bluestore_budget++;
+    }
+}
+
+void BlueStore::BlueStoreCoDel::on_interval_finished() {
+    max_queue_length = 0;
+}
+
+void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
+    if (cct->_conf.get_val<bool>("bluestore_codel")) {
+        activated = cct->_conf.get_val<bool>("bluestore_codel");
+    }
+    if (cct->_conf.get_val<int64_t>("bluestore_codel_target_latency")) {
+        initial_target_latency = cct->_conf.get_val<int64_t>("bluestore_codel_target_latency");
+    }
+    if (cct->_conf.get_val<int64_t>("bluestore_codel_interval")) {
+        initial_interval = cct->_conf.get_val<int64_t>("bluestore_codel_interval");
+    }
+    if (cct->_conf.get_val<int64_t>("bluestore_codel_starting_budget")) {
+        starting_bluestore_budget = cct->_conf.get_val<int64_t>("bluestore_codel_starting_budget");
+        bluestore_budget = starting_bluestore_budget;
+    }
+
+    activated = false;
+    initial_target_latency = 5 * 1000 * 1000;
+    initial_interval = 5 * 1000 * 1000;
+    starting_bluestore_budget = 100 * 1024 * 1024 * 1024;
+
+    std::string line;
+    std::ifstream settingFile("codel.settings");
+    if (getline(settingFile, line)) {
+        starting_bluestore_budget = std::stoi(line);
+        starting_bluestore_budget = starting_bluestore_budget * 1024;
+    }
+    settingFile.close();
+
+    bluestore_budget = starting_bluestore_budget;
+    std::cout << "batch size:" << bluestore_budget << std::endl;
+    bluestore_budget_limit_ratio = 1.5;
+    adaptive_down_sizing = true;
+    this->reset();
+}
+
+int64_t BlueStore::BlueStoreCoDel::get_bluestore_budget() {
+    return bluestore_budget;
+}
+
+void BlueStore::BlueStoreCoDel::clear_log_data() {
+    txc_start_vec.clear();
+    txc_start_vec.clear();
+    txc_end_vec.clear();
+    txc_bytes.clear();
+
+    throttle_max_vec.clear();
+    throttle_current_vec.clear();
+
+    read_start_vec.clear();
+    read_end_vec.clear();
+    read_bytes.clear();
+}
+
+void BlueStore::BlueStoreCoDel::dump_log_data() {
+    // create an filestream object
+    std::string prefix = "codel_log_";
+    std::string index = "";
+    if(activated){
+        index = "_" + std::to_string(initial_target_latency) + "_" + std::to_string(initial_interval);
+    }
+
+    std::ofstream txc_file(prefix + "txc" + index + ".csv");
+    // add column names
+    txc_file << "start, end, size, th max, th cur" << "\n";
+
+    for (unsigned int i = 0; i < txc_start_vec.size(); i++){
+        txc_file << std::fixed << txc_start_vec[i];
+        txc_file << ",";
+        txc_file << std::fixed << txc_end_vec[i];
+        txc_file << ",";
+        txc_file << std::fixed << txc_bytes[i];
+        txc_file << ",";
+        txc_file << std::fixed << throttle_max_vec[i];
+        txc_file << ",";
+        txc_file << std::fixed << throttle_current_vec[i];
+        txc_file << "\n";
+    }
+    txc_file.close();
+
+    std::ofstream read_file(prefix + "read" + index + ".csv");
+    // add column names
+    read_file << "start, end" << "\n";
+
+    for (unsigned int i = 0; i < read_start_vec.size(); i++){
+        read_file << std::fixed << read_start_vec[i];
+        read_file << ",";
+        read_file << std::fixed << read_end_vec[i];
+        read_file << "\n";
+    }
+    read_file.close();
+
+    // dump_st.close();
+    // dump_st2.close();
+}
 
 // DB key value Histogram
 #define KEY_SLAB 32

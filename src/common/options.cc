@@ -4868,8 +4868,23 @@ std::vector<Option> get_global_options() {
     .set_long_description("How often (in seconds) to print KV sync thread utilization, "
       "not logged when set to 0 or when utilization is 0%"),
 
+    Option("bluestore_codel", Option::TYPE_BOOL, Option::LEVEL_ADVANCED)
+    .set_default(false)
+    .set_description("Run BlueStore with CoDel"),
 
-    // -----------------------------------------
+    Option("bluestore_codel_target_latency", Option::TYPE_INT, Option::LEVEL_DEV)
+    .set_default(0)
+    .set_description("CoDel target latency in nanoseconds"),
+
+    Option("bluestore_codel_interval", Option::TYPE_INT, Option::LEVEL_DEV)
+    .set_default(0)
+    .set_description("CoDel interval parameters in nanoseconds"),
+
+    Option("bluestore_codel_starting_budget", Option::TYPE_INT, Option::LEVEL_DEV)
+    .set_default(100)
+    .set_description("Initial CoDel budget in bytes"),
+
+          // -----------------------------------------
     // kstore
 
     Option("kstore_max_ops", Option::TYPE_UINT, Option::LEVEL_ADVANCED)

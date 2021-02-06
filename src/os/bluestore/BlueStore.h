@@ -43,6 +43,7 @@
 #include "common/Finisher.h"
 #include "common/ceph_mutex.h"
 #include "common/Throttle.h"
+#include "common/CoDel.h"
 #include "common/perf_counters.h"
 #include "common/PriorityCache.h"
 #include "compressor/Compressor.h"
@@ -1609,6 +1610,7 @@ public:
 
     uint64_t seq = 0;
     ceph::mono_clock::time_point start;
+    ceph::mono_clock::time_point start_time;
     ceph::mono_clock::time_point last_stamp;
 
     uint64_t last_nid = 0;     ///< if non-zero, highest new nid we allocated
@@ -1783,6 +1785,12 @@ public:
     void release_kv_throttle(uint64_t cost) {
       throttle_bytes.put(cost);
     }
+    int64_t get_current() {
+        return throttle_bytes.get_current();
+    }
+    int64_t get_max() {
+        return throttle_bytes.get_max();
+    }
     void release_deferred_throttle(uint64_t cost) {
       throttle_deferred_bytes.put(cost);
     }
@@ -1800,6 +1808,66 @@ public:
 #endif
     }
   } throttle;
+
+    /**
+     * CoDel algorithm to calculate the incoming batch size to kv by using Throttle mechanism
+     */
+    class BlueStoreCoDel : public CoDel {
+    public:
+        BlueStoreCoDel(CephContext *cct) {
+            init(cct);
+        }
+
+        // log data
+        vector<double> txc_start_vec;
+        vector<double> txc_end_vec;
+        vector<double> txc_bytes;
+        vector <int64_t> txc_batch_id;
+
+        vector <int64_t> throttle_max_vec;
+        vector <int64_t> throttle_current_vec;
+
+        vector<double> read_start_vec;
+        vector<double> read_end_vec;
+        vector<double> read_bytes;
+        vector <int64_t> read_batch_id;
+
+        std::chrono::time_point <mono_clock> created_time = mono_clock::now();
+
+        void register_txc(TransContext *txc, BlueStoreThrottle throttle);
+
+        void init(CephContext *cct);
+
+        int64_t get_bluestore_budget();
+
+        void flush_log();
+
+        void dump_log_data();
+
+        void clear_log_data();
+
+        bool activated = true;
+
+    protected:
+        int64_t starting_bluestore_budget = 100;
+        double bluestore_budget_limit_ratio = 1.5;
+        bool adaptive_down_sizing = true;
+        int64_t bluestore_budget;
+        int64_t registered = 0;
+        int64_t ios_registered = 0;
+        mono_clock::time_point first_txc_start;
+        mono_clock::time_point last_txc_end;
+        int64_t latency_sum = 0;
+        int64_t max_queue_length = 0;
+        bool batch_started = false;
+
+        void on_min_latency_violation();
+
+        void on_no_violation();
+
+        void on_interval_finished();
+    } codel;
+
 
   typedef boost::intrusive::list<
     TransContext,

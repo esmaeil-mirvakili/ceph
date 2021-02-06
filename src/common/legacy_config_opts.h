@@ -1548,3 +1548,9 @@ OPTION(debug_allow_any_pool_priority, OPT_BOOL)
 OPTION(rgw_gc_max_deferred_entries_size, OPT_U64) // GC deferred entries size in queue head
 OPTION(rgw_gc_max_queue_size, OPT_U64) // GC max queue size
 OPTION(rgw_gc_max_deferred, OPT_U64) // GC max number of deferred entries
+
+// BlueStore CoDel configs
+OPTION(bluestore_codel, OPT_BOOL)    // Run BlueStore with CoDel
+OPTION(bluestore_codel_target_latency, OPT_U64) // CoDel target latency in nanoseconds
+OPTION(bluestore_codel_interval, OPT_U64)   // CoDel interval parameters in nanoseconds
+OPTION(bluestore_codel_starting_budget, OPT_U64)    // Initial CoDel budget in bytes
