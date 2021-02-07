@@ -1839,7 +1839,7 @@ public:
 
         std::chrono::time_point <mono_clock> created_time = mono_clock::now();
 
-        void register_txc(TransContext *txc, BlueStoreThrottle throttle);
+        void register_txc(TransContext *txc, BlueStoreThrottle throttle&);
 
         void init(CephContext *cct);
 
