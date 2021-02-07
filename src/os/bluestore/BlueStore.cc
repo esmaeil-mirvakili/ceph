@@ -15785,21 +15785,21 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
         bluestore_budget = starting_bluestore_budget;
     }
 
-    activated = false;
-    initial_target_latency = 5 * 1000 * 1000;
-    initial_interval = 5 * 1000 * 1000;
-    starting_bluestore_budget = 100 * 1024 * 1024 * 1024;
-
-    std::string line;
-    std::ifstream settingFile("codel.settings");
-    if (getline(settingFile, line)) {
-        starting_bluestore_budget = std::stoi(line);
-        starting_bluestore_budget = starting_bluestore_budget * 1024;
-    }
-    settingFile.close();
-
-    bluestore_budget = starting_bluestore_budget;
-    std::cout << "batch size:" << bluestore_budget << std::endl;
+//    activated = false;
+//    initial_target_latency = 5 * 1000 * 1000;
+//    initial_interval = 5 * 1000 * 1000;
+//    starting_bluestore_budget = 100 * 1024 * 1024 * 1024;
+//
+//    std::string line;
+//    std::ifstream settingFile("codel.settings");
+//    if (getline(settingFile, line)) {
+//        starting_bluestore_budget = std::stoi(line);
+//        starting_bluestore_budget = starting_bluestore_budget * 1024;
+//    }
+//    settingFile.close();
+//
+//    bluestore_budget = starting_bluestore_budget;
+//    std::cout << "batch size:" << bluestore_budget << std::endl;
     bluestore_budget_limit_ratio = 1.5;
     adaptive_down_sizing = true;
     this->reset();
