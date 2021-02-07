@@ -45,6 +45,7 @@
 #include "common/blkdev.h"
 #include "common/numa.h"
 #include "common/pretty_binary.h"
+#include "common/admin_socket.h"
 
 #if defined(WITH_LTTNG)
 #define TRACEPOINT_DEFINE
@@ -15730,7 +15731,7 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, BlueStoreThrottl
     mono_clock::time_point now = mono_clock::now();
     if(activated){
         int64_t latency = std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count();
-        if max_queue_length < throttle.get_current()
+        if (max_queue_length < throttle.get_current())
             max_queue_length = throttle.get_current()
         register_queue_latency(latency);
 

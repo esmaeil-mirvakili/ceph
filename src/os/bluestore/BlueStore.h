@@ -52,6 +52,7 @@
 #include "bluestore_types.h"
 #include "BlueFS.h"
 #include "common/EventTrace.h"
+#include <fstream>
 
 #ifdef WITH_BLKIN
 #include "common/zipkin_trace.h"
@@ -1806,6 +1807,10 @@ public:
       double rate = conf.get_val<double>("bluestore_throttle_trace_rate");
       trace_period_mcs = rate > 0 ? floor((1/rate) * 1000000.0) : 0;
 #endif
+    }
+
+    void reset_max(int64_t m) {
+        throttle_bytes.reset_max(m);
     }
   } throttle;
 
