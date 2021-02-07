@@ -11175,7 +11175,7 @@ void BlueStore::_txc_calc_cost(TransContext *txc)
   // one "io" for the kv commit
   auto ios = 1 + txc->ioc.get_num_ios();
   auto cost = throttle_cost_per_io.load();
-  txc->cost = ios * cost + txc->bytes;
+  txc->cost = txc->bytes;
   txc->ios = ios;
   dout(10) << __func__ << " " << txc << " cost " << txc->cost << " ("
 	   << ios << " ios * " << cost << " + " << txc->bytes
@@ -15730,6 +15730,8 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, BlueStoreThrottl
     mono_clock::time_point now = mono_clock::now();
     if(activated){
         int64_t latency = std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count();
+        if max_queue_length < throttle.get_current()
+            max_queue_length = throttle.get_current()
         register_queue_latency(latency);
 
         txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
@@ -15748,7 +15750,7 @@ void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
             if(error_ratio > 0.5){
                 error_ratio = 0.5;
             }
-            bluestore_budget *= 1 - error_ratio;
+            bluestore_budget = bluestore_budget * (1 - error_ratio);
         } else {
             bluestore_budget /= 2;
         }
@@ -15760,7 +15762,7 @@ void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
 
 void BlueStore::BlueStoreCoDel::on_no_violation() {
     if(activated && bluestore_budget < max_queue_length * bluestore_budget_limit_ratio){
-        bluestore_budget++;
+        bluestore_budget += 1024;
     }
 }
 
@@ -15769,17 +15771,17 @@ void BlueStore::BlueStoreCoDel::on_interval_finished() {
 }
 
 void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
-    if (cct->_conf.get_val<bool>("bluestore_codel")) {
-        activated = cct->_conf.get_val<bool>("bluestore_codel");
+    if (cct->_conf->bluestore_codel) {
+        activated = cct->_conf->bluestore_codel;
     }
-    if (cct->_conf.get_val<int64_t>("bluestore_codel_target_latency")) {
-        initial_target_latency = cct->_conf.get_val<int64_t>("bluestore_codel_target_latency");
+    if (cct->_conf->bluestore_codel_target_latency) {
+        initial_target_latency = cct->_conf->bluestore_codel_target_latency;
     }
-    if (cct->_conf.get_val<int64_t>("bluestore_codel_interval")) {
-        initial_interval = cct->_conf.get_val<int64_t>("bluestore_codel_interval");
+    if (cct->_conf->bluestore_codel_interval) {
+        initial_interval = cct->_conf->bluestore_codel_interval;
     }
-    if (cct->_conf.get_val<int64_t>("bluestore_codel_starting_budget")) {
-        starting_bluestore_budget = cct->_conf.get_val<int64_t>("bluestore_codel_starting_budget");
+    if (cct->_conf->bluestore_codel_starting_budget) {
+        starting_bluestore_budget = cct->_conf->bluestore_codel_starting_budget;
         bluestore_budget = starting_bluestore_budget;
     }
 
