@@ -4531,8 +4531,7 @@ BlueStore::BlueStore(CephContext *cct,
   _init_logger();
   cct->_conf.add_observer(this);
   set_cache_shards(1);
-  if(codel.activated)
-      throttle.reset_max(codel.get_bluestore_budget());
+  codel.set_throttle(throttle);
   asok_hook = SocketHook::create(this);
 }
 
@@ -4674,6 +4673,7 @@ void BlueStore::handle_conf_change(const ConfigProxy& conf,
       changed.count("bluestore_codel_starting_budget")) {
       if (bdev) {
           codel.init(cct);
+          codel.set_throttle(throttle);
       }
     }
 }
@@ -11305,7 +11305,7 @@ void BlueStore::_txc_state_proc(TransContext *txc)
 
     case TransContext::STATE_KV_DONE:
       throttle.log_state_latency(*txc, logger, l_bluestore_state_kv_done_lat);
-      codel.register_txc(txc, throttle);
+      codel.register_txc(txc);
       if (txc->deferred_txn) {
 	txc->set_state(TransContext::STATE_DEFERRED_QUEUED);
 	_deferred_queue(txc);
@@ -15726,7 +15726,7 @@ void BlueStore::BlueStoreThrottle::complete(TransContext &txc)
 }
 #endif
 
-void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, BlueStoreThrottle& throttle){
+void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
     mono_clock::time_point now = mono_clock::now();
     if(activated){
         int64_t latency = std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count();
@@ -15734,8 +15734,6 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, BlueStoreThrottl
             max_queue_length = throttle.get_current();
         auto temp = bluestore_budget;
         register_queue_latency(latency);
-        if(temp != bluestore_budget)
-            throttle.reset_max(bluestore_budget);
 
         txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
         txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
@@ -15771,6 +15769,8 @@ void BlueStore::BlueStoreCoDel::on_no_violation() {
 
 void BlueStore::BlueStoreCoDel::on_interval_finished() {
     max_queue_length = 0;
+    if(activated)
+        throttle.reset_max(bluestore_budget);
 }
 
 void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
@@ -15805,6 +15805,7 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
 //    std::cout << "batch size:" << bluestore_budget << std::endl;
     bluestore_budget_limit_ratio = 1.5;
     adaptive_down_sizing = true;
+
     this->reset();
 }
 

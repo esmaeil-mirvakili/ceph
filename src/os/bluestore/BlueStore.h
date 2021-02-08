@@ -1823,6 +1823,12 @@ public:
             init(cct);
         }
 
+        void set_throttle(BlueStoreThrottle& bs_throttle) {
+            throttle = bs_throttle;
+            if(activated)
+                throttle.reset_max(bluestore_budget);
+        }
+
         // log data
         vector<double> txc_start_vec;
         vector<double> txc_end_vec;
@@ -1865,6 +1871,7 @@ public:
         int64_t latency_sum = 0;
         int64_t max_queue_length = 0;
         bool batch_started = false;
+        BlueStoreThrottle& throttle;
 
         void on_min_latency_violation();
 
