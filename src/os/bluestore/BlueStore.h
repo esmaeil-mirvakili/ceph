@@ -1823,10 +1823,10 @@ public:
             init(cct);
         }
 
-        void set_throttle(BlueStoreThrottle& bs_throttle) {
+        void set_throttle(BlueStoreThrottle* bs_throttle) {
             throttle = bs_throttle;
             if(activated)
-                throttle.reset_max(bluestore_budget);
+                throttle->reset_max(bluestore_budget);
         }
 
         // log data
@@ -1871,7 +1871,7 @@ public:
         int64_t latency_sum = 0;
         int64_t max_queue_length = 0;
         bool batch_started = false;
-        BlueStoreThrottle& throttle;
+        BlueStoreThrottle* throttle;
 
         void on_min_latency_violation();
 

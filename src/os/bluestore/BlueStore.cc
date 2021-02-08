@@ -4531,7 +4531,7 @@ BlueStore::BlueStore(CephContext *cct,
   _init_logger();
   cct->_conf.add_observer(this);
   set_cache_shards(1);
-  codel.set_throttle(throttle);
+  codel.set_throttle(&throttle);
   asok_hook = SocketHook::create(this);
 }
 
@@ -15730,16 +15730,16 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
     mono_clock::time_point now = mono_clock::now();
     if(activated){
         int64_t latency = std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count();
-        if (max_queue_length < throttle.get_current())
-            max_queue_length = throttle.get_current();
+        if (max_queue_length < throttle->get_current())
+            max_queue_length = throttle->get_current();
         auto temp = bluestore_budget;
         register_queue_latency(latency);
 
         txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
         txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
         txc_bytes.push_back(txc->bytes);
-        throttle_max_vec.push_back(throttle.get_max());
-        throttle_current_vec.push_back(throttle.get_current());
+        throttle_max_vec.push_back(throttle->get_max());
+        throttle_current_vec.push_back(throttle->get_current());
     }
 }
 
@@ -15770,7 +15770,7 @@ void BlueStore::BlueStoreCoDel::on_no_violation() {
 void BlueStore::BlueStoreCoDel::on_interval_finished() {
     max_queue_length = 0;
     if(activated)
-        throttle.reset_max(bluestore_budget);
+        throttle->reset_max(bluestore_budget);
 }
 
 void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
