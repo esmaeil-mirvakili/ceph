@@ -15730,7 +15730,7 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
     std::lock_guard l(codel_lock);
     mono_clock::time_point now = mono_clock::now();
     if(activated){
-        int64_t latency = std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count();
+        int64_t latency = std::chrono::nanoseconds(txc->start_time - now).count();
         if (max_queue_length < throttle->get_current())
             max_queue_length = throttle->get_current();
         register_queue_latency(latency);
@@ -15777,7 +15777,7 @@ void BlueStore::BlueStoreCoDel::on_interval_finished() {
 
 void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     if (cct->_conf->bluestore_codel) {
-        activated = cct->_conf->bluestore_codel;
+//        activated = cct->_conf->bluestore_codel;
     }
     if (cct->_conf->bluestore_codel_target_latency) {
         initial_target_latency = cct->_conf->bluestore_codel_target_latency;
