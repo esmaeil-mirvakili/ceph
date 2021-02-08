@@ -15744,19 +15744,22 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
 }
 
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
-    if(activated){
-        if (adaptive_down_sizing && target_latency > 0) {
+    if(activated && target_latency > 0){
+        if (adaptive_down_sizing) {
             double diff = (double)(target_latency - min_latency);
             auto error_ratio = std::abs(diff) / min_latency;
             if(error_ratio > 0.5){
                 error_ratio = 0.5;
             }
+            if(error_ratio < 0.05){
+                error_ratio = 0.05;
+            }
             bluestore_budget = bluestore_budget * (1 - error_ratio);
         } else {
             bluestore_budget /= 2;
         }
-        if(bluestore_budget <= starting_bluestore_budget){
-            bluestore_budget = starting_bluestore_budget;
+        if(bluestore_budget <= min_bluestore_budget){
+            bluestore_budget = min_bluestore_budget;
         }
     }
 }
@@ -15793,6 +15796,7 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     initial_interval = 300 * 1000 * 1000;
     starting_bluestore_budget = 400 * 1024;
     bluestore_budget = starting_bluestore_budget;
+    min_bluestore_budget = 10 * 1024;
 //
 //    std::string line;
 //    std::ifstream settingFile("codel.settings");

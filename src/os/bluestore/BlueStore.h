@@ -1860,6 +1860,7 @@ public:
         bool activated = true;
 
     protected:
+        int64_t min_bluestore_budget = 100;
         int64_t starting_bluestore_budget = 100;
         double bluestore_budget_limit_ratio = 1.5;
         bool adaptive_down_sizing = true;
