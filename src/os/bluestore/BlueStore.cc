@@ -4673,7 +4673,7 @@ void BlueStore::handle_conf_change(const ConfigProxy& conf,
       changed.count("bluestore_codel_starting_budget")) {
       if (bdev) {
           codel.init(cct);
-          codel.set_throttle(throttle);
+          codel.set_throttle(&throttle);
       }
     }
 }
