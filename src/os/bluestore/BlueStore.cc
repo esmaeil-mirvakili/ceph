@@ -15730,7 +15730,7 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
     std::lock_guard l(codel_lock);
     mono_clock::time_point now = mono_clock::now();
     if(activated){
-        int64_t latency = std::chrono::nanoseconds(txc->start_time - now).count();
+        int64_t latency = std::chrono::nanoseconds(now - txc->start_time).count();
         if (max_queue_length < throttle->get_current())
             max_queue_length = throttle->get_current();
         register_queue_latency(latency);
