@@ -12078,7 +12078,6 @@ void BlueStore::_kv_sync_thread()
       // iteration there will already be ops awake.  otherwise, we
       // end up going to sleep, and then wake up when the very first
       // transaction is ready for commit.
-      throttle.reset_max(codel.get_bluestore_budget());
       throttle.release_kv_throttle(costs);
 
       // cleanup sync deferred keys
@@ -15733,7 +15732,10 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc, BlueStoreThrottl
         int64_t latency = std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count();
         if (max_queue_length < throttle.get_current())
             max_queue_length = throttle.get_current();
+        auto temp = bluestore_budget;
         register_queue_latency(latency);
+        if(temp != bluestore_budget)
+            throttle.reset_max(bluestore_budget);
 
         txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
         txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
