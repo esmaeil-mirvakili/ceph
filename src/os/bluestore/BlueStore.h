@@ -1873,6 +1873,7 @@ public:
         int64_t max_queue_length = 0;
         bool batch_started = false;
         BlueStoreThrottle* throttle;
+        ceph::mutex codel_lock = ceph::make_mutex("BlueStore::BlueStoreCoDel::codel_lock");
 
         void on_min_latency_violation();
 
