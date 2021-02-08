@@ -15757,15 +15757,15 @@ void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
         } else {
             bluestore_budget /= 2;
         }
-        if(bluestore_budget <= 0){
-            bluestore_budget = 1;
+        if(bluestore_budget <= starting_bluestore_budget){
+            bluestore_budget = starting_bluestore_budget;
         }
     }
 }
 
 void BlueStore::BlueStoreCoDel::on_no_violation() {
     if(activated && bluestore_budget < max_queue_length * bluestore_budget_limit_ratio){
-        bluestore_budget += 1024;
+        bluestore_budget += (100 * 1024);
     }
 }
 
