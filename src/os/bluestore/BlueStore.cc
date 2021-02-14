@@ -15743,6 +15743,21 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
     }
 }
 
+void BlueStore::BlueStoreCoDel::update_latency_stats(int64_t latency) {
+    latency_variance = ((latency_variance + latency_mean * latency_mean) * latency_items + (latency * latency)) / (latency_items + 1);
+    latency_mean = ((latency_mean * latency_items) + latency) / (latency_items + 1);
+    latency_variance = latency_variance - (latency_mean * latency_mean);
+    latency_items++;
+}
+
+bool BlueStore::BlueStoreCoDel::is_outlier(int64_t latency) {
+    double distance = 0;
+    if(latency_variance != 0)
+        distance = (latency - latency_mean) / sqrt(latency_variance);
+    update_latency_stats(latency);
+    return abs(distance) > outlier_threshold;
+}
+
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
     if(target_latency > 0){
         if (adaptive_down_sizing) {
@@ -15791,7 +15806,7 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     }
 
     activated = true;
-    initial_target_latency = 50 * 1000 * 1000;
+    initial_target_latency = 3 * 1000 * 1000;
     initial_interval = 300 * 1000 * 1000;
     starting_bluestore_budget = 500 * 1024;
     bluestore_budget = starting_bluestore_budget;
@@ -15821,6 +15836,7 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     txc_start_vec.clear();
     txc_end_vec.clear();
     txc_bytes.clear();
+    outliers.clear();
 
     throttle_max_vec.clear();
     throttle_current_vec.clear();
@@ -15840,7 +15856,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
 
     std::ofstream txc_file(prefix + "txc" + index + ".csv");
     // add column names
-    txc_file << "start, end, size, th max, th cur" << "\n";
+    txc_file << "start, end, size, th max, th cur, outlier" << "\n";
 
     for (unsigned int i = 0; i < txc_start_vec.size(); i++){
         txc_file << std::fixed << txc_start_vec[i];

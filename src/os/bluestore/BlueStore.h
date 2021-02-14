@@ -1833,7 +1833,8 @@ public:
         vector<double> txc_start_vec;
         vector<double> txc_end_vec;
         vector<double> txc_bytes;
-        vector <int64_t> txc_batch_id;
+        vector<int64_t> outliers;
+        vector<int64_t> txc_batch_id;
 
         vector <int64_t> throttle_max_vec;
         vector <int64_t> throttle_current_vec;
@@ -1874,12 +1875,20 @@ public:
         bool batch_started = false;
         BlueStoreThrottle* throttle;
         ceph::mutex codel_lock = ceph::make_mutex("BlueStore::BlueStoreCoDel::codel_lock");
+        double outlier_threshold = 3;
+        double latency_mean = 0;
+        double latency_variance = 0;
+        int64_t latency_items = 0;
 
         void on_min_latency_violation();
 
         void on_no_violation();
 
         void on_interval_finished();
+
+        void update_latency_stats(int64_t latency);
+
+        bool is_outlier(int64_t latency);
     } codel;
 
 
