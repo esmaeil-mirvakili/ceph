@@ -15808,12 +15808,34 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
         bluestore_budget = starting_bluestore_budget;
     }
 
-    activated = true;
-    initial_target_latency = 3 * 1000 * 1000;
-    initial_interval = 300 * 1000 * 1000;
-    starting_bluestore_budget = 500 * 1024;
+
+    std::string line;
+    std::ifstream settingFile("codel.settings");
+    if (getline(settingFile, line)) {
+        activated = std::stoi(line) > 0;
+    }
+    if (getline(settingFile, line)) {
+        initial_target_latency = std::stoi(line);
+    }
+    if (getline(settingFile, line)) {
+        initial_interval = std::stoi(line);
+    }
+    if (getline(settingFile, line)) {
+        starting_bluestore_budget = std::stoi(line);
+    }
+    if (getline(settingFile, line)) {
+        min_bluestore_budget = std::stoi(line);
+    }
+    settingFile.close();
     bluestore_budget = starting_bluestore_budget;
-    min_bluestore_budget = 256 * 1024;
+
+
+//    activated = true;
+//    initial_target_latency = 3 * 1000 * 1000;
+//    initial_interval = 300 * 1000 * 1000;
+//
+//    starting_bluestore_budget = 500 * 1024;
+//    min_bluestore_budget = 100 * 1024;
 //
 //    std::string line;
 //    std::ifstream settingFile("codel.settings");
