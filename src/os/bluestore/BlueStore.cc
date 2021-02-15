@@ -15729,7 +15729,7 @@ void BlueStore::BlueStoreThrottle::complete(TransContext &txc)
 #endif
 
 void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
-    std::lock_guard l(codel_lock);
+//    std::lock_guard l(codel_lock);
     mono_clock::time_point now = mono_clock::now();
     if(activated){
         int64_t latency = std::chrono::nanoseconds(now - txc->start_time).count();
