@@ -11316,12 +11316,12 @@ void BlueStore::_txc_state_proc(TransContext *txc)
     case TransContext::STATE_DEFERRED_CLEANUP:
       throttle.log_state_latency(*txc, logger, l_bluestore_state_deferred_cleanup_lat);
       txc->set_state(TransContext::STATE_FINISHING);
+      codel.register_txc(txc);
       // ** fall-thru **
 
     case TransContext::STATE_FINISHING:
       throttle.log_state_latency(*txc, logger, l_bluestore_state_finishing_lat);
       _txc_finish(txc);
-      codel.register_txc(txc);
       return;
 
     default:
