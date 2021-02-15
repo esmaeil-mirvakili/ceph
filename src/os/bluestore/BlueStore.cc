@@ -12676,6 +12676,7 @@ int BlueStore::queue_transactions(
 
   // execute (start)
   txc->start_time = mono_clock::now();
+  txc->throttle_usage = throttle.get_current() * 1.0 / throttle.get_max();
   _txc_state_proc(txc);
 
   if (bdev->is_smr()) {
@@ -15733,13 +15734,15 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
         int64_t latency = std::chrono::nanoseconds(now - txc->start_time).count();
         if (max_queue_length < throttle->get_current())
             max_queue_length = throttle->get_current();
-        register_queue_latency(latency);
+        if(txc->throttle_usage > 0.5)
+            register_queue_latency(latency);
 
         txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
         txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
         txc_bytes.push_back(txc->bytes);
         throttle_max_vec.push_back(throttle->get_max());
         throttle_current_vec.push_back(throttle->get_current());
+        throttle_usage.push_back(txc->throttle_usage);
     }
 }
 
@@ -15810,7 +15813,7 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     initial_interval = 300 * 1000 * 1000;
     starting_bluestore_budget = 500 * 1024;
     bluestore_budget = starting_bluestore_budget;
-    min_bluestore_budget = 10 * 1024;
+    min_bluestore_budget = 256 * 1024;
 //
 //    std::string line;
 //    std::ifstream settingFile("codel.settings");
@@ -15836,7 +15839,7 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     txc_start_vec.clear();
     txc_end_vec.clear();
     txc_bytes.clear();
-    outliers.clear();
+    throttle_usage.clear();
 
     throttle_max_vec.clear();
     throttle_current_vec.clear();
@@ -15856,7 +15859,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
 
     std::ofstream txc_file(prefix + "txc" + index + ".csv");
     // add column names
-    txc_file << "start, end, size, th max, th cur, outlier" << "\n";
+    txc_file << "start, end, size, th max, th cur, throttle_usage" << "\n";
 
     for (unsigned int i = 0; i < txc_start_vec.size(); i++){
         txc_file << std::fixed << txc_start_vec[i];
@@ -15868,6 +15871,8 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
         txc_file << std::fixed << throttle_max_vec[i];
         txc_file << ",";
         txc_file << std::fixed << throttle_current_vec[i];
+        txc_file << ",";
+        txc_file << std::fixed << throttle_usage[i];
         txc_file << "\n";
     }
     txc_file.close();

@@ -1614,6 +1614,8 @@ public:
     ceph::mono_clock::time_point start_time;
     ceph::mono_clock::time_point last_stamp;
 
+    double_t throttle_usage;
+
     uint64_t last_nid = 0;     ///< if non-zero, highest new nid we allocated
     uint64_t last_blobid = 0;  ///< if non-zero, highest new blobid we allocated
 
@@ -1833,7 +1835,7 @@ public:
         vector<double> txc_start_vec;
         vector<double> txc_end_vec;
         vector<double> txc_bytes;
-        vector<int64_t> outliers;
+        vector<double> throttle_usage;
         vector<int64_t> txc_batch_id;
 
         vector <int64_t> throttle_max_vec;
