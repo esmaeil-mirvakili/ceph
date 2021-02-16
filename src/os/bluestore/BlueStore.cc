@@ -11316,7 +11316,6 @@ void BlueStore::_txc_state_proc(TransContext *txc)
     case TransContext::STATE_DEFERRED_CLEANUP:
       throttle.log_state_latency(*txc, logger, l_bluestore_state_deferred_cleanup_lat);
       txc->set_state(TransContext::STATE_FINISHING);
-      codel.register_txc(txc);
       // ** fall-thru **
 
     case TransContext::STATE_FINISHING:
@@ -12070,6 +12069,7 @@ void BlueStore::_kv_sync_thread()
 	if (txc->had_ios) {
 	  --txc->osr->txc_with_unstable_io;
 	}
+          codel.register_txc(txc);
       }
 
       // release throttle *before* we commit.  this allows new ops
@@ -12079,7 +12079,6 @@ void BlueStore::_kv_sync_thread()
       // end up going to sleep, and then wake up when the very first
       // transaction is ready for commit.
       throttle.release_kv_throttle(costs);
-      throttle.reset_max(codel.get_bluestore_budget());
 
       // cleanup sync deferred keys
       for (auto b : deferred_stable) {
@@ -15735,7 +15734,7 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
         int64_t latency = std::chrono::nanoseconds(now - txc->start_time).count();
         if (max_queue_length < throttle->get_current())
             max_queue_length = throttle->get_current();
-        if(txc->throttle_usage > 0.3)
+        if(txc->throttle_usage > throttle_usage_threshold)
             register_queue_latency(latency);
 
         txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
@@ -15745,21 +15744,6 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
         throttle_current_vec.push_back(throttle->get_current());
         throttle_usage.push_back(txc->throttle_usage);
     }
-}
-
-void BlueStore::BlueStoreCoDel::update_latency_stats(int64_t latency) {
-    latency_variance = ((latency_variance + latency_mean * latency_mean) * latency_items + (latency * latency)) / (latency_items + 1);
-    latency_mean = ((latency_mean * latency_items) + latency) / (latency_items + 1);
-    latency_variance = latency_variance - (latency_mean * latency_mean);
-    latency_items++;
-}
-
-bool BlueStore::BlueStoreCoDel::is_outlier(int64_t latency) {
-    double distance = 0;
-    if(latency_variance != 0)
-        distance = (latency - latency_mean) / sqrt(latency_variance);
-    update_latency_stats(latency);
-    return abs(distance) > outlier_threshold;
 }
 
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
@@ -15791,7 +15775,7 @@ void BlueStore::BlueStoreCoDel::on_no_violation() {
 
 void BlueStore::BlueStoreCoDel::on_interval_finished() {
     max_queue_length = 0;
-//    throttle->reset_max(bluestore_budget);
+    throttle->reset_max(bluestore_budget);
 }
 
 void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
@@ -15826,6 +15810,9 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     }
     if (getline(settingFile, line)) {
         min_bluestore_budget = std::stoi(line);
+    }
+    if (getline(settingFile, line)) {
+        throttle_usage_threshold = std::stoi(line) / 100.0;
     }
     settingFile.close();
     bluestore_budget = starting_bluestore_budget;

@@ -1877,20 +1877,13 @@ public:
         bool batch_started = false;
         BlueStoreThrottle* throttle;
         ceph::mutex codel_lock = ceph::make_mutex("BlueStore::BlueStoreCoDel::codel_lock");
-        double outlier_threshold = 3;
-        double latency_mean = 0;
-        double latency_variance = 0;
-        int64_t latency_items = 0;
+        double throttle_usage_threshold = 0.5;
 
         void on_min_latency_violation();
 
         void on_no_violation();
 
         void on_interval_finished();
-
-        void update_latency_stats(int64_t latency);
-
-        bool is_outlier(int64_t latency);
     } codel;
 
 
