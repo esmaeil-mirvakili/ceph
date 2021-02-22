@@ -11177,6 +11177,8 @@ void BlueStore::_txc_calc_cost(TransContext *txc)
   auto ios = 1 + txc->ioc.get_num_ios();
   auto cost = throttle_cost_per_io.load();
   txc->cost = txc->bytes;
+  if(!codel.activated)
+      txc->cost = ios * cost + txc->bytes;
   txc->ios = ios;
   dout(10) << __func__ << " " << txc << " cost " << txc->cost << " ("
 	   << ios << " ios * " << cost << " + " << txc->bytes
@@ -15736,14 +15738,13 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
             max_queue_length = throttle->get_current();
         if(txc->throttle_usage > throttle_usage_threshold)
             register_queue_latency(latency);
-
-        txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
-        txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
-        txc_bytes.push_back(txc->bytes);
-        throttle_max_vec.push_back(throttle->get_max());
-        throttle_current_vec.push_back(throttle->get_current());
-        throttle_usage.push_back(txc->throttle_usage);
     }
+    txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
+    txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
+    txc_bytes.push_back(txc->bytes);
+    throttle_max_vec.push_back(throttle->get_max());
+    throttle_current_vec.push_back(throttle->get_current());
+    throttle_usage.push_back(txc->throttle_usage);
 }
 
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
@@ -15775,7 +15776,8 @@ void BlueStore::BlueStoreCoDel::on_no_violation() {
 
 void BlueStore::BlueStoreCoDel::on_interval_finished() {
     max_queue_length = 0;
-    throttle->reset_max(bluestore_budget);
+    if(activated)
+        throttle->reset_max(bluestore_budget);
 }
 
 void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
