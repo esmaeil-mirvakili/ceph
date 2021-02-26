@@ -4531,7 +4531,7 @@ BlueStore::BlueStore(CephContext *cct,
   _init_logger();
   cct->_conf.add_observer(this);
   set_cache_shards(1);
-  codel.set_throttle(&throttle);
+  codel.set_throttle(throttle);
   asok_hook = SocketHook::create(this);
 }
 
@@ -4653,8 +4653,7 @@ void BlueStore::handle_conf_change(const ConfigProxy& conf,
       changed.count("bluestore_throttle_deferred_bytes") ||
       changed.count("bluestore_throttle_trace_rate")) {
     throttle.reset_throttle(conf);
-    if(codel.activated)
-        throttle.reset_max(codel.get_bluestore_budget());
+    codel.set_throttle(throttle);
   }
   if (changed.count("bluestore_max_defer_interval")) {
     if (bdev) {
@@ -4673,7 +4672,7 @@ void BlueStore::handle_conf_change(const ConfigProxy& conf,
       changed.count("bluestore_codel_starting_budget")) {
       if (bdev) {
           codel.init(cct);
-          codel.set_throttle(&throttle);
+          codel.set_throttle(throttle);
       }
     }
 }
@@ -11176,10 +11175,9 @@ void BlueStore::_txc_calc_cost(TransContext *txc)
   // one "io" for the kv commit
   auto ios = 1 + txc->ioc.get_num_ios();
   auto cost = throttle_cost_per_io.load();
-  txc->cost = txc->bytes;
-  if(!codel.activated)
-      txc->cost = ios * cost + txc->bytes;
+  txc->cost = ios * cost + txc->bytes;
   txc->ios = ios;
+  codel.modify_transaction_cost(txc);
   dout(10) << __func__ << " " << txc << " cost " << txc->cost << " ("
 	   << ios << " ios * " << cost << " + " << txc->bytes
 	   << " bytes)" << dendl;
@@ -15730,7 +15728,6 @@ void BlueStore::BlueStoreThrottle::complete(TransContext &txc)
 #endif
 
 void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
-//    std::lock_guard l(codel_lock);
     mono_clock::time_point now = mono_clock::now();
     if(activated){
         int64_t latency = std::chrono::nanoseconds(now - txc->start_time).count();

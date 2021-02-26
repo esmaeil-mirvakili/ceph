@@ -21,8 +21,9 @@ private:
      * @return true if current interval is finished, false otherwise
      */
     bool _is_cur_interval_finished() {
-        auto current_time = mono_clock::now();
-        return std::chrono::nanoseconds(current_time - *interval_start).count() >= interval;
+        auto now = mono_clock::now();
+        int64_t current_time = std::chrono::nanoseconds(now - mono_clock::zero()).count()
+        return current_time - interval_start >= interval;
     }
 
     bool _check_latency_violation() {
@@ -43,7 +44,7 @@ protected:
     int64_t interval = INT_NULL;       // current interval that algorithm is using
     int64_t target_latency = INT_NULL;       // current target latency that algorithm is using
     int64_t min_latency = INT_NULL;       // min latency in the current interval
-    mono_clock::time_point *interval_start = nullptr;      // beginning of current interval
+    int64_t interval_start = INT_NULL;      // beginning of current interval
     int64_t violation_count = 0;       // number of consecutive violations
 
     /**
@@ -68,7 +69,7 @@ protected:
         std::cout << "target:" << target_latency << std::endl;
         std::cout << "interval init:" << initial_interval << std::endl;
         std::cout << "interval:" << interval << std::endl;
-        interval_start = nullptr;
+        interval_start = INT_NULL;
         min_latency = INT_NULL;
     }
 
@@ -78,7 +79,7 @@ protected:
     void reset_interval() {
         min_latency = INT_NULL;
         auto now = mono_clock::now();
-        interval_start = &now;
+        interval_start = std::chrono::nanoseconds(now - mono_clock::zero()).count();
         on_interval_finished();
     }
 
