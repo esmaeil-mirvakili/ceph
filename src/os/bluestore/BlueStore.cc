@@ -15773,8 +15773,8 @@ void BlueStore::BlueStoreCoDel::on_no_violation() {
 
 void BlueStore::BlueStoreCoDel::on_interval_finished() {
     max_queue_length = 0;
-    if(activated)
-        throttle->reset_max(bluestore_budget);
+    if(activated && throttle_ptr)
+        throttle_ptr->reset_max(bluestore_budget);
 }
 
 void BlueStore::BlueStoreCoDel::init(CephContext* cct) {

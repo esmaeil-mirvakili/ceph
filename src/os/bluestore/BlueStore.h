@@ -1826,7 +1826,7 @@ public:
         }
 
         void set_throttle(BlueStoreThrottle bs_throttle) {
-            throttle_ptr.reset(&bs_throttle);
+            throttle_ptr = &bs_throttle;
             if(activated)
                 throttle_ptr->reset_max(bluestore_budget);
         }
@@ -1880,7 +1880,7 @@ public:
         int64_t latency_sum = 0;
         int64_t max_queue_length = 0;
         bool batch_started = false;
-        std::shared_ptr<BlueStoreThrottle> throttle_ptr = nullptr;
+        BlueStoreThrottle *throttle_ptr;
         ceph::mutex codel_lock = ceph::make_mutex("BlueStore::BlueStoreCoDel::codel_lock");
         double throttle_usage_threshold = 0.5;
 
