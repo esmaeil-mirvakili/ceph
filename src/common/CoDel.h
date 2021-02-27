@@ -22,7 +22,7 @@ private:
      */
     bool _is_cur_interval_finished() {
         auto now = mono_clock::now();
-        int64_t current_time = std::chrono::nanoseconds(now - mono_clock::zero()).count()
+        int64_t current_time = std::chrono::nanoseconds(now - mono_clock::zero()).count();
         return current_time - interval_start >= interval;
     }
 
