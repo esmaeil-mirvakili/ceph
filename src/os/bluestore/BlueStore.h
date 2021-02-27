@@ -1825,8 +1825,8 @@ public:
             init(cct);
         }
 
-        void set_throttle(BlueStoreThrottle bs_throttle) {
-            throttle_ptr = &bs_throttle;
+        void set_throttle(BlueStoreThrottle *bs_throttle) {
+            throttle_ptr = bs_throttle;
             if(activated)
                 throttle_ptr->reset_max(bluestore_budget);
         }
