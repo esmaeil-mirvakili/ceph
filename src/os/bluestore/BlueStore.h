@@ -1826,9 +1826,9 @@ public:
         }
 
         void set_throttle(BlueStoreThrottle *bs_throttle) {
-            throttle_ptr = bs_throttle;
+            throttle = bs_throttle;
             if(activated)
-                throttle_ptr->reset_max(bluestore_budget);
+                throttle->reset_max(bluestore_budget);
         }
 
         void modify_transaction_cost(TransContext *txc) {
@@ -1880,7 +1880,7 @@ public:
         int64_t latency_sum = 0;
         int64_t max_queue_length = 0;
         bool batch_started = false;
-        BlueStoreThrottle *throttle_ptr;
+        BlueStoreThrottle *throttle;
         ceph::mutex codel_lock = ceph::make_mutex("BlueStore::BlueStoreCoDel::codel_lock");
         double throttle_usage_threshold = 0.5;
 
