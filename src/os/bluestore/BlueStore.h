@@ -1826,7 +1826,7 @@ public:
         }
 
         void set_throttle(BlueStoreThrottle bs_throttle) {
-            throttle_ptr = std::make_shared<BlueStoreThrottle>(bs_throttle);
+            throttle_ptr = std::shared_ptr<BlueStoreThrottle>(bs_throttle);
             if(activated)
                 throttle_ptr->reset_max(bluestore_budget);
         }
