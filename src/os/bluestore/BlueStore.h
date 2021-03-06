@@ -1878,7 +1878,7 @@ public:
         mono_clock::time_point first_txc_start;
         mono_clock::time_point last_txc_end;
         int64_t latency_sum = 0;
-        int64_t max_queue_length = 0;
+        int64_t max_queue_length = min_bluestore_budget;
         bool batch_started = false;
         BlueStoreThrottle *throttle;
         ceph::mutex codel_lock = ceph::make_mutex("BlueStore::BlueStoreCoDel::codel_lock");

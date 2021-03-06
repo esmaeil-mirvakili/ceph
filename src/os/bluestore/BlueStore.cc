@@ -15772,14 +15772,13 @@ void BlueStore::BlueStoreCoDel::on_no_violation() {
 }
 
 void BlueStore::BlueStoreCoDel::on_interval_finished() {
-    max_queue_length = 0;
     if(activated && throttle)
         throttle->reset_max(bluestore_budget);
 }
 
 void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     if (cct->_conf->bluestore_codel) {
-//        activated = cct->_conf->bluestore_codel;
+        activated = cct->_conf->bluestore_codel;
     }
     if (cct->_conf->bluestore_codel_target_latency) {
         initial_target_latency = cct->_conf->bluestore_codel_target_latency;
@@ -15790,6 +15789,7 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     if (cct->_conf->bluestore_codel_starting_budget) {
         starting_bluestore_budget = cct->_conf->bluestore_codel_starting_budget;
         bluestore_budget = starting_bluestore_budget;
+        min_bluestore_budget = starting_bluestore_budget;
     }
 
     activated = true;
@@ -15819,25 +15819,24 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
         if (getline(settingFile, line)) {
             throttle_usage_threshold = std::stoi(line) / 100.0;
         }
+        if (getline(settingFile, line)) {
+            adaptive_down_sizing = std::stoi(line) > 0;
+        }
     }
     settingFile.close();
     bluestore_budget = starting_bluestore_budget;
+    max_queue_length = min_bluestore_budget
 
-
-//
-//
-//    std::string line;
-//    std::ifstream settingFile("codel.settings");
-//    if (getline(settingFile, line)) {
-//        starting_bluestore_budget = std::stoi(line);
-//        starting_bluestore_budget = starting_bluestore_budget * 1024;
-//    }
-//    settingFile.close();
+    std::string line;
+    std::ifstream settingFile("codel.settings");
+    if (getline(settingFile, line)) {
+        starting_bluestore_budget = std::stoi(line);
+        starting_bluestore_budget = starting_bluestore_budget * 1024;
+    }
+    settingFile.close();
 //
 //    std::cout << "batch size:" << bluestore_budget << std::endl;
     bluestore_budget_limit_ratio = 1.5;
-    adaptive_down_sizing = true;
-
     this->reset();
 }
 
