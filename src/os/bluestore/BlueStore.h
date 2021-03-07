@@ -1821,7 +1821,7 @@ public:
      */
     class BlueStoreCoDel : public CoDel {
     public:
-        BlueStoreCoDel(CephContext *cct) {
+        BlueStoreCoDel(CephContext *cct): CoDel(cct) {
             init(cct);
         }
 
