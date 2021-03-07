@@ -2,9 +2,9 @@
 #include "CoDel.h"
 
 CoDel::CoDel(CephContext *_cct): timer(_cct, timer_lock){
-timer.init();
-std::lock_guard l{timer_lock};
-_interval_process();
+    timer.init();
+    std::lock_guard l{timer_lock};
+    _interval_process();
 }
 
 CoDel::~CoDel() {
@@ -35,9 +35,9 @@ void CoDel::_interval_process() {
     min_latency = INT_NULL;
     on_interval_finished();
 
-    codel_ctx = new LambdaContext(
+    auto codel_ctx = new LambdaContext(
             [this](int r) {
-                interval_process();
+                _interval_process();
             });git
     auto interval_duration = std::chrono::nanoseconds(interval);
     timer.add_event_after(interval_duration, codel_ctx);
