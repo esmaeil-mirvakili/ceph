@@ -3,8 +3,6 @@
 
 CoDel::CoDel(CephContext *_cct): timer(_cct, timer_lock){
     timer.init();
-    std::lock_guard l{timer_lock};
-    _interval_process();
 }
 
 CoDel::~CoDel() {
@@ -19,7 +17,16 @@ void CoDel::register_queue_latency(int64_t latency) {
     }
 }
 
-void CoDel::_interval_process() {
+class C_IntervalTimeout : public Context {
+    CoDel *codel;
+public:
+    explicit C_IntervalTimeout(CoDel *_codel) : codel(_codel) {}
+    void finish(int r) override {
+        codel->interval_process();
+    }
+};
+
+void CoDel::interval_process() {
     if(_check_latency_violation()){
         // min latency violation
         violation_count++;
@@ -35,12 +42,8 @@ void CoDel::_interval_process() {
     min_latency = INT_NULL;
     on_interval_finished();
 
-    auto codel_ctx = new LambdaContext(
-            [this](int r) {
-                _interval_process();
-            });
     auto interval_duration = std::chrono::nanoseconds(interval);
-    timer.add_event_after(interval_duration, codel_ctx);
+    timer.add_event_after(interval_duration, new C_IntervalTimeout(this));
 }
 
 /**
@@ -68,7 +71,7 @@ void CoDel::reset() {
     min_latency = INT_NULL;
     std::lock_guard l{timer_lock};
     timer.cancel_all_events();
-    _interval_process();
+    interval_process();
     std::cout << "target init:" << initial_target_latency << std::endl;
     std::cout << "target:" << target_latency << std::endl;
     std::cout << "interval init:" << initial_interval << std::endl;
