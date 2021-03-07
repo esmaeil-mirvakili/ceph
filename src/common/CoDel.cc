@@ -38,7 +38,7 @@ void CoDel::_interval_process() {
     auto codel_ctx = new LambdaContext(
             [this](int r) {
                 _interval_process();
-            });git
+            });
     auto interval_duration = std::chrono::nanoseconds(interval);
     timer.add_event_after(interval_duration, codel_ctx);
 }
