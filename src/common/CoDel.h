@@ -21,6 +21,7 @@ public:
 private:
     bool _check_latency_violation();
     void _update_interval();
+    void _interval_process();
 
 protected:
     int64_t initial_interval;     // Initial interval to start the algorithm
@@ -37,7 +38,6 @@ protected:
      */
     void reset();
     void register_queue_latency(int64_t queuing_latency);
-    void interval_process();
 
     /**
      * react properly if min latency is greater than target latency (min latency violation)
