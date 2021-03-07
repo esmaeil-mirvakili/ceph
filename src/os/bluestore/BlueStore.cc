@@ -15825,15 +15825,15 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     }
     settingFile.close();
     bluestore_budget = starting_bluestore_budget;
-    max_queue_length = min_bluestore_budget
+    max_queue_length = min_bluestore_budget;
 
-    std::string line;
-    std::ifstream settingFile("codel.settings");
-    if (getline(settingFile, line)) {
-        starting_bluestore_budget = std::stoi(line);
-        starting_bluestore_budget = starting_bluestore_budget * 1024;
-    }
-    settingFile.close();
+//    std::string line;
+//    std::ifstream settingFile("codel.settings");
+//    if (getline(settingFile, line)) {
+//        starting_bluestore_budget = std::stoi(line);
+//        starting_bluestore_budget = starting_bluestore_budget * 1024;
+//    }
+//    settingFile.close();
 //
 //    std::cout << "batch size:" << bluestore_budget << std::endl;
     bluestore_budget_limit_ratio = 1.5;
