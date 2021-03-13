@@ -11,6 +11,13 @@ CoDel::~CoDel() {
     timer.shutdown();
 }
 
+void CoDel::initialize(int64_t init_window_size, int64_t init_target){
+    initial_window_size = init_window_size;
+    window_size = initial_window_size;
+    initial_target_latency = init_target;
+    target_latency = initial_target_latency;
+}
+
 void CoDel::register_queue_latency(int64_t latency, int64_t size) {
     if(submitted_size + size > window_size){
         _process_latencies();
@@ -65,7 +72,7 @@ void CoDel::_update_window() {
     auto sqrt = (int) std::round(std::sqrt(violation_count));
     window_size = initial_window_size / sqrt;
     if(window_size <= 0){
-        window_size = 1024;
+        window_size = 1024 * 1024;
     }
 }
 
