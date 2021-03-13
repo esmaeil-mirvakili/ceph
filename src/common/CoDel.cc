@@ -11,6 +11,13 @@ CoDel::~CoDel() {
     timer.shutdown();
 }
 
+void CoDel::initialize(int64_t init_interval, int64_t init_target){
+    initial_interval = init_interval;
+    interval = initial_interval;
+    initial_target_latency = init_target;
+    target_latency = initial_target_latency;
+}
+
 void CoDel::register_queue_latency(int64_t latency) {
     if(min_latency == INT_NULL || latency < min_latency){
         min_latency = latency;
