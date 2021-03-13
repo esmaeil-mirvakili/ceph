@@ -38,6 +38,7 @@ protected:
      */
     void reset();
     void register_queue_latency(int64_t queuing_latency);
+    void initialize(int64_t init_interval, int64_t init_target);
 
     /**
      * react properly if min latency is greater than target latency (min latency violation)

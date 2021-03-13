@@ -15777,26 +15777,22 @@ void BlueStore::BlueStoreCoDel::on_interval_finished() {
 }
 
 void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
+    int64_t init_interval = 0;
+    int64_t init_target = 0;
     if (cct->_conf->bluestore_codel) {
         activated = cct->_conf->bluestore_codel;
     }
     if (cct->_conf->bluestore_codel_target_latency) {
-        initial_target_latency = cct->_conf->bluestore_codel_target_latency;
+        init_target = cct->_conf->bluestore_codel_target_latency;
     }
     if (cct->_conf->bluestore_codel_interval) {
-        initial_interval = cct->_conf->bluestore_codel_interval;
+        init_interval = cct->_conf->bluestore_codel_interval;
     }
     if (cct->_conf->bluestore_codel_starting_budget) {
         starting_bluestore_budget = cct->_conf->bluestore_codel_starting_budget;
         bluestore_budget = starting_bluestore_budget;
         min_bluestore_budget = starting_bluestore_budget;
     }
-
-    activated = true;
-    initial_target_latency = 25 * 1000 * 1000;
-    initial_interval = 300 * 1000 * 1000;
-    starting_bluestore_budget = 500 * 1024;
-    min_bluestore_budget = 100 * 1024;
 
     std::string line;
     std::ifstream settingFile("codel.settings");
@@ -15805,10 +15801,10 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
             activated = std::stoi(line) > 0;
         }
         if (getline(settingFile, line)) {
-            initial_target_latency = std::stoi(line);
+            init_target = std::stoi(line);
         }
         if (getline(settingFile, line)) {
-            initial_interval = std::stoi(line);
+            init_interval = std::stoi(line);
         }
         if (getline(settingFile, line)) {
             starting_bluestore_budget = std::stoi(line);
@@ -15826,17 +15822,9 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     settingFile.close();
     bluestore_budget = starting_bluestore_budget;
     max_queue_length = min_bluestore_budget;
-
-//    std::string line;
-//    std::ifstream settingFile("codel.settings");
-//    if (getline(settingFile, line)) {
-//        starting_bluestore_budget = std::stoi(line);
-//        starting_bluestore_budget = starting_bluestore_budget * 1024;
-//    }
-//    settingFile.close();
-//
-//    std::cout << "batch size:" << bluestore_budget << std::endl;
     bluestore_budget_limit_ratio = 1.5;
+
+    initialize(init_interval, init_target);
     this->reset();
 }
 
