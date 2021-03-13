@@ -15853,7 +15853,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     std::string prefix = "codel_log_";
     std::string index = "";
     if(activated){
-        index = "_" + std::to_string(initial_target_latency) + "_" + std::to_string(initial_interval);
+        index = "_" + std::to_string(initial_target_latency) + "_" + std::to_string(initial_window_size);
     }
 
     std::ofstream txc_file(prefix + "txc" + index + ".csv");
