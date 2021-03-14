@@ -57,6 +57,7 @@ set(common_srcs
   cmdparse.cc
   code_environment.cc
   CoDel.cc
+  CoDel_Window.cc
   common_init.cc
   compat.cc
   condition_variable_debug.cc
