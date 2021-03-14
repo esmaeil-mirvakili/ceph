@@ -1834,6 +1834,7 @@ public:
         void modify_transaction_cost(TransContext *txc) {
             if(activated)
                 txc->cost = txc->bytes;
+            txc->cost = 1;  // todo:remove
         }
 
         // log data
