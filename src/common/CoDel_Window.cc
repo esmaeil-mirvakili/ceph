@@ -19,13 +19,13 @@ void CoDel::initialize(int64_t init_window_size, int64_t init_target){
 }
 
 void CoDel::register_queue_latency(int64_t latency, int64_t size) {
-    if(submitted_size + size > window_size){
-        _process_latencies();
-    }
     if(min_latency == INT_NULL || latency < min_latency){
         min_latency = latency;
     }
     submitted_size += size;
+    if(submitted_size > window_size){
+        _process_latencies();
+    }
 }
 
 void CoDel::_timeout_process() {
@@ -52,12 +52,12 @@ void CoDel::_process_latencies() {
     submitted_size = 0;
     on_interval_finished();
 
-    auto codel_ctx = new LambdaContext(
-            [this](int r) {
-                _timeout_process();
-            });
-    auto timeout_duration = std::chrono::nanoseconds(timeout);
-    timer.add_event_after(timeout_duration, codel_ctx);
+//    auto codel_ctx = new LambdaContext(
+//            [this](int r) {
+//                _timeout_process();
+//            });
+//    auto timeout_duration = std::chrono::nanoseconds(timeout);
+//    timer.add_event_after(timeout_duration, codel_ctx);
 }
 
 /**
@@ -72,7 +72,7 @@ void CoDel::_update_window() {
     auto sqrt = (int) std::round(std::sqrt(violation_count));
     window_size = initial_window_size / sqrt;
     if(window_size <= 0){
-        window_size = 1024 * 1024;
+        window_size = 10 * 1024;
     }
 }
 
