@@ -15808,7 +15808,6 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
         }
         if (getline(settingFile, line)) {
             starting_bluestore_budget = std::stoi(line);
-            throttle->reset_max(starting_bluestore_budget);  // todo: remove
         }
         if (getline(settingFile, line)) {
             min_bluestore_budget = std::stoi(line);

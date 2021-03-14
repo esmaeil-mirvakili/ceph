@@ -1827,6 +1827,7 @@ public:
 
         void set_throttle(BlueStoreThrottle *bs_throttle) {
             throttle = bs_throttle;
+            throttle->reset_max(1); // todo:remove
             if(activated)
                 throttle->reset_max(bluestore_budget);
         }
