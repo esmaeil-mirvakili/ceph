@@ -56,7 +56,6 @@ set(common_srcs
   ceph_time.cc
   cmdparse.cc
   code_environment.cc
-  CoDel.cc
   CoDel_Window.cc
   common_init.cc
   compat.cc
