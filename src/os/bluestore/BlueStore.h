@@ -1827,7 +1827,6 @@ public:
 
         void set_throttle(BlueStoreThrottle *bs_throttle) {
             throttle = bs_throttle;
-            throttle->reset_max(1); // todo:remove
             if(activated)
                 throttle->reset_max(bluestore_budget);
         }
@@ -1835,7 +1834,6 @@ public:
         void modify_transaction_cost(TransContext *txc) {
             if(activated)
                 txc->cost = txc->bytes;
-            txc->cost = 1;  // todo:remove
         }
 
         // log data
