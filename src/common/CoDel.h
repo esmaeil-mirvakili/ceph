@@ -5,6 +5,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <map>
 #include "ceph_time.h"
 #include "common/Timer.h"
 #include "include/Context.h"
@@ -29,16 +30,20 @@ protected:
     int64_t interval = INT_NULL;       // current interval that algorithm is using
     int64_t target_latency = INT_NULL;       // current target latency that algorithm is using
     int64_t min_latency = INT_NULL;       // min latency in the current interval
+    int64_t min_latency_txc_size = 0;
     int64_t violation_count = 0;       // number of consecutive violations
     SafeTimer timer;
     ceph::mutex timer_lock = ceph::make_mutex("CoDel::timer_lock");
+    std::map<int64_t, int64_t> target_latency_map;
+    bool normalize_latency = false;
 
     /**
      * reset the algorithm
      */
     void reset();
-    void register_queue_latency(int64_t queuing_latency);
+    void register_queue_latency(int64_t queuing_latency, int64_t size);
     void initialize(int64_t init_interval, int64_t init_target);
+    void add_target_latency(int64_t size, int64_t target_latency_ns);
 
     /**
      * react properly if min latency is greater than target latency (min latency violation)

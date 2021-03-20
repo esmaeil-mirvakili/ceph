@@ -18,9 +18,14 @@ void CoDel::initialize(int64_t init_interval, int64_t init_target){
     target_latency = initial_target_latency;
 }
 
-void CoDel::register_queue_latency(int64_t latency) {
+void CoDel::add_target_latency(int64_t size, int64_t target_latency_ns){
+    target_latency_map[size] = target_latency_ns;
+}
+
+void CoDel::register_queue_latency(int64_t latency, int64_t size) {
     if(min_latency == INT_NULL || latency < min_latency){
         min_latency = latency;
+        min_latency_txc_size = size;
     }
 }
 
@@ -38,6 +43,7 @@ void CoDel::_interval_process() {
     }
     // reset interval
     min_latency = INT_NULL;
+    min_latency_txc_size = 0;
     on_interval_finished();
 
     auto codel_ctx = new LambdaContext(
@@ -53,7 +59,21 @@ void CoDel::_interval_process() {
 * @return true if min latency violate the target, false otherwise
 */
 bool CoDel::_check_latency_violation() {
-    return min_latency != INT_NULL && min_latency > target_latency;
+    if(min_latency != INT_NULL){
+        int64_t selected_target_latency = target_latency;
+        for (auto iter = target_latency_map.begin(); iter != target_latency_map.end(); ++iter)
+            if(min_latency_txc_size < iter->first) {
+                selected_target_latency = iter->second;
+                break;
+            }
+        if(normalize_latency){
+            if(min_latency - selected_target_latency > target_latency)
+                return true;
+        }else
+            if(min_latency > selected_target_latency)
+            return true;
+    }
+    return false;
 }
 
 void CoDel::_update_interval() {

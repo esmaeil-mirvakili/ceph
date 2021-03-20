@@ -15734,7 +15734,7 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
         if (max_queue_length < throttle->get_current())
             max_queue_length = throttle->get_current();
         if(txc->throttle_usage > throttle_usage_threshold)
-            register_queue_latency(latency);
+            register_queue_latency(latency, txc->bytes);
     }
     txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
     txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
@@ -15817,6 +15817,20 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
         }
         if (getline(settingFile, line)) {
             adaptive_down_sizing = std::stoi(line) > 0;
+        }
+        if (getline(settingFile, line)) {
+            normalize_latency = std::stoi(line) > 0;
+        }
+        if (getline(settingFile, line)) {
+            if(std::stoi(line) > 0){
+                while (getline(settingFile, line)){
+                    line.erase(std::remove(str.begin(), str.end(), ' '), str.end());
+                    std::vector<std::string> results;
+                    boost::split(results, line, [](char c){return c == ':';});
+                    if(results.size() > 1)
+                        add_target_latency(std::stoi(results[0]), std::stoi(results[1]))
+                }
+            }
         }
     }
     settingFile.close();

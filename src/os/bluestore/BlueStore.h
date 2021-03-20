@@ -24,6 +24,7 @@
 #include <ratio>
 #include <mutex>
 #include <condition_variable>
+#include <algorithm>
 
 #include <boost/intrusive/list.hpp>
 #include <boost/intrusive/unordered_set.hpp>
