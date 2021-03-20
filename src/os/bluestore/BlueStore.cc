@@ -15824,7 +15824,7 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
         if (getline(settingFile, line)) {
             if(std::stoi(line) > 0){
                 while (getline(settingFile, line)){
-                    line.erase(std::remove(str.begin(), str.end(), ' '), str.end());
+                    line.erase(std::remove(line.begin(), line.end(), ' '), line.end());
                     std::vector<std::string> results;
                     boost::split(results, line, [](char c){return c == ':';});
                     if(results.size() > 1)
