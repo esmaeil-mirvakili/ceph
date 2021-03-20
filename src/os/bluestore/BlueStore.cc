@@ -15828,7 +15828,7 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
                     std::vector<std::string> results;
                     boost::split(results, line, [](char c){return c == ':';});
                     if(results.size() > 1)
-                        add_target_latency(std::stoi(results[0]), std::stoi(results[1]))
+                        add_target_latency(std::stoi(results[0]), std::stoi(results[1]));
                 }
             }
         }
