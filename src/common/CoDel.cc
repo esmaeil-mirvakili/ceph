@@ -67,7 +67,11 @@ bool CoDel::_check_latency_violation() {
                 break;
             }
         if(normalize_latency){
-            if(min_latency - selected_target_latency > target_latency)
+            int64_t normalized = min_latency - selected_target_latency;
+            if(normalized <= 0) {
+                normalized = min_latency;
+            }
+            if (normalized > target_latency)
                 return true;
         }else
             if(min_latency > selected_target_latency)
