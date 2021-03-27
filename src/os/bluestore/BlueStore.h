@@ -1884,6 +1884,7 @@ public:
         BlueStoreThrottle *throttle;
         ceph::mutex codel_lock = ceph::make_mutex("BlueStore::BlueStoreCoDel::codel_lock");
         double throttle_usage_threshold = 0.5;
+        bool only_4k = false;
 
         void on_min_latency_violation();
 
