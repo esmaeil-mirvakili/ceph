@@ -75,7 +75,7 @@ bool CoDel::_check_latency_violation() {
                 return true;
         }else
             if(min_latency > selected_target_latency)
-            return true;
+                return true;
     }
     return false;
 }
@@ -97,7 +97,6 @@ void CoDel::reset() {
     min_latency = INT_NULL;
     std::lock_guard l{timer_lock};
     timer.cancel_all_events();
-    _interval_process();
     std::cout << "target init:" << initial_target_latency << std::endl;
     std::cout << "target:" << target_latency << std::endl;
     std::cout << "interval init:" << initial_interval << std::endl;
