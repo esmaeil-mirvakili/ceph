@@ -12677,6 +12677,8 @@ int BlueStore::queue_transactions(
   // execute (start)
   txc->start_time = mono_clock::now();
   txc->throttle_usage = throttle.get_current() * 1.0 / throttle.get_max();
+  txc->throttle_current = throttle.get_current();
+  txc->throttle_max = throttle.get_max();
   _txc_state_proc(txc);
 
   if (bdev->is_smr()) {
@@ -15740,8 +15742,8 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
     txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
     txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
     txc_bytes.push_back(txc->bytes);
-    throttle_max_vec.push_back(throttle->get_max());
-    throttle_current_vec.push_back(throttle->get_current());
+    throttle_max_vec.push_back(txc->throttle_max);
+    throttle_current_vec.push_back(txc->throttle_current);
     throttle_usage.push_back(txc->throttle_usage);
 }
 

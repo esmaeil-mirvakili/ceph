@@ -1616,6 +1616,8 @@ public:
     ceph::mono_clock::time_point last_stamp;
 
     double_t throttle_usage;
+    double_t throttle_current;
+    double_t throttle_max;
 
     uint64_t last_nid = 0;     ///< if non-zero, highest new nid we allocated
     uint64_t last_blobid = 0;  ///< if non-zero, highest new blobid we allocated
