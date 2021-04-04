@@ -20,10 +20,25 @@ void CoDel::initialize(int64_t init_interval, int64_t init_target){
 
 void CoDel::add_target_latency(int64_t size, int64_t target_latency_ns){
     target_latency_map[size] = target_latency_ns;
+    min_latency_map[size] = INT_NULL;
 }
 
 void CoDel::register_queue_latency(int64_t latency, int64_t size) {
-    if(min_latency == INT_NULL || latency < min_latency){
+    if(!normalize_latency) {
+        int64_t selected_size = INT_NULL;
+        for (auto iter = min_latency_map.begin(); iter != min_latency_map.end(); ++iter)
+            if(size < iter->first || selected_size == INT_NULL) {
+                selected_target_latency = iter->second;
+                break;
+            }
+        if(selected_size != INT_NULL){
+            if (min_latency_map[selected_size] == INT_NULL || latency < min_latency_map[selected_size]) {
+                min_latency_map[selected_size] = latency;
+            }
+            return;
+        }
+    }
+    if (min_latency == INT_NULL || latency < min_latency) {
         min_latency = latency;
         min_latency_txc_size = size;
     }
@@ -59,6 +74,18 @@ void CoDel::_interval_process() {
 * @return true if min latency violate the target, false otherwise
 */
 bool CoDel::_check_latency_violation() {
+    if(!normalize_latency){
+        bool has_min_lat = false;
+        for (auto iter = min_latency_map.begin(); iter != min_latency_map.end(); ++iter)
+            if(iter->second != INT_NULL) {
+                has_min_lat = true;
+                if(iter->second > target_latency_map[iter->first]) {
+                    return true;
+                }
+            }
+        if(has_min_lat)
+            return false;
+    }
     if(min_latency != INT_NULL){
         int64_t selected_target_latency = target_latency;
         for (auto iter = target_latency_map.begin(); iter != target_latency_map.end(); ++iter)

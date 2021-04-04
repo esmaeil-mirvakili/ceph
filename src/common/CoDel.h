@@ -35,6 +35,7 @@ protected:
     SafeTimer timer;
     ceph::mutex timer_lock = ceph::make_mutex("CoDel::timer_lock");
     std::map<int64_t, int64_t> target_latency_map;
+    std::map<int64_t, int64_t> min_latency_map;
     bool normalize_latency = false;
 
     /**
