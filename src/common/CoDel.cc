@@ -27,8 +27,8 @@ void CoDel::register_queue_latency(int64_t latency, int64_t size) {
     if(!normalize_latency) {
         int64_t selected_size = INT_NULL;
         for (auto iter = min_latency_map.begin(); iter != min_latency_map.end(); ++iter)
-            if(size < iter->first || selected_size == INT_NULL) {
-                selected_target_latency = iter->second;
+            if(size < iter->first) {
+                selected_size = iter->first;
                 break;
             }
         if(selected_size != INT_NULL){
