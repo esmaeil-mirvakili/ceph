@@ -15775,7 +15775,7 @@ void BlueStore::BlueStoreCoDel::on_no_violation() {
 }
 
 void BlueStore::BlueStoreCoDel::on_interval_finished() {
-    if(activated && throttle)
+    if(activated)
         throttle->reset_max(bluestore_budget);
 }
 
