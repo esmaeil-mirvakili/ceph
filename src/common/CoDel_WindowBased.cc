@@ -1,7 +1,7 @@
 
 #include "CoDel_WindowBased.h"
 
-CoDel::CoDel(CephContext *_cct): timer(_cct, timer_lock){
+CoDel::CoDel(CephContext *_cct){
 }
 
 CoDel::~CoDel() {
