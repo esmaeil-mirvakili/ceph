@@ -32,7 +32,7 @@ void CoDel::_interval_process() {
     } else{
         // no latency violation
         violation_count = 0;
-        interval = initial_interval;
+//        interval = initial_interval;
         on_no_violation();
     }
     // reset interval
@@ -46,45 +46,19 @@ void CoDel::_interval_process() {
 * @return true if min latency violate the target, false otherwise
 */
 bool CoDel::_check_latency_violation() {
-    if(!normalize_latency){
-        bool has_min_lat = false;
-        for (auto iter = min_latency_map.begin(); iter != min_latency_map.end(); ++iter)
-            if(iter->second != INT_NULL) {
-                has_min_lat = true;
-                if(iter->second > target_latency_map[iter->first]) {
-                    return true;
-                }
-            }
-        if(has_min_lat)
-            return false;
-    }
     if(min_latency != INT_NULL){
-        int64_t selected_target_latency = target_latency;
-        for (auto iter = target_latency_map.begin(); iter != target_latency_map.end(); ++iter)
-            if(min_latency_txc_size < iter->first) {
-                selected_target_latency = iter->second;
-                break;
-            }
-        if(normalize_latency){
-            int64_t normalized = min_latency - selected_target_latency;
-            if(normalized <= 0) {
-                normalized = min_latency;
-            }
-            if (normalized > target_latency)
-                return true;
-        }else
-            if(min_latency > selected_target_latency)
-                return true;
+        if(min_latency > target_latency)
+            return true;
     }
     return false;
 }
 
 void CoDel::_update_interval() {
     auto sqrt = (int) std::round(std::sqrt(violation_count));
-    interval = initial_interval / sqrt;
-    if(interval <= 0){
-        interval = 1000;
-    }
+//    interval = initial_interval / sqrt;
+//    if(interval <= 0){
+//        interval = 1000;
+//    }
 }
 
 /**
@@ -96,6 +70,6 @@ void CoDel::reset() {
     min_latency = INT_NULL;
     std::cout << "target init:" << initial_target_latency << std::endl;
     std::cout << "target:" << target_latency << std::endl;
-    std::cout << "interval init:" << initial_interval << std::endl;
-    std::cout << "interval:" << interval << std::endl;
+    std::cout << "window init:" << initial_window_size << std::endl;
+    std::cout << "window:" << window_size << std::endl;
 }
