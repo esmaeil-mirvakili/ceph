@@ -15822,7 +15822,7 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
             adaptive_down_sizing = std::stoi(line) > 0;
         }
         if (getline(settingFile, line)) {
-            normalize_latency = std::stoi(line) > 0;
+            //normalize_latency = std::stoi(line) > 0;
         }
         if (getline(settingFile, line)) {
             only_4k = std::stoi(line) > 0;
@@ -15833,8 +15833,8 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
                     line.erase(std::remove(line.begin(), line.end(), ' '), line.end());
                     std::vector<std::string> results;
                     boost::split(results, line, [](char c){return c == ':';});
-                    if(results.size() > 1)
-                        add_target_latency(std::stoi(results[0]), std::stoi(results[1]));
+//                    if(results.size() > 1)
+//                        add_target_latency(std::stoi(results[0]), std::stoi(results[1]));
                 }
             }
         }
@@ -15872,7 +15872,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     std::string prefix = "codel_log_";
     std::string index = "";
     if(activated){
-        index = "_" + std::to_string(initial_target_latency) + "_" + std::to_string(initial_interval);
+        index = "_" + std::to_string(initial_target_latency);
     }
 
     std::ofstream txc_file(prefix + "txc" + index + ".csv");
