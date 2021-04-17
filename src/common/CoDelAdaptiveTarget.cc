@@ -65,8 +65,8 @@ void CoDel::_coarse_interval_process() {
     if(no_violation_count == coarse_interval_frequency){
         if(has_bufferbloat_symptoms())
             target_latency -= target_increment;
-    } else if((no_violation_count*1.0)/coarse_interval_frequency < 0.3){
-        if(has_bufferbloat_symptoms())
+    } else if((no_violation_count*1.0)/coarse_interval_frequency < 0.2){
+        if(!has_bufferbloat_symptoms())
             target_latency += target_increment;
     }
     no_violation_count = 0;

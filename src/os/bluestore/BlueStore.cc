@@ -11223,10 +11223,10 @@ void BlueStore::_txc_state_proc(TransContext *txc)
 	     << " " << txc->get_state_name() << dendl;
     switch (txc->get_state()) {
     case TransContext::STATE_PREPARE:
-        codel.add_io_queued(txc);
       throttle.log_state_latency(*txc, logger, l_bluestore_state_prepare_lat);
       if (txc->ioc.has_pending_aios()) {
 	txc->set_state(TransContext::STATE_AIO_WAIT);
+          codel.add_io_queued(txc);
 #ifdef WITH_BLKIN
         if (txc->trace) {
           txc->trace.keyval("pending aios", txc->ioc.num_pending.load());
@@ -11259,6 +11259,7 @@ void BlueStore::_txc_state_proc(TransContext *txc)
       }
       throttle.log_state_latency(*txc, logger, l_bluestore_state_io_done_lat);
       txc->set_state(TransContext::STATE_KV_QUEUED);
+      codel.add_kv_queued(txc);
       if (cct->_conf->bluestore_sync_submit_transaction) {
 	if (txc->last_nid >= nid_max ||
 	    txc->last_blobid >= blobid_max) {
@@ -11287,7 +11288,6 @@ void BlueStore::_txc_state_proc(TransContext *txc)
       {
 	std::lock_guard l(kv_lock);
 	kv_queue.push_back(txc);
-	codel.add_kv_queued(txc);
 	if (!kv_sync_in_progress) {
 	  kv_sync_in_progress = true;
 	  kv_cond.notify_one();
@@ -15794,7 +15794,10 @@ void BlueStore::BlueStoreCoDel::on_no_violation() {
 bool BlueStore::BlueStoreCoDel::has_bufferbloat_symptoms() {
     int64_t kv_queued_count = kv_queued.load(std::memory_order_relaxed);
     int64_t io_queued_count = io_queued.load(std::memory_order_relaxed);
-    return (io_queued_count*1.0)/kv_queued_count > 3;
+    int64_t base = std::max(kv_queued_count, io_queued_count);
+    if(base == 0)
+        return false;
+    return && (std::abs(kv_queued_count - io_queued_count) * 1.0)/base > 0.8;
 }
 
 void BlueStore::BlueStoreCoDel::on_interval_finished() {
