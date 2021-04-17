@@ -23,6 +23,7 @@ private:
     bool _check_latency_violation();
     void _update_interval();
     void _interval_process();
+    void _coarse_interval_process();
 
 protected:
     int64_t initial_interval;     // Initial interval to start the algorithm
@@ -32,19 +33,23 @@ protected:
     int64_t min_latency = INT_NULL;       // min latency in the current interval
     int64_t min_latency_txc_size = 0;
     int64_t violation_count = 0;       // number of consecutive violations
+    int64_t no_violation_count = 0;       // number of non_violations
+    int64_t interval_count = 0;       // number of passed intervals
+    int64_t coarse_interval_frequency = 20;
+    int64_t target_increment = 500 * 1000;
     SafeTimer timer;
     ceph::mutex timer_lock = ceph::make_mutex("CoDel::timer_lock");
-    std::map<int64_t, int64_t> target_latency_map;
-    std::map<int64_t, int64_t> min_latency_map;
-    bool normalize_latency = false;
+    ceph::mutex register_lock = ceph::make_mutex("CoDel::register_lock");
+    bool adaptive_target = false;
+
+
 
     /**
      * reset the algorithm
      */
     void reset();
     void register_queue_latency(int64_t queuing_latency, int64_t size);
-    void initialize(int64_t init_interval, int64_t init_target);
-    void add_target_latency(int64_t size, int64_t target_latency_ns);
+    void initialize(int64_t init_interval, int64_t init_target, bool coarse_interval);
 
     /**
      * react properly if min latency is greater than target latency (min latency violation)
@@ -55,6 +60,7 @@ protected:
      */
     virtual void on_no_violation() = 0;
     virtual void on_interval_finished() = 0;
+    virtual bool has_bufferbloat_symptoms() = 0;
 };
 
 

@@ -44,7 +44,7 @@
 #include "common/Finisher.h"
 #include "common/ceph_mutex.h"
 #include "common/Throttle.h"
-#include "common/CoDel_WindowBased.h"
+#include "common/CoDelAdaptiveTarget.h"
 #include "common/perf_counters.h"
 #include "common/PriorityCache.h"
 #include "compressor/Compressor.h"
@@ -1848,6 +1848,9 @@ public:
 
         vector <int64_t> throttle_max_vec;
         vector <int64_t> throttle_current_vec;
+        vector <int64_t> target_vec;
+        vector <int64_t> io_queued_vec;
+        vector <int64_t> kv_queued_vec;
 
         vector<double> read_start_vec;
         vector<double> read_end_vec;
@@ -1857,6 +1860,10 @@ public:
         std::chrono::time_point <mono_clock> created_time = mono_clock::now();
 
         void register_txc(TransContext *txc);
+
+        void add_kv_queued(TransContext *txc);
+
+        void add_io_queued(TransContext *txc);
 
         void init(CephContext *cct);
 
@@ -1885,14 +1892,19 @@ public:
         bool batch_started = false;
         BlueStoreThrottle *throttle;
         ceph::mutex codel_lock = ceph::make_mutex("BlueStore::BlueStoreCoDel::codel_lock");
+        std::atomic_int64_t kv_queued = {0};
+        std::atomic_int64_t io_queued = {0};
         double throttle_usage_threshold = 0.5;
         bool only_4k = false;
+
 
         void on_min_latency_violation();
 
         void on_no_violation();
 
         void on_interval_finished();
+
+        bool has_bufferbloat_symptoms();
     } codel;
 
 

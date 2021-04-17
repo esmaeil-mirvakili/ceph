@@ -1,5 +1,5 @@
 
-#include "CoDel.h"
+#include "CoDelAdaptiveTarget.h"
 
 CoDel::CoDel(CephContext *_cct): timer(_cct, timer_lock){
     timer.init();
@@ -11,33 +11,16 @@ CoDel::~CoDel() {
     timer.shutdown();
 }
 
-void CoDel::initialize(int64_t init_interval, int64_t init_target){
+void CoDel::initialize(int64_t init_interval, int64_t init_target, bool coarse_interval){
     initial_interval = init_interval;
     interval = initial_interval;
     initial_target_latency = init_target;
     target_latency = initial_target_latency;
-}
-
-void CoDel::add_target_latency(int64_t size, int64_t target_latency_ns){
-    target_latency_map[size] = target_latency_ns;
-    min_latency_map[size] = INT_NULL;
+    adaptive_target = coarse_interval;
 }
 
 void CoDel::register_queue_latency(int64_t latency, int64_t size) {
-    if(!normalize_latency) {
-        int64_t selected_size = INT_NULL;
-        for (auto iter = min_latency_map.begin(); iter != min_latency_map.end(); ++iter)
-            if(size < iter->first) {
-                selected_size = iter->first;
-                break;
-            }
-        if(selected_size != INT_NULL){
-            if (min_latency_map[selected_size] == INT_NULL || latency < min_latency_map[selected_size]) {
-                min_latency_map[selected_size] = latency;
-            }
-            return;
-        }
-    }
+    std::lock_guard l(register_lock);
     if (min_latency == INT_NULL || latency < min_latency) {
         min_latency = latency;
         min_latency_txc_size = size;
@@ -45,6 +28,7 @@ void CoDel::register_queue_latency(int64_t latency, int64_t size) {
 }
 
 void CoDel::_interval_process() {
+    std::lock_guard l(register_lock);
     if(_check_latency_violation()){
         // min latency violation
         violation_count++;
@@ -53,13 +37,17 @@ void CoDel::_interval_process() {
     } else{
         // no latency violation
         violation_count = 0;
+        no_violation_count++;
         interval = initial_interval;
         on_no_violation();
     }
     // reset interval
     min_latency = INT_NULL;
     min_latency_txc_size = 0;
+    interval_count++;
     on_interval_finished();
+    if(interval_count >= coarse_interval_frequency)
+        _coarse_interval_process();
 
     auto codel_ctx = new LambdaContext(
             [this](int r) {
@@ -69,40 +57,26 @@ void CoDel::_interval_process() {
     timer.add_event_after(interval_duration, codel_ctx);
 }
 
+void CoDel::_coarse_interval_process() {
+    if(no_violation_count == coarse_interval_frequency){
+        if(has_bufferbloat_symptoms())
+            target_latency -= target_increment;
+    } else if((no_violation_count*1.0)/coarse_interval_frequency < 0.3){
+        if(has_bufferbloat_symptoms())
+            target_latency += target_increment;
+    }
+    no_violation_count = 0;
+    interval_count = 0;
+}
+
 /**
 * check if the min latency violate the target
 * @return true if min latency violate the target, false otherwise
 */
 bool CoDel::_check_latency_violation() {
-    if(!normalize_latency){
-        bool has_min_lat = false;
-        for (auto iter = min_latency_map.begin(); iter != min_latency_map.end(); ++iter)
-            if(iter->second != INT_NULL) {
-                has_min_lat = true;
-                if(iter->second > target_latency_map[iter->first]) {
-                    return true;
-                }
-            }
-        if(has_min_lat)
-            return false;
-    }
     if(min_latency != INT_NULL){
-        int64_t selected_target_latency = target_latency;
-        for (auto iter = target_latency_map.begin(); iter != target_latency_map.end(); ++iter)
-            if(min_latency_txc_size < iter->first) {
-                selected_target_latency = iter->second;
-                break;
-            }
-        if(normalize_latency){
-            int64_t normalized = min_latency - selected_target_latency;
-            if(normalized <= 0) {
-                normalized = min_latency;
-            }
-            if (normalized > target_latency)
-                return true;
-        }else
-            if(min_latency > selected_target_latency)
-                return true;
+        if(min_latency > target_latency)
+            return true;
     }
     return false;
 }
