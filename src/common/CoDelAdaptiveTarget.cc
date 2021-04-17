@@ -100,8 +100,6 @@ void CoDel::reset() {
     interval = initial_interval;
     target_latency = initial_target_latency;
     min_latency = INT_NULL;
-    std::lock_guard l{timer_lock};
-    timer.cancel_all_events();
     std::cout << "target init:" << initial_target_latency << std::endl;
     std::cout << "target:" << target_latency << std::endl;
     std::cout << "interval init:" << initial_interval << std::endl;

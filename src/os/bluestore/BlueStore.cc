@@ -15803,6 +15803,7 @@ void BlueStore::BlueStoreCoDel::on_interval_finished() {
 }
 
 void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
+    std::cout << "###########################################" << std::endl;
     int64_t init_interval = 0;
     int64_t init_target = 0;
     if (cct->_conf->bluestore_codel) {
@@ -15856,8 +15857,14 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     max_queue_length = min_bluestore_budget;
     bluestore_budget_limit_ratio = 1.5;
 
+    std::cout << "4k only:" << only_4k << std::endl;
+    std::cout << "adaptive down:" << adaptive_down_sizing << std::endl;
+    std::cout << "adaptive target:" << adaptive_target << std::endl;
+    std::cout << "activated:" << activated << std::endl;
+
     initialize(init_interval, init_target, adaptive_target, activated);
     this->reset();
+    std::cout << "+++++++++++++++++++++++++++++++++++++++++++" << std::endl;
 }
 
 int64_t BlueStore::BlueStoreCoDel::get_bluestore_budget() {
