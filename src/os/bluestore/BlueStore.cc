@@ -15874,6 +15874,10 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     throttle_max_vec.clear();
     throttle_current_vec.clear();
 
+    target_vec.clear();
+    io_queued_vec.clear();
+    kv_queued_vec.clear();
+
     read_start_vec.clear();
     read_end_vec.clear();
     read_bytes.clear();
