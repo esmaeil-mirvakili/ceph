@@ -15794,7 +15794,7 @@ void BlueStore::BlueStoreCoDel::on_no_violation() {
 bool BlueStore::BlueStoreCoDel::has_bufferbloat_symptoms() {
     int64_t kv_queued_count = kv_queued.load(std::memory_order_relaxed);
     int64_t io_queued_count = io_queued.load(std::memory_order_relaxed);
-    return (io_queued_count*1.0)/(io_queued_count + kv_queued_count) > 3;
+    return (io_queued_count*1.0)/kv_queued_count > 3;
 }
 
 void BlueStore::BlueStoreCoDel::on_interval_finished() {
