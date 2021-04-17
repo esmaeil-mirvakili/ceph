@@ -15856,7 +15856,7 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     max_queue_length = min_bluestore_budget;
     bluestore_budget_limit_ratio = 1.5;
 
-    initialize(init_interval, init_target, adaptive_target);
+    initialize(init_interval, init_target, adaptive_target, activated);
     this->reset();
 }
 

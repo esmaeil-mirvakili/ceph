@@ -22,7 +22,7 @@ public:
 private:
     bool _check_latency_violation();
     void _update_interval();
-    void _interval_process();
+    void _interval_process(bool process);
     void _coarse_interval_process();
 
 protected:
@@ -49,7 +49,7 @@ protected:
      */
     void reset();
     void register_queue_latency(int64_t queuing_latency, int64_t size);
-    void initialize(int64_t init_interval, int64_t init_target, bool coarse_interval);
+    void initialize(int64_t init_interval, int64_t init_target, bool coarse_interval, bool active);
 
     /**
      * react properly if min latency is greater than target latency (min latency violation)

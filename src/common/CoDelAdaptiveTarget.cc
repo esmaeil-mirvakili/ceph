@@ -11,12 +11,14 @@ CoDel::~CoDel() {
     timer.shutdown();
 }
 
-void CoDel::initialize(int64_t init_interval, int64_t init_target, bool coarse_interval){
+void CoDel::initialize(int64_t init_interval, int64_t init_target, bool coarse_interval, bool active){
     initial_interval = init_interval;
     interval = initial_interval;
     initial_target_latency = init_target;
     target_latency = initial_target_latency;
     adaptive_target = coarse_interval;
+    if(active)
+        _interval_process(false);
 }
 
 void CoDel::register_queue_latency(int64_t latency, int64_t size) {
@@ -27,31 +29,33 @@ void CoDel::register_queue_latency(int64_t latency, int64_t size) {
     }
 }
 
-void CoDel::_interval_process() {
+void CoDel::_interval_process(bool process) {
     std::lock_guard l(register_lock);
-    if(_check_latency_violation()){
-        // min latency violation
-        violation_count++;
-        _update_interval();
-        on_min_latency_violation(); // handle the violation
-    } else{
-        // no latency violation
-        violation_count = 0;
-        no_violation_count++;
-        interval = initial_interval;
-        on_no_violation();
+    if (process) {
+        if (_check_latency_violation()) {
+            // min latency violation
+            violation_count++;
+            _update_interval();
+            on_min_latency_violation(); // handle the violation
+        } else {
+            // no latency violation
+            violation_count = 0;
+            no_violation_count++;
+            interval = initial_interval;
+            on_no_violation();
+        }
+        // reset interval
+        min_latency = INT_NULL;
+        min_latency_txc_size = 0;
+        interval_count++;
+        on_interval_finished();
+        if (adaptive_target && interval_count >= coarse_interval_frequency)
+            _coarse_interval_process();
     }
-    // reset interval
-    min_latency = INT_NULL;
-    min_latency_txc_size = 0;
-    interval_count++;
-    on_interval_finished();
-    if(interval_count >= coarse_interval_frequency)
-        _coarse_interval_process();
 
     auto codel_ctx = new LambdaContext(
             [this](int r) {
-                _interval_process();
+                _interval_process(true);
             });
     auto interval_duration = std::chrono::nanoseconds(interval);
     timer.add_event_after(interval_duration, codel_ctx);
