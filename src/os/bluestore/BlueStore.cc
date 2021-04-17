@@ -15797,7 +15797,7 @@ bool BlueStore::BlueStoreCoDel::has_bufferbloat_symptoms() {
     int64_t base = std::max(kv_queued_count, io_queued_count);
     if(base == 0)
         return false;
-    return && (std::abs(kv_queued_count - io_queued_count) * 1.0)/base > 0.8;
+    return (std::abs(kv_queued_count - io_queued_count) * 1.0)/base > 0.7;
 }
 
 void BlueStore::BlueStoreCoDel::on_interval_finished() {
