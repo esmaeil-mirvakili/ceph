@@ -37,7 +37,7 @@ protected:
     int64_t interval_count = 0;       // number of passed intervals
     int64_t coarse_interval_frequency = 20;
     int64_t target_increment = 100 * 1000;
-    int64_t ignore_interval = 10
+    int64_t ignore_interval = 10;
     SafeTimer timer;
     ceph::mutex timer_lock = ceph::make_mutex("CoDel::timer_lock");
     ceph::mutex register_lock = ceph::make_mutex("CoDel::register_lock");
