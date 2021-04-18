@@ -49,8 +49,12 @@ void CoDel::_interval_process(bool process) {
         min_latency_txc_size = 0;
         interval_count++;
         on_interval_finished();
-        if (adaptive_target && interval_count >= coarse_interval_frequency)
-            _coarse_interval_process();
+        if (adaptive_target && interval_count >= coarse_interval_frequency) {
+            if(ignore_interval > 0)
+                ignore_interval--;
+            else
+                _coarse_interval_process();
+        }
     }
 
     auto codel_ctx = new LambdaContext(
