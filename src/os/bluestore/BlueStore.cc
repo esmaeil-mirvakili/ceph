@@ -4532,6 +4532,7 @@ BlueStore::BlueStore(CephContext *cct,
   cct->_conf.add_observer(this);
   set_cache_shards(1);
   codel.set_throttle(&throttle);
+  codel.init(cct);
   asok_hook = SocketHook::create(this);
 }
 
@@ -4652,8 +4653,9 @@ void BlueStore::handle_conf_change(const ConfigProxy& conf,
   if (changed.count("bluestore_throttle_bytes") ||
       changed.count("bluestore_throttle_deferred_bytes") ||
       changed.count("bluestore_throttle_trace_rate")) {
-    throttle.reset_throttle(conf);
-    codel.set_throttle(&throttle);
+      if(!codel.activated)
+          throttle.reset_throttle(conf);
+//    codel.set_throttle(&throttle);
   }
   if (changed.count("bluestore_max_defer_interval")) {
     if (bdev) {
@@ -4670,10 +4672,10 @@ void BlueStore::handle_conf_change(const ConfigProxy& conf,
       changed.count("bluestore_codel") ||
       changed.count("bluestore_codel_interval") ||
       changed.count("bluestore_codel_starting_budget")) {
-      if (bdev) {
-          codel.init(cct);
-          codel.set_throttle(&throttle);
-      }
+//      if (bdev) {
+//          codel.init(cct);
+//          codel.set_throttle(&throttle);
+//      }
     }
 }
 

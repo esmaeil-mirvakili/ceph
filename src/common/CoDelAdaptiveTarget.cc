@@ -13,12 +13,15 @@ CoDel::~CoDel() {
 
 void CoDel::initialize(int64_t init_interval, int64_t init_target, bool coarse_interval, bool active){
     initial_interval = init_interval;
-    interval = initial_interval;
     initial_target_latency = init_target;
-    target_latency = initial_target_latency;
     adaptive_target = coarse_interval;
-    if(active)
+    if(active) {
+        {
+            std::lock_guard l{timer_lock};
+            timer.cancel_all_events();
+        }
         _interval_process(false);
+    }
 }
 
 void CoDel::register_queue_latency(int64_t latency, int64_t size) {
@@ -31,7 +34,7 @@ void CoDel::register_queue_latency(int64_t latency, int64_t size) {
 
 void CoDel::_interval_process(bool process) {
     std::lock_guard l(register_lock);
-    if (process) {
+    if (process && min_latency != INT_NULL) {
         if (_check_latency_violation()) {
             // min latency violation
             violation_count++;
@@ -66,7 +69,7 @@ void CoDel::_interval_process(bool process) {
 }
 
 void CoDel::_coarse_interval_process() {
-    if(no_violation_count == coarse_interval_frequency){
+    if((no_violation_count*1.0)/coarse_interval_frequency > 0.8){
 //        if(has_bufferbloat_symptoms())
             target_latency -= target_increment;
     } else if((no_violation_count*1.0)/coarse_interval_frequency < 0.2){
