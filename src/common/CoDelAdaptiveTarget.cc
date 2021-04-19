@@ -16,10 +16,7 @@ void CoDel::initialize(int64_t init_interval, int64_t init_target, bool coarse_i
     initial_target_latency = init_target;
     adaptive_target = coarse_interval;
     if(active) {
-        {
-            std::lock_guard l{timer_lock};
-            timer.cancel_all_events();
-        }
+        std::cout << "set timer" << std::endl;
         _interval_process(false);
     }
 }
