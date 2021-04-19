@@ -37,6 +37,7 @@ void CoDel::register_queue_latency(int64_t latency, int64_t size) {
 void CoDel::_interval_process(bool process) {
     std::lock_guard l(register_lock);
     if (process && min_latency != INT_NULL) {
+        std::cout << "txc cnt" << txc_count << std::endl;
         if (_check_latency_violation()) {
             // min latency violation
             violation_count++;
