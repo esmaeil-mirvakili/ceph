@@ -15913,9 +15913,9 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     // create an filestream object
     std::string prefix = "codel_log_";
     std::string index = "";
-    if(activated){
-        index = "_" + std::to_string(initial_target_latency);
-    }
+//    if(activated){
+//        index = "_" + std::to_string(initial_target_latency);
+//    }
 
     std::ofstream txc_file(prefix + "txc" + index + ".csv");
     // add column names
