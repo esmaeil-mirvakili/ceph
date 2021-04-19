@@ -22,6 +22,14 @@ public:
     * reset the algorithm
     */
     void reset();
+    vector<int64_t> target_vec;
+    vector<int64_t> batch_vec;
+    vector<int64_t> min_lat_vec;
+    vector<int64_t> violation_count_vec;
+    vector<int64_t> no_violation_count_vec;
+    vector<int64_t> interval_count_vec;
+    vector<int64_t> time_vec;
+    vector<int8_t> coarse_vec;
 
 private:
     bool _check_latency_violation();

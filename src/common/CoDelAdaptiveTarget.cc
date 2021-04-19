@@ -49,18 +49,27 @@ void CoDel::_interval_process(bool process) {
             interval = initial_interval;
             on_no_violation();
         }
+        min_lat_vec.push_back(min_latency);
+        violation_count_vec.push_back(violation_count);
+        no_violation_count_vec.push_back(no_violation_count);
+        int8_t coarse = 0;
         // reset interval
         min_latency = INT_NULL;
         txc_count = 0;
         min_latency_txc_size = 0;
         interval_count++;
+        interval_count_vec.push_back(interval_count);
         on_interval_finished();
         if (adaptive_target && interval_count >= coarse_interval_frequency) {
             if(ignore_interval > 0)
                 ignore_interval--;
-            else
+            else {
                 _coarse_interval_process();
+                coarse = true;
+            }
         }
+        coarse_vec.push_back(coarse);
+        target_vec.push_back(target_latency);
     }
 
     auto codel_ctx = new LambdaContext(
@@ -113,6 +122,7 @@ void CoDel::reset() {
     min_latency = INT_NULL;
     no_violation_count = 0;
     interval_count = 0;
+    ignore_interval = 10;
     std::cout << "target init:" << initial_target_latency << std::endl;
     std::cout << "target:" << target_latency << std::endl;
     std::cout << "interval init:" << initial_interval << std::endl;

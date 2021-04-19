@@ -15804,8 +15804,12 @@ bool BlueStore::BlueStoreCoDel::has_bufferbloat_symptoms() {
 }
 
 void BlueStore::BlueStoreCoDel::on_interval_finished() {
-    if(activated)
+    if(activated) {
+        mono_clock::time_point now = mono_clock::now();
+        batch_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
+        time_vec.push_back(bluestore_budget);
         throttle->reset_max(bluestore_budget);
+    }
 }
 
 void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
@@ -15894,6 +15898,14 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     read_start_vec.clear();
     read_end_vec.clear();
     read_bytes.clear();
+
+    target_vec.clear();
+    batch_vec.clear();
+    min_lat_vec.clear();
+    violation_count_vec.clear();
+    no_violation_count_vec.clear();
+    interval_count_vec.clear();
+    coarse_vec.clear();
 }
 
 void BlueStore::BlueStoreCoDel::dump_log_data() {
@@ -15929,6 +15941,30 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
         txc_file << "\n";
     }
     txc_file.close();
+
+    std::ofstream txc_file(prefix + "batch" + index + ".csv");
+    // add column names
+    batch_file << "time, target, throttle_budget, min_lat, violation_cnt, no_violation_cnt, interval_cnt, coarse" << "\n";
+    for (unsigned int i = 0; i < txc_start_vec.size(); i++){
+        batch_file << std::fixed << time_vec[i];
+        batch_file << ",";
+        batch_file << std::fixed << target_vec[i];
+        batch_file << ",";
+        batch_file << std::fixed << batch_vec[i];
+        batch_file << ",";
+        batch_file << std::fixed << min_lat_vec[i];
+        batch_file << ",";
+        batch_file << std::fixed << violation_count_vec[i];
+        batch_file << ",";
+        batch_file << std::fixed << no_violation_count_vec[i];
+        batch_file << ",";
+        batch_file << std::fixed << interval_count_vec[i];
+        batch_file << ",";
+        batch_file << std::fixed << coarse_vec[i];
+        batch_file << ",";
+        batch_file << "\n";
+    }
+    batch_file.close();
 
     std::ofstream read_file(prefix + "read" + index + ".csv");
     // add column names
