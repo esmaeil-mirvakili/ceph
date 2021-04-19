@@ -15942,7 +15942,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     }
     txc_file.close();
 
-    std::ofstream txc_file(prefix + "batch" + index + ".csv");
+    std::ofstream batch_file(prefix + "batch" + index + ".csv");
     // add column names
     batch_file << "time, target, throttle_budget, min_lat, violation_cnt, no_violation_cnt, interval_cnt, coarse" << "\n";
     for (unsigned int i = 0; i < txc_start_vec.size(); i++){
