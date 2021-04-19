@@ -30,6 +30,7 @@ void CoDel::register_queue_latency(int64_t latency, int64_t size) {
         min_latency = latency;
         min_latency_txc_size = size;
     }
+    txc_count++;
 }
 
 void CoDel::_interval_process(bool process) {
@@ -49,6 +50,7 @@ void CoDel::_interval_process(bool process) {
         }
         // reset interval
         min_latency = INT_NULL;
+        txc_count = 0
         min_latency_txc_size = 0;
         interval_count++;
         on_interval_finished();
@@ -60,6 +62,10 @@ void CoDel::_interval_process(bool process) {
         }
     }
 
+    {
+        std::lock_guard l{timer_lock};
+        timer.cancel_all_events();
+    }
     auto codel_ctx = new LambdaContext(
             [this](int r) {
                 _interval_process(true);

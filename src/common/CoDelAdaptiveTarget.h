@@ -35,6 +35,7 @@ protected:
     int64_t violation_count = 0;       // number of consecutive violations
     int64_t no_violation_count = 0;       // number of non_violations
     int64_t interval_count = 0;       // number of passed intervals
+    int64_t txc_count = 0;
     int64_t coarse_interval_frequency = 20;
     int64_t target_increment = 100 * 1000;
     int64_t ignore_interval = 10;
