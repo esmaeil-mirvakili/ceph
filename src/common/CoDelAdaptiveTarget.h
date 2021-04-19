@@ -18,6 +18,10 @@ class CoDel {
 public:
     CoDel(CephContext *_cct);
     ~CoDel();
+    /**
+    * reset the algorithm
+    */
+    void reset();
 
 private:
     bool _check_latency_violation();
@@ -45,11 +49,6 @@ protected:
     bool adaptive_target = false;
 
 
-
-    /**
-     * reset the algorithm
-     */
-    void reset();
     void register_queue_latency(int64_t queuing_latency, int64_t size);
     void initialize(int64_t init_interval, int64_t init_target, bool coarse_interval, bool active);
 

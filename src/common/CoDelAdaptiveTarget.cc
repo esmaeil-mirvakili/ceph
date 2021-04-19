@@ -37,7 +37,6 @@ void CoDel::register_queue_latency(int64_t latency, int64_t size) {
 void CoDel::_interval_process(bool process) {
     std::lock_guard l(register_lock);
     if (process && min_latency != INT_NULL) {
-        std::cout << "txc cnt" << txc_count << std::endl;
         if (_check_latency_violation()) {
             // min latency violation
             violation_count++;
@@ -108,9 +107,12 @@ void CoDel::_update_interval() {
 * reset the algorithm
 */
 void CoDel::reset() {
+    std::lock_guard l(register_lock);
     interval = initial_interval;
     target_latency = initial_target_latency;
     min_latency = INT_NULL;
+    no_violation_count = 0;
+    interval_count = 0;
     std::cout << "target init:" << initial_target_latency << std::endl;
     std::cout << "target:" << target_latency << std::endl;
     std::cout << "interval init:" << initial_interval << std::endl;

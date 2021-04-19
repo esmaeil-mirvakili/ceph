@@ -4506,6 +4506,7 @@ private:
         else if (command == "reset kvq vector")
         {
             store->codel.clear_log_data();
+            store->codel.reset();
         }
         return 0;
     }
