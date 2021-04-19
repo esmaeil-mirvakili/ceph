@@ -65,7 +65,7 @@ void CoDel::_interval_process(bool process) {
                 ignore_interval--;
             else {
                 _coarse_interval_process();
-                coarse = true;
+                coarse = 1;
             }
         }
         coarse_vec.push_back(coarse);
@@ -81,10 +81,10 @@ void CoDel::_interval_process(bool process) {
 }
 
 void CoDel::_coarse_interval_process() {
-    if((no_violation_count*1.0)/coarse_interval_frequency > 0.8){
+    if((no_violation_count*1.0)/coarse_interval_frequency > 0.7){
 //        if(has_bufferbloat_symptoms())
             target_latency -= target_increment;
-    } else if((no_violation_count*1.0)/coarse_interval_frequency < 0.2){
+    } else if((no_violation_count*1.0)/coarse_interval_frequency < 0.3){
 //        if(!has_bufferbloat_symptoms())
             target_latency += target_increment;
     }
