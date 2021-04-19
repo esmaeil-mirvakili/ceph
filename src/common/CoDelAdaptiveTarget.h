@@ -28,8 +28,9 @@ public:
     vector<int64_t> violation_count_vec;
     vector<int64_t> no_violation_count_vec;
     vector<int64_t> interval_count_vec;
-    vector<int64_t> time_vec;
-    vector<int8_t> coarse_vec;
+    vector<double> time_vec;
+    vector<double> thr_vec;
+    vector<int64_t> coarse_vec;
 
 private:
     bool _check_latency_violation();
@@ -47,6 +48,9 @@ protected:
     int64_t violation_count = 0;       // number of consecutive violations
     int64_t no_violation_count = 0;       // number of non_violations
     int64_t interval_count = 0;       // number of passed intervals
+    int64_t interval_size = 0;
+    double interval_time = 0;
+    double throughput = 0;
     int64_t txc_count = 0;
     int64_t coarse_interval_frequency = 20;
     int64_t target_increment = 100 * 1000;

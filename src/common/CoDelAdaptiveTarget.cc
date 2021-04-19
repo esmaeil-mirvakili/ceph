@@ -31,6 +31,7 @@ void CoDel::register_queue_latency(int64_t latency, int64_t size) {
         min_latency = latency;
         min_latency_txc_size = size;
     }
+    interval_size += size;
     txc_count++;
 }
 
@@ -70,6 +71,7 @@ void CoDel::_interval_process(bool process) {
         }
         coarse_vec.push_back(coarse);
         target_vec.push_back(target_latency);
+        thr_vec.push_back(throughput);
     }
 
     auto codel_ctx = new LambdaContext(
@@ -81,15 +83,22 @@ void CoDel::_interval_process(bool process) {
 }
 
 void CoDel::_coarse_interval_process() {
-    if((no_violation_count*1.0)/coarse_interval_frequency > 0.7){
-//        if(has_bufferbloat_symptoms())
-            target_latency -= target_increment;
-    } else if((no_violation_count*1.0)/coarse_interval_frequency < 0.3){
-//        if(!has_bufferbloat_symptoms())
+    mono_clock::time_point now = mono_clock::now();
+    auto time = std::chrono::nanoseconds(now - mono_clock::zero()).count();
+    double_t interval_throughput = (interval_size * 1.0) / (time - interval_time);
+    if (interval_time > 0) {
+        if ((no_violation_count * 1.0) / coarse_interval_frequency > 0.9) {
+            if(interval_throughput < throughput)
+                target_latency -= target_increment;
+        } else if ((no_violation_count * 1.0) / coarse_interval_frequency < 0.5) {
             target_latency += target_increment;
+        }
     }
     no_violation_count = 0;
     interval_count = 0;
+    interval_size = 0;
+    interval_time = time;
+    throughput = interval_throughput;
 }
 
 /**
@@ -123,6 +132,8 @@ void CoDel::reset() {
     no_violation_count = 0;
     interval_count = 0;
     ignore_interval = 10;
+    interval_size = 0;
+    interval_time = 0;
     std::cout << "target init:" << initial_target_latency << std::endl;
     std::cout << "target:" << target_latency << std::endl;
     std::cout << "interval init:" << initial_interval << std::endl;

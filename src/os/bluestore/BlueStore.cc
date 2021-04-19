@@ -15806,8 +15806,8 @@ bool BlueStore::BlueStoreCoDel::has_bufferbloat_symptoms() {
 void BlueStore::BlueStoreCoDel::on_interval_finished() {
     if(activated) {
         mono_clock::time_point now = mono_clock::now();
-        batch_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
-        time_vec.push_back(bluestore_budget);
+        time_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
+        batch_vec.push_back(bluestore_budget);
         throttle->reset_max(bluestore_budget);
     }
 }
@@ -15962,6 +15962,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
         batch_file << ",";
         batch_file << std::fixed << coarse_vec[i];
         batch_file << ",";
+        batch_file << std::fixed << thr_vec[i];
         batch_file << "\n";
     }
     batch_file.close();
