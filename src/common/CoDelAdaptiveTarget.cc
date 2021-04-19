@@ -85,8 +85,8 @@ void CoDel::_coarse_interval_process() {
     auto time = std::chrono::nanoseconds(now - mono_clock::zero()).count();
     double_t interval_throughput = (interval_size * 1.0) / ((time - interval_time)/1000);
     if (interval_time > 0) {
-        if ((no_violation_count * 1.0) / coarse_interval_frequency > 0.9) {
-            if(interval_throughput <= throughput)
+        if ((no_violation_count * 1.0) / coarse_interval_frequency > 0.8) {
+//            if(interval_throughput <= throughput)
                 target_latency -= target_increment;
         } else if ((no_violation_count * 1.0) / coarse_interval_frequency < 0.5) {
             target_latency += target_increment;
