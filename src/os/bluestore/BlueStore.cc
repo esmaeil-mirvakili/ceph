@@ -15899,14 +15899,6 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     read_end_vec.clear();
     read_bytes.clear();
 
-    target_vec.clear();
-    batch_vec.clear();
-    min_lat_vec.clear();
-    violation_count_vec.clear();
-    no_violation_count_vec.clear();
-    interval_count_vec.clear();
-    coarse_vec.clear();
-
     target_lat_vec.clear();
     batch_vec.clear();
     min_lat_vec.clear();
