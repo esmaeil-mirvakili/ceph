@@ -15906,6 +15906,15 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     no_violation_count_vec.clear();
     interval_count_vec.clear();
     coarse_vec.clear();
+
+    target_lat_vec.clear();
+    batch_vec.clear();
+    min_lat_vec.clear();
+    violation_count_vec.clear();
+    no_violation_count_vec.clear();
+    interval_count_vec.clear();
+    time_vec.clear();
+    thr_vec.clear();
 }
 
 void BlueStore::BlueStoreCoDel::dump_log_data() {
@@ -15944,11 +15953,11 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
 
     std::ofstream batch_file(prefix + "batch" + index + ".csv");
     // add column names
-    batch_file << "time, target, throttle_budget, min_lat, violation_cnt, no_violation_cnt, interval_cnt, coarse" << "\n";
-    for (unsigned int i = 0; i < txc_start_vec.size(); i++){
+    batch_file << "time, target, throttle_budget, min_lat, violation_cnt, no_violation_cnt, interval_cnt, throughput" << "\n";
+    for (unsigned int i = 0; i < time_vec.size(); i++){
         batch_file << std::fixed << time_vec[i];
         batch_file << ",";
-        batch_file << std::fixed << target_vec[i];
+        batch_file << std::fixed << target_lat_vec[i];
         batch_file << ",";
         batch_file << std::fixed << batch_vec[i];
         batch_file << ",";
@@ -15959,8 +15968,6 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
         batch_file << std::fixed << no_violation_count_vec[i];
         batch_file << ",";
         batch_file << std::fixed << interval_count_vec[i];
-        batch_file << ",";
-        batch_file << std::fixed << coarse_vec[i];
         batch_file << ",";
         batch_file << std::fixed << thr_vec[i];
         batch_file << "\n";

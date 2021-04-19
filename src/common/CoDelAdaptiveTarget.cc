@@ -53,7 +53,7 @@ void CoDel::_interval_process(bool process) {
         min_lat_vec.push_back(min_latency);
         violation_count_vec.push_back(violation_count);
         no_violation_count_vec.push_back(no_violation_count);
-        int8_t coarse = 0;
+
         // reset interval
         min_latency = INT_NULL;
         txc_count = 0;
@@ -66,11 +66,9 @@ void CoDel::_interval_process(bool process) {
                 ignore_interval--;
             else {
                 _coarse_interval_process();
-                coarse = 1;
             }
         }
-        coarse_vec.push_back(coarse);
-        target_vec.push_back(target_latency);
+        target_lat_vec.push_back(target_latency);
         thr_vec.push_back(throughput);
     }
 
@@ -85,10 +83,10 @@ void CoDel::_interval_process(bool process) {
 void CoDel::_coarse_interval_process() {
     mono_clock::time_point now = mono_clock::now();
     auto time = std::chrono::nanoseconds(now - mono_clock::zero()).count();
-    double_t interval_throughput = (interval_size * 1.0) / (time - interval_time);
+    double_t interval_throughput = (interval_size * 1.0) / ((time - interval_time)/1000);
     if (interval_time > 0) {
         if ((no_violation_count * 1.0) / coarse_interval_frequency > 0.9) {
-//            if(interval_throughput < throughput)
+            if(interval_throughput <= throughput)
                 target_latency -= target_increment;
         } else if ((no_violation_count * 1.0) / coarse_interval_frequency < 0.5) {
             target_latency += target_increment;
