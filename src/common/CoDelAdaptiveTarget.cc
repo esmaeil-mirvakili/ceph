@@ -41,18 +41,18 @@ void CoDel::_interval_process(bool process) {
         if (_check_latency_violation()) {
             // min latency violation
             violation_count++;
+            violated_interval_count++;
             _update_interval();
             on_min_latency_violation(); // handle the violation
         } else {
             // no latency violation
             violation_count = 0;
-            no_violation_count++;
             interval = initial_interval;
             on_no_violation();
         }
         min_lat_vec.push_back(min_latency);
         violation_count_vec.push_back(violation_count);
-        no_violation_count_vec.push_back(no_violation_count);
+        violated_interval_count.push_back(violated_interval_count);
 
         // reset interval
         min_latency = INT_NULL;
@@ -61,12 +61,8 @@ void CoDel::_interval_process(bool process) {
         interval_count++;
         interval_count_vec.push_back(interval_count);
         on_interval_finished();
-        if (adaptive_target && interval_count >= coarse_interval_frequency) {
-            if(ignore_interval > 0)
-                ignore_interval--;
-            else {
-                _coarse_interval_process();
-            }
+        if (adaptive_target && interval_count >= slow_interval_frequency) {
+            _coarse_interval_process();
         }
         target_lat_vec.push_back(target_latency);
         thr_vec.push_back(throughput);
@@ -85,14 +81,14 @@ void CoDel::_coarse_interval_process() {
     auto time = std::chrono::nanoseconds(now - mono_clock::zero()).count();
     double_t interval_throughput = (interval_size * 1.0) / ((time - interval_time)/1000);
     if (interval_time > 0) {
-        if ((no_violation_count * 1.0) / coarse_interval_frequency > 0.9) {
-//            if(interval_throughput <= throughput)
-                target_latency -= target_increment;
-        } else if ((no_violation_count * 1.0) / coarse_interval_frequency < 0.6) {
+        double violation_ratio = (violated_interval_count * 1.0) / slow_interval_frequency;
+        if (violation_ratio < normal_codel_percentage_threshold) {
+            target_latency -= target_increment;
+        } else if (violation_ratio > aggressive_codel_percentage_threshold) {
             target_latency += target_increment;
         }
     }
-    no_violation_count = 0;
+    violated_interval_count = 0;
     interval_count = 0;
     interval_size = 0;
     interval_time = time;
@@ -127,9 +123,8 @@ void CoDel::reset() {
     interval = initial_interval;
     target_latency = initial_target_latency;
     min_latency = INT_NULL;
-    no_violation_count = 0;
+    violated_interval_count = 0;
     interval_count = 0;
-    ignore_interval = 10;
     interval_size = 0;
     interval_time = 0;
     std::cout << "target init:" << initial_target_latency << std::endl;

@@ -45,19 +45,21 @@ protected:
     int64_t min_latency = INT_NULL;       // min latency in the current interval
     int64_t min_latency_txc_size = 0;
     int64_t violation_count = 0;       // number of consecutive violations
-    int64_t no_violation_count = 0;       // number of non_violations
+    int64_t violated_interval_count = 0;       // number of non_violations
     int64_t interval_count = 0;       // number of passed intervals
     int64_t interval_size = 0;
     double interval_time = 0;
     double throughput = 0;
+    double aggressive_codel_percentage_threshold = 0.4;
+    double normal_codel_percentage_threshold = 0.1;
     int64_t txc_count = 0;
-    int64_t coarse_interval_frequency = 20;
+    int64_t slow_interval_frequency = 20;
     int64_t target_increment = 100 * 1000;
-    int64_t ignore_interval = 10;
     SafeTimer timer;
     ceph::mutex timer_lock = ceph::make_mutex("CoDel::timer_lock");
     ceph::mutex register_lock = ceph::make_mutex("CoDel::register_lock");
     bool adaptive_target = false;
+    bool smart_increment = false;
 
 
     void register_queue_latency(int64_t queuing_latency, int64_t size);

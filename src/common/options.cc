@@ -4872,17 +4872,37 @@ std::vector<Option> get_global_options() {
     .set_default(false)
     .set_description("Run BlueStore with CoDel"),
 
-    Option("bluestore_codel_target_latency", Option::TYPE_INT, Option::LEVEL_DEV)
-    .set_default(0)
-    .set_description("CoDel target latency in nanoseconds"),
+    Option("bluestore_codel_target_latency", Option::INT, Option::LEVEL_ADVANCED)
+    .set_default(7*1000*1000)
+    .set_description("CoDel target latency"),
 
-    Option("bluestore_codel_interval", Option::TYPE_INT, Option::LEVEL_DEV)
-    .set_default(0)
-    .set_description("CoDel interval parameters in nanoseconds"),
+    Option("bluestore_codel_interval", Option::TYPE_INT, Option::LEVEL_ADVANCED)
+    .set_default(50*1000*1000)
+    .set_description("CoDel interval"),
 
-    Option("bluestore_codel_starting_budget", Option::TYPE_INT, Option::LEVEL_DEV)
-    .set_default(100)
+    Option("bluestore_codel_interval_window", Option::TYPE_SIZE, Option::LEVEL_ADVANCED)
+    .set_default(10*1024*1024)
+    .set_description("CoDel interval in bytes for window-based CoDel"),
+
+    Option("bluestore_codel_starting_budget", Option::TYPE_INT, Option::LEVEL_ADVANCED)
+    .set_default(200*1024)
     .set_description("Initial CoDel budget in bytes"),
+
+    Option("bluestore_codel_min_budget", Option::TYPE_INT, Option::LEVEL_ADVANCED)
+    .set_default(200*1024)
+    .set_description("Min CoDel budget in bytes"),
+
+    Option("bluestore_codel_aggressive_codel_threshold", Option::TYPE_INT, Option::LEVEL_ADVANCED)
+    .set_default(0.4)
+    .set_description("Violated interval percentage indicating an aggressive behavior"),
+
+    Option("bluestore_codel_normal_codel_threshold", Option::TYPE_INT, Option::LEVEL_ADVANCED)
+    .set_default(0.1)
+    .set_description("Violated interval percentage indicating a normal behavior"),
+
+    Option("bluestore_codel_slow_codel_frequency", Option::TYPE_INT, Option::LEVEL_ADVANCED)
+    .set_default(20)
+    .set_description("Slow CoDel frequency in terms of fast codel interval"),
 
           // -----------------------------------------
     // kstore

@@ -15861,6 +15861,27 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
         if (getline(settingFile, line)) {
             adaptive_target = std::stoi(line) > 0;
         }
+        if (getline(settingFile, line)) {
+            aggressive_codel_percentage_threshold = std::stoi(line) / 100.0;
+        }
+        if (getline(settingFile, line)) {
+            normal_codel_percentage_threshold = std::stoi(line) / 100.0;
+        }
+        if (getline(settingFile, line)) {
+            slow_interval_frequency = std::stoi(line);
+        }
+        if (getline(settingFile, line)) {
+            target_increment = std::stoi(line);
+        }
+        if (getline(settingFile, line)) {
+            smart_increment = std::stoi(line) > 0;
+        }
+        if (getline(settingFile, line)) {
+            aggressive_codel_percentage_threshold = std::stoi(line) / 100.0;
+        }
+        if (getline(settingFile, line)) {
+            normal_codel_percentage_threshold = std::stoi(line) / 100.0;
+        }
     }
     settingFile.close();
     bluestore_budget = starting_bluestore_budget;
