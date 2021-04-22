@@ -15862,12 +15862,6 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
             adaptive_target = std::stoi(line) > 0;
         }
         if (getline(settingFile, line)) {
-            aggressive_codel_percentage_threshold = std::stoi(line) / 100.0;
-        }
-        if (getline(settingFile, line)) {
-            normal_codel_percentage_threshold = std::stoi(line) / 100.0;
-        }
-        if (getline(settingFile, line)) {
             slow_interval_frequency = std::stoi(line);
         }
         if (getline(settingFile, line)) {
