@@ -52,7 +52,7 @@ void CoDel::_interval_process(bool process) {
         }
         min_lat_vec.push_back(min_latency);
         violation_count_vec.push_back(violation_count);
-        violated_interval_count.push_back(violated_interval_count);
+        no_violation_count_vec.push_back(violated_interval_count);
 
         // reset interval
         min_latency = INT_NULL;
