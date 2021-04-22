@@ -4872,7 +4872,7 @@ std::vector<Option> get_global_options() {
     .set_default(false)
     .set_description("Run BlueStore with CoDel"),
 
-    Option("bluestore_codel_target_latency", Option::INT, Option::LEVEL_ADVANCED)
+    Option("bluestore_codel_target_latency", Option::TYPE_INT, Option::LEVEL_ADVANCED)
     .set_default(7*1000*1000)
     .set_description("CoDel target latency"),
 
