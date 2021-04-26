@@ -82,14 +82,14 @@ void CoDel::_coarse_interval_process() {
     double_t interval_throughput = (interval_size * 1.0) / ((time - interval_time)/1000);
     if (interval_time > 0) {
         double violation_ratio = (violated_interval_count * 1.0) / slow_interval_frequency;
-        if (violation_ratio < normal_codel_percentage_threshold) {
+        if (violation_ratio <= normal_codel_percentage_threshold) {
             if(smart_increment){
-                double norm = violation_ratio / normal_codel_percentage_threshold;
+                double norm = (normal_codel_percentage_threshold - violation_ratio) / normal_codel_percentage_threshold;
                 double dec = ((norm * norm + 1) * target_increment)/2;
                 target_latency -= dec;
             }else
                 target_latency -= target_increment;
-        } else if (violation_ratio > aggressive_codel_percentage_threshold) {
+        } else if (violation_ratio >= aggressive_codel_percentage_threshold) {
             if(smart_increment){
                 double norm = (violation_ratio - aggressive_codel_percentage_threshold) / (1 - aggressive_codel_percentage_threshold);
                 double dec = ((norm * norm + 1) * target_increment)/2;
