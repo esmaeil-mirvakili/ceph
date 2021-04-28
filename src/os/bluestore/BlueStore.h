@@ -1849,8 +1849,6 @@ public:
         vector <int64_t> throttle_max_vec;
         vector <int64_t> throttle_current_vec;
         vector <int64_t> target_vec;
-        vector <int64_t> io_queued_vec;
-        vector <int64_t> kv_queued_vec;
 
         vector<double> read_start_vec;
         vector<double> read_end_vec;
@@ -1891,9 +1889,6 @@ public:
         int64_t max_queue_length = min_bluestore_budget;
         bool batch_started = false;
         BlueStoreThrottle *throttle;
-        ceph::mutex codel_lock = ceph::make_mutex("BlueStore::BlueStoreCoDel::codel_lock");
-        std::atomic_int64_t kv_queued = {0};
-        std::atomic_int64_t io_queued = {0};
         double throttle_usage_threshold = 0.5;
         bool only_4k = false;
 

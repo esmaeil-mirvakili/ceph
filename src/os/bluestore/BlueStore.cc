@@ -11229,7 +11229,6 @@ void BlueStore::_txc_state_proc(TransContext *txc)
       throttle.log_state_latency(*txc, logger, l_bluestore_state_prepare_lat);
       if (txc->ioc.has_pending_aios()) {
 	txc->set_state(TransContext::STATE_AIO_WAIT);
-          codel.add_io_queued(txc);
 #ifdef WITH_BLKIN
         if (txc->trace) {
           txc->trace.keyval("pending aios", txc->ioc.num_pending.load());
@@ -11262,7 +11261,6 @@ void BlueStore::_txc_state_proc(TransContext *txc)
       }
       throttle.log_state_latency(*txc, logger, l_bluestore_state_io_done_lat);
       txc->set_state(TransContext::STATE_KV_QUEUED);
-      codel.add_kv_queued(txc);
       if (cct->_conf->bluestore_sync_submit_transaction) {
 	if (txc->last_nid >= nid_max ||
 	    txc->last_blobid >= blobid_max) {
@@ -15736,7 +15734,6 @@ void BlueStore::BlueStoreThrottle::complete(TransContext &txc)
 
 void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
     mono_clock::time_point now = mono_clock::now();
-    kv_queued--;
     if(activated){
         int64_t latency = std::chrono::nanoseconds(now - txc->start_time).count();
         if (max_queue_length < throttle->get_current())
@@ -15745,8 +15742,6 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
             if(!only_4k || txc->bytes < 6000)
                 register_queue_latency(latency, txc->bytes);
     }
-    int64_t kv_queued_count = kv_queued.load(std::memory_order_relaxed);
-    int64_t io_queued_count = io_queued.load(std::memory_order_relaxed);
     txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
     txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
     txc_bytes.push_back(txc->bytes);
@@ -15754,17 +15749,14 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
     throttle_current_vec.push_back(txc->throttle_current);
     throttle_usage.push_back(txc->throttle_usage);
     target_vec.push_back(target_latency);
-    io_queued_vec.push_back(io_queued_count);
-    kv_queued_vec.push_back(kv_queued_count);
 }
 
 void BlueStore::BlueStoreCoDel::add_kv_queued(TransContext *txc){
-    io_queued--;
-    kv_queued++;
+
 }
 
 void BlueStore::BlueStoreCoDel::add_io_queued(TransContext *txc){
-    io_queued++;
+
 }
 
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
@@ -15795,12 +15787,7 @@ void BlueStore::BlueStoreCoDel::on_no_violation() {
 }
 
 bool BlueStore::BlueStoreCoDel::has_bufferbloat_symptoms() {
-    int64_t kv_queued_count = kv_queued.load(std::memory_order_relaxed);
-    int64_t io_queued_count = io_queued.load(std::memory_order_relaxed);
-    int64_t base = std::max(kv_queued_count, io_queued_count);
-    if(base == 0)
-        return false;
-    return (std::abs(kv_queued_count - io_queued_count) * 1.0)/base > 0.7;
+    return false;
 }
 
 void BlueStore::BlueStoreCoDel::on_interval_finished() {
@@ -15907,8 +15894,6 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     throttle_current_vec.clear();
 
     target_vec.clear();
-    io_queued_vec.clear();
-    kv_queued_vec.clear();
 
     read_start_vec.clear();
     read_end_vec.clear();
@@ -15934,7 +15919,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
 
     std::ofstream txc_file(prefix + "txc" + index + ".csv");
     // add column names
-    txc_file << "start, end, size, th max, th cur, throttle_usage, target, io_queued, kv_queued" << "\n";
+    txc_file << "start, end, size, th max, th cur, throttle_usage, target" << "\n";
 
     for (unsigned int i = 0; i < txc_start_vec.size(); i++){
         txc_file << std::fixed << txc_start_vec[i];
@@ -15950,10 +15935,6 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
         txc_file << std::fixed << throttle_usage[i];
         txc_file << ",";
         txc_file << std::fixed << target_vec[i];
-        txc_file << ",";
-        txc_file << std::fixed << io_queued_vec[i];
-        txc_file << ",";
-        txc_file << std::fixed << kv_queued_vec[i];
         txc_file << "\n";
     }
     txc_file.close();
