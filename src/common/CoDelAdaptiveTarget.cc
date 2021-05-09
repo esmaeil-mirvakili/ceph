@@ -31,6 +31,7 @@ void CoDel::register_queue_latency(int64_t latency, int64_t size) {
         min_latency = latency;
         min_latency_txc_size = size;
     }
+    coarse_interval_size += size;
     interval_size += size;
     txc_count++;
 }
@@ -42,6 +43,7 @@ void CoDel::_interval_process(bool process) {
             // min latency violation
             violation_count++;
             violated_interval_count++;
+            violated_interval_size_vec.push_back(interval_size);
             _update_interval();
             on_min_latency_violation(); // handle the violation
         } else {
@@ -56,6 +58,7 @@ void CoDel::_interval_process(bool process) {
 
         // reset interval
         min_latency = INT_NULL;
+        interval_size = 0;
         txc_count = 0;
         min_latency_txc_size = 0;
         interval_count++;
@@ -79,34 +82,41 @@ void CoDel::_interval_process(bool process) {
 void CoDel::_coarse_interval_process() {
     mono_clock::time_point now = mono_clock::now();
     auto time = std::chrono::nanoseconds(now - mono_clock::zero()).count();
-    double_t interval_throughput = (interval_size * 1.0) / ((time - interval_time)/1000);
+    double_t interval_throughput = (coarse_interval_size * 1.0) / ((time - interval_time)/1000);
     if (interval_time > 0) {
         double violation_ratio = (violated_interval_count * 1.0) / slow_interval_frequency;
+        if(smart_increment){
+            int64_t violated_size = 0;
+            for (unsigned int i = 0; i < violated_interval_size_vec.size(); i++)
+                violated_size += violated_interval_size_vec[i];
+            violation_ratio = (violated_size * 1.0) / coarse_interval_size;
+        }
         if (violation_ratio <= normal_codel_percentage_threshold) {
-            if(smart_increment){
-                double diff = normal_codel_percentage_threshold - violation_ratio;
-                double min_x = -normal_codel_percentage_threshold;
-                double max_x = 0.0;
-                double alpha = max_x * max_x + min_x * min_x - (2 * min_x * max_x);
-                double dec_ratio = (diff * diff) / alpha;
-                target_latency = target_latency - (dec_ratio * target_increment);
-            }else
+//            if(smart_increment){
+//                double diff = normal_codel_percentage_threshold - violation_ratio;
+//                double min_x = -normal_codel_percentage_threshold;
+//                double max_x = 0.0;
+//                double alpha = max_x * max_x + min_x * min_x - (2 * min_x * max_x);
+//                double dec_ratio = (diff * diff) / alpha;
+//                target_latency = target_latency - (dec_ratio * target_increment);
+//            }else
                 target_latency -= target_increment;
         } else if (violation_ratio >= aggressive_codel_percentage_threshold) {
-            if(smart_increment){
-                double diff = violation_ratio - aggressive_codel_percentage_threshold;
-                double min_x = aggressive_codel_percentage_threshold;
-                double max_x = 1.0;
-                double alpha = max_x * max_x + min_x * min_x - (2 * min_x * max_x);
-                double dec_ratio = (diff * diff) / alpha;
-                target_latency = target_latency + (dec_ratio * target_increment);
-            }else
+//            if(smart_increment){
+//                double diff = violation_ratio - aggressive_codel_percentage_threshold;
+//                double min_x = aggressive_codel_percentage_threshold;
+//                double max_x = 1.0;
+//                double alpha = max_x * max_x + min_x * min_x - (2 * min_x * max_x);
+//                double dec_ratio = (diff * diff) / alpha;
+//                target_latency = target_latency + (dec_ratio * target_increment);
+//            }else
                 target_latency += target_increment;
         }
     }
     violated_interval_count = 0;
     interval_count = 0;
-    interval_size = 0;
+    coarse_interval_size = 0;
+    violated_interval_size_vec.clear();
     interval_time = time;
     throughput = interval_throughput;
 }
@@ -142,6 +152,8 @@ void CoDel::reset() {
     violated_interval_count = 0;
     interval_count = 0;
     interval_size = 0;
+    violated_interval_size_vec.clear();
+    coarse_interval_size = 0;
     interval_time = 0;
     std::cout << "target init:" << initial_target_latency << std::endl;
     std::cout << "target:" << target_latency << std::endl;

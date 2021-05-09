@@ -48,6 +48,8 @@ protected:
     int64_t violated_interval_count = 0;       // number of non_violations
     int64_t interval_count = 0;       // number of passed intervals
     int64_t interval_size = 0;
+    int64_t coarse_interval_size = 0;
+    vector<int64_t> violated_interval_size_vec;
     double interval_time = 0;
     double throughput = 0;
     double aggressive_codel_percentage_threshold = 0.4;
