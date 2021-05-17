@@ -55,7 +55,6 @@ protected:
     double aggressive_codel_percentage_threshold = 0.4;
     double normal_codel_percentage_threshold = 0.1;
     int64_t txc_count = 0;
-    double_t throttle_usage_sum = 0.0;
     int64_t slow_interval_frequency = 20;
     int64_t target_increment = 100 * 1000;
     SafeTimer timer;
@@ -65,7 +64,7 @@ protected:
     bool smart_increment = false;
 
 
-    void register_queue_latency(int64_t queuing_latency, double_t throttle_usage, int64_t size);
+    void register_queue_latency(int64_t queuing_latency, int64_t size);
     void initialize(int64_t init_interval, int64_t init_target, bool coarse_interval, bool active);
 
     /**

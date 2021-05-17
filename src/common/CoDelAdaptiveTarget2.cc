@@ -25,16 +25,15 @@ void CoDel::initialize(int64_t init_interval, int64_t init_target, bool coarse_i
     }
 }
 
-void CoDel::register_queue_latency(int64_t latency, double_t throttle_usage, int64_t size) {
+void CoDel::register_queue_latency(int64_t latency, int64_t size) {
     std::lock_guard l(register_lock);
     if (min_latency == INT_NULL || latency < min_latency) {
         min_latency = latency;
         min_latency_txc_size = size;
     }
-//    coarse_interval_size += size;
-//    interval_size += size;
+    coarse_interval_size += size;
+    interval_size += size;
     txc_count++;
-    throttle_usage_sum += throttle_usage;
 }
 
 void CoDel::_interval_process(bool process) {
@@ -43,8 +42,8 @@ void CoDel::_interval_process(bool process) {
         if (_check_latency_violation()) {
             // min latency violation
             violation_count++;
-//            violated_interval_count++;
-//            violated_interval_size_vec.push_back(interval_size);
+            violated_interval_count++;
+            violated_interval_size_vec.push_back(interval_size);
             _update_interval();
             on_min_latency_violation(); // handle the violation
         } else {
@@ -59,7 +58,8 @@ void CoDel::_interval_process(bool process) {
 
         // reset interval
         min_latency = INT_NULL;
-//        interval_size = 0;
+        interval_size = 0;
+        txc_count = 0;
         min_latency_txc_size = 0;
         interval_count++;
         interval_count_vec.push_back(interval_count);
@@ -82,19 +82,43 @@ void CoDel::_interval_process(bool process) {
 void CoDel::_coarse_interval_process() {
     mono_clock::time_point now = mono_clock::now();
     auto time = std::chrono::nanoseconds(now - mono_clock::zero()).count();
-    double_t usage_avg = throttle_usage_sum / (txc_count * 1.0);
-    throughput = usage_avg;
+    double_t interval_throughput = (coarse_interval_size * 1.0) / ((time - interval_time)/1000);
     if (interval_time > 0) {
-        if (usage_avg >= normal_codel_percentage_threshold) {
+        double violation_ratio = (violated_interval_count * 1.0) / slow_interval_frequency;
+        if(smart_increment){
+            int64_t violated_size = 0;
+            for (unsigned int i = 0; i < violated_interval_size_vec.size(); i++)
+                violated_size += violated_interval_size_vec[i];
+            violation_ratio = (violated_size * 1.0) / coarse_interval_size;
+        }
+        if (violation_ratio <= normal_codel_percentage_threshold) {
+//            if(smart_increment){
+//                double diff = normal_codel_percentage_threshold - violation_ratio;
+//                double min_x = -normal_codel_percentage_threshold;
+//                double max_x = 0.0;
+//                double alpha = max_x * max_x + min_x * min_x - (2 * min_x * max_x);
+//                double dec_ratio = (diff * diff) / alpha;
+//                target_latency = target_latency - (dec_ratio * target_increment);
+//            }else
                 target_latency -= target_increment;
-        } else {
+        } else if (violation_ratio >= aggressive_codel_percentage_threshold) {
+//            if(smart_increment){
+//                double diff = violation_ratio - aggressive_codel_percentage_threshold;
+//                double min_x = aggressive_codel_percentage_threshold;
+//                double max_x = 1.0;
+//                double alpha = max_x * max_x + min_x * min_x - (2 * min_x * max_x);
+//                double dec_ratio = (diff * diff) / alpha;
+//                target_latency = target_latency + (dec_ratio * target_increment);
+//            }else
                 target_latency += target_increment;
         }
     }
+    violated_interval_count = 0;
     interval_count = 0;
-    txc_count = 0;
-    throttle_usage_sum = 0;
+    coarse_interval_size = 0;
+    violated_interval_size_vec.clear();
     interval_time = time;
+    throughput = interval_throughput;
 }
 
 /**

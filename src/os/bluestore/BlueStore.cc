@@ -15740,7 +15740,7 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
             max_queue_length = throttle->get_current();
         if(txc->throttle_usage > throttle_usage_threshold)
             if(!only_4k || txc->bytes < 6000)
-                register_queue_latency(latency, txc->bytes);
+                register_queue_latency(latency, txc->throttle_usage, txc->bytes);
     }
     txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
     txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
