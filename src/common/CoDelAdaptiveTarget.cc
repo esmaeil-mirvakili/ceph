@@ -85,7 +85,7 @@ void CoDel::_coarse_interval_process() {
     double_t usage_avg = throttle_usage_sum / (txc_count * 1.0);
     throughput = usage_avg;
     if (interval_time > 0) {
-        if (usage_avg >= normal_codel_percentage_threshold) {
+        if (usage_avg < normal_codel_percentage_threshold) {
                 target_latency -= target_increment;
         } else {
                 target_latency += target_increment;
