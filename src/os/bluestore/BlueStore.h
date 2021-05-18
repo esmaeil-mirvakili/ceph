@@ -1830,8 +1830,10 @@ public:
 
         void set_throttle(BlueStoreThrottle *bs_throttle) {
             throttle = bs_throttle;
-            if(activated)
+            if(activated) {
+                bluestore_budget = throttle->get_max();
                 throttle->reset_max(bluestore_budget);
+            }
         }
 
         void modify_transaction_cost(TransContext *txc) {

@@ -40,19 +40,19 @@ void CoDel::register_queue_latency(int64_t latency, double_t throttle_usage, int
 void CoDel::_interval_process(bool process) {
     std::lock_guard l(register_lock);
     if (process && min_latency != INT_NULL) {
-        if (_check_latency_violation()) {
-            // min latency violation
-            violation_count++;
-//            violated_interval_count++;
-//            violated_interval_size_vec.push_back(interval_size);
-            _update_interval();
-            on_min_latency_violation(); // handle the violation
-        } else {
-            // no latency violation
-            violation_count = 0;
-            interval = initial_interval;
-            on_no_violation();
-        }
+//        if (_check_latency_violation()) {
+//            // min latency violation
+//            violation_count++;
+////            violated_interval_count++;
+////            violated_interval_size_vec.push_back(interval_size);
+//            _update_interval();
+//            on_min_latency_violation(); // handle the violation
+//        } else {
+//            // no latency violation
+//            violation_count = 0;
+//            interval = initial_interval;
+//            on_no_violation();
+//        }
         min_lat_vec.push_back(min_latency);
         violation_count_vec.push_back(violation_count);
         no_violation_count_vec.push_back(violated_interval_count);
