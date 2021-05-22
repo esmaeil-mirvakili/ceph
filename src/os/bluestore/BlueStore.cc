@@ -15882,7 +15882,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     for (unsigned int i = 0; i < txc_start_vec.size(); i++){
         txc_file << std::fixed << txc_start_vec[i];
         txc_file << ",";
-        txc_file << std::fixed << txc_lat_vev[i];
+        txc_file << std::fixed << txc_lat_vectxc_lat_vec[i];
         txc_file << ",";
         txc_file << std::fixed << txc_bytes[i];
         txc_file << ",";
