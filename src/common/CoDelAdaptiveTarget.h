@@ -39,6 +39,7 @@ protected:
     int64_t min_target_latency = 1000;  // in ns
     int64_t max_target_latency = 200000; // in ns
     int64_t txc_cnt = 0;
+    int64_t violation_count = 0;
     int64_t interval_count = 0;       // number of passed intervals
     int64_t slow_interval_frequency = 10;
     mono_clock::time_point slow_interval_start = mono_clock::zero();

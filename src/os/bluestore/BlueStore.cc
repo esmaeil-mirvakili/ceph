@@ -15862,7 +15862,7 @@ int64_t BlueStore::BlueStoreCoDel::get_bluestore_budget() {
 
 void BlueStore::BlueStoreCoDel::clear_log_data() {
     txc_start_vec.clear();
-    txc_lat.clear();
+    txc_lat_vec.clear();
     txc_bytes.clear();
     throttle_max_vec.clear();
     throttle_current_vec.clear();
@@ -15882,7 +15882,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     for (unsigned int i = 0; i < txc_start_vec.size(); i++){
         txc_file << std::fixed << txc_start_vec[i];
         txc_file << ",";
-        txc_file << std::fixed << txc_lat[i];
+        txc_file << std::fixed << txc_lat_vev[i];
         txc_file << ",";
         txc_file << std::fixed << txc_bytes[i];
         txc_file << ",";

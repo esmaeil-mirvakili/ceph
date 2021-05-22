@@ -1843,7 +1843,7 @@ public:
 
         // log data
         vector<double> txc_start_vec;
-        vector<double> txc_lat;
+        vector<double> txc_lat_vec;
         vector<double> txc_bytes;
         vector<int64_t> throttle_max_vec;
         vector<int64_t> throttle_current_vec;
