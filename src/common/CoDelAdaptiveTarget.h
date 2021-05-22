@@ -22,19 +22,11 @@ public:
     * reset the algorithm
     */
     void reset();
-    vector<int64_t> target_lat_vec;
-    vector<int64_t> batch_vec;
-    vector<int64_t> min_lat_vec;
-    vector<int64_t> violation_count_vec;
-    vector<int64_t> no_violation_count_vec;
-    vector<int64_t> interval_count_vec;
-    vector<double> time_vec;
-    vector<double> thr_vec;
 
 private:
     bool _check_latency_violation();
     void _update_interval();
-    void _interval_process(bool process);
+    void _interval_process();
     void _coarse_interval_process();
 
 protected:
@@ -43,30 +35,25 @@ protected:
     int64_t interval = INT_NULL;       // current interval that algorithm is using
     int64_t target_latency = INT_NULL;       // current target latency that algorithm is using
     int64_t min_latency = INT_NULL;       // min latency in the current interval
-    int64_t min_latency_txc_size = 0;
-    int64_t violation_count = 0;       // number of consecutive violations
-    int64_t violated_interval_count = 0;       // number of non_violations
+    int64_t sum_latency = 0;
+    int64_t min_target_latency = 1000;  // in ns
+    int64_t max_target_latency = 200000; // in ns
+    int64_t txc_cnt = 0;
     int64_t interval_count = 0;       // number of passed intervals
-    int64_t interval_size = 0;
-    int64_t coarse_interval_size = 0;
-    vector<int64_t> violated_interval_size_vec;
-    double interval_time = 0;
-    double throughput = 0;
-    double aggressive_codel_percentage_threshold = 0.4;
-    double normal_codel_percentage_threshold = 0.1;
-    int64_t txc_count = 0;
-    double_t throttle_usage_sum = 0.0;
-    int64_t slow_interval_frequency = 20;
-    int64_t target_increment = 100 * 1000;
+    int64_t slow_interval_frequency = 10;
+    mono_clock::time_point slow_interval_start = mono_clock::zero();
+    double_t slow_interval_throughput;
+    double_t slow_interval_lat;
+    double_t learning_rate = 0.01;
+    int64_t coarse_interval_size;
     SafeTimer timer;
     ceph::mutex timer_lock = ceph::make_mutex("CoDel::timer_lock");
     ceph::mutex register_lock = ceph::make_mutex("CoDel::register_lock");
     bool adaptive_target = false;
-    bool smart_increment = false;
 
 
     void register_queue_latency(int64_t queuing_latency, double_t throttle_usage, int64_t size);
-    void initialize(int64_t init_interval, int64_t init_target, bool coarse_interval, bool active);
+    void initialize(int64_t init_interval, int64_t init_target, bool adaptive_target, bool active);
 
     /**
      * react properly if min latency is greater than target latency (min latency violation)
@@ -77,7 +64,6 @@ protected:
      */
     virtual void on_no_violation() = 0;
     virtual void on_interval_finished() = 0;
-    virtual bool has_bufferbloat_symptoms() = 0;
 };
 
 

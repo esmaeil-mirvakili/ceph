@@ -1843,27 +1843,16 @@ public:
 
         // log data
         vector<double> txc_start_vec;
-        vector<double> txc_end_vec;
+        vector<double> txc_lat;
         vector<double> txc_bytes;
-        vector<double> throttle_usage;
-        vector<int64_t> txc_batch_id;
-
-        vector <int64_t> throttle_max_vec;
-        vector <int64_t> throttle_current_vec;
-        vector <int64_t> target_vec;
-
-        vector<double> read_start_vec;
-        vector<double> read_end_vec;
-        vector<double> read_bytes;
-        vector <int64_t> read_batch_id;
+        vector<int64_t> throttle_max_vec;
+        vector<int64_t> throttle_current_vec;
+        vector<int64_t> target_vec;
+        vector<double_t> throughput_vec;
 
         std::chrono::time_point <mono_clock> created_time = mono_clock::now();
 
         void register_txc(TransContext *txc);
-
-        void add_kv_queued(TransContext *txc);
-
-        void add_io_queued(TransContext *txc);
 
         void init(CephContext *cct);
 

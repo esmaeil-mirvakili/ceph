@@ -15734,29 +15734,20 @@ void BlueStore::BlueStoreThrottle::complete(TransContext &txc)
 
 void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
     mono_clock::time_point now = mono_clock::now();
+    int64_t latency = std::chrono::nanoseconds(now - txc->start_time).count();
     if(activated){
-        int64_t latency = std::chrono::nanoseconds(now - txc->start_time).count();
         if (max_queue_length < throttle->get_current())
             max_queue_length = throttle->get_current();
         if(txc->throttle_usage > throttle_usage_threshold)
-            if(!only_4k || txc->bytes < 6000)
-                register_queue_latency(latency, txc->throttle_usage, txc->bytes);
+            register_queue_latency(latency, txc->throttle_usage, txc->bytes);
     }
     txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
-    txc_end_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
+    txc_lat_vec.push_back(latency);
     txc_bytes.push_back(txc->bytes);
     throttle_max_vec.push_back(txc->throttle_max);
     throttle_current_vec.push_back(txc->throttle_current);
-    throttle_usage.push_back(txc->throttle_usage);
+    throughput_vec.push_back(slow_interval_throughput);
     target_vec.push_back(target_latency);
-}
-
-void BlueStore::BlueStoreCoDel::add_kv_queued(TransContext *txc){
-
-}
-
-void BlueStore::BlueStoreCoDel::add_io_queued(TransContext *txc){
-
 }
 
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
@@ -15786,21 +15777,13 @@ void BlueStore::BlueStoreCoDel::on_no_violation() {
     }
 }
 
-bool BlueStore::BlueStoreCoDel::has_bufferbloat_symptoms() {
-    return false;
-}
-
 void BlueStore::BlueStoreCoDel::on_interval_finished() {
     if(activated) {
-        mono_clock::time_point now = mono_clock::now();
-        time_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
-        batch_vec.push_back(bluestore_budget);
         throttle->reset_max(bluestore_budget);
     }
 }
 
 void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
-    std::cout << "###########################################" << std::endl;
     int64_t init_interval = 0;
     int64_t init_target = 0;
     if (cct->_conf->bluestore_codel) {
@@ -15852,16 +15835,16 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
             slow_interval_frequency = std::stoi(line);
         }
         if (getline(settingFile, line)) {
-            target_increment = std::stoi(line);
+            learning_rate = std::stod(line);
         }
         if (getline(settingFile, line)) {
-            smart_increment = std::stoi(line) > 0;
+            adaptive_down_sizing = std::stoi(line) > 0;
         }
         if (getline(settingFile, line)) {
-            aggressive_codel_percentage_threshold = std::stoi(line) / 100.0;
+            max_target_latency = std::stoi(line);
         }
         if (getline(settingFile, line)) {
-            normal_codel_percentage_threshold = std::stoi(line) / 100.0;
+            min_target_latency = std::stoi(line);
         }
     }
     settingFile.close();
@@ -15869,14 +15852,8 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     max_queue_length = min_bluestore_budget;
     bluestore_budget_limit_ratio = 1.5;
 
-    std::cout << "4k only:" << only_4k << std::endl;
-    std::cout << "adaptive down:" << adaptive_down_sizing << std::endl;
-    std::cout << "adaptive target:" << adaptive_target << std::endl;
-    std::cout << "activated:" << activated << std::endl;
-
     initialize(init_interval, init_target, adaptive_target, activated);
     this->reset();
-    std::cout << "+++++++++++++++++++++++++++++++++++++++++++" << std::endl;
 }
 
 int64_t BlueStore::BlueStoreCoDel::get_bluestore_budget() {
@@ -15885,46 +15862,27 @@ int64_t BlueStore::BlueStoreCoDel::get_bluestore_budget() {
 
 void BlueStore::BlueStoreCoDel::clear_log_data() {
     txc_start_vec.clear();
-    txc_start_vec.clear();
-    txc_end_vec.clear();
+    txc_lat.clear();
     txc_bytes.clear();
-    throttle_usage.clear();
-
     throttle_max_vec.clear();
     throttle_current_vec.clear();
-
     target_vec.clear();
-
-    read_start_vec.clear();
-    read_end_vec.clear();
-    read_bytes.clear();
-
-    target_lat_vec.clear();
-    batch_vec.clear();
-    min_lat_vec.clear();
-    violation_count_vec.clear();
-    no_violation_count_vec.clear();
-    interval_count_vec.clear();
-    time_vec.clear();
-    thr_vec.clear();
+    throughput_vec.clear();
 }
 
 void BlueStore::BlueStoreCoDel::dump_log_data() {
     // create an filestream object
     std::string prefix = "codel_log_";
     std::string index = "";
-//    if(activated){
-//        index = "_" + std::to_string(initial_target_latency);
-//    }
 
     std::ofstream txc_file(prefix + "txc" + index + ".csv");
     // add column names
-    txc_file << "start, end, size, th max, th cur, throttle_usage, target" << "\n";
+    txc_file << "start, lat, size, budget, throttle, throughput, target" << "\n";
 
     for (unsigned int i = 0; i < txc_start_vec.size(); i++){
         txc_file << std::fixed << txc_start_vec[i];
         txc_file << ",";
-        txc_file << std::fixed << txc_end_vec[i];
+        txc_file << std::fixed << txc_lat[i];
         txc_file << ",";
         txc_file << std::fixed << txc_bytes[i];
         txc_file << ",";
@@ -15932,50 +15890,12 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
         txc_file << ",";
         txc_file << std::fixed << throttle_current_vec[i];
         txc_file << ",";
-        txc_file << std::fixed << throttle_usage[i];
+        txc_file << std::fixed << throughput_vec[i];
         txc_file << ",";
         txc_file << std::fixed << target_vec[i];
         txc_file << "\n";
     }
     txc_file.close();
-
-    std::ofstream batch_file(prefix + "batch" + index + ".csv");
-    // add column names
-    batch_file << "time, target, throttle_budget, min_lat, violation_cnt, no_violation_cnt, interval_cnt, throughput" << "\n";
-    for (unsigned int i = 0; i < time_vec.size(); i++){
-        batch_file << std::fixed << time_vec[i];
-        batch_file << ",";
-        batch_file << std::fixed << target_lat_vec[i];
-        batch_file << ",";
-        batch_file << std::fixed << batch_vec[i];
-        batch_file << ",";
-        batch_file << std::fixed << min_lat_vec[i];
-        batch_file << ",";
-        batch_file << std::fixed << violation_count_vec[i];
-        batch_file << ",";
-        batch_file << std::fixed << no_violation_count_vec[i];
-        batch_file << ",";
-        batch_file << std::fixed << interval_count_vec[i];
-        batch_file << ",";
-        batch_file << std::fixed << thr_vec[i];
-        batch_file << "\n";
-    }
-    batch_file.close();
-
-    std::ofstream read_file(prefix + "read" + index + ".csv");
-    // add column names
-    read_file << "start, end" << "\n";
-
-    for (unsigned int i = 0; i < read_start_vec.size(); i++){
-        read_file << std::fixed << read_start_vec[i];
-        read_file << ",";
-        read_file << std::fixed << read_end_vec[i];
-        read_file << "\n";
-    }
-    read_file.close();
-
-    // dump_st.close();
-    // dump_st2.close();
 }
 
 // DB key value Histogram
