@@ -15802,7 +15802,7 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
         bluestore_budget = starting_bluestore_budget;
         min_bluestore_budget = starting_bluestore_budget;
     }
-    bool adaptive_target = false;
+    bool adaptive_t = false;
     std::string line;
     std::ifstream settingFile("codel.settings");
     if(settingFile.good()){
@@ -15831,7 +15831,7 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
             only_4k = std::stoi(line) > 0;
         }
         if (getline(settingFile, line)) {
-            adaptive_target = std::stoi(line) > 0;
+            adaptive_t = std::stoi(line) > 0;
         }
         if (getline(settingFile, line)) {
             slow_interval_frequency = std::stoi(line);
@@ -15854,7 +15854,7 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     max_queue_length = min_bluestore_budget;
     bluestore_budget_limit_ratio = 1.5;
 
-    initialize(init_interval, init_target, adaptive_target, activated);
+    initialize(init_interval, init_target, adaptive_t, activated);
     this->reset();
 }
 

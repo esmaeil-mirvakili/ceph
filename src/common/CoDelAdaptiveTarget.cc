@@ -11,10 +11,10 @@ CoDel::~CoDel() {
     timer.shutdown();
 }
 
-void CoDel::initialize(int64_t init_interval, int64_t init_target, bool adaptive_target, bool active){
+void CoDel::initialize(int64_t init_interval, int64_t init_target, bool adaptive, bool active){
     initial_interval = init_interval;
     initial_target_latency = init_target;
-    adaptive_target = adaptive_target;
+    adaptive_target = adaptive;
     if(active) {
         {
             std::lock_guard l{timer_lock};
