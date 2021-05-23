@@ -87,6 +87,8 @@ void CoDel::_coarse_interval_process() {
     interval_count = 0;
     slow_interval_start = mono_clock::now();
     coarse_interval_size = 0;
+    sum_latency = 0;
+    txc_cnt = 0;
     slow_interval_throughput = cur_throughput;
     slow_interval_lat = avg_lat;
 }
