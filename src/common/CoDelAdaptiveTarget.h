@@ -36,8 +36,8 @@ protected:
     int64_t target_latency = INT_NULL;       // current target latency that algorithm is using
     int64_t min_latency = INT_NULL;       // min latency in the current interval
     int64_t sum_latency = 0;
-    int64_t min_target_latency = 1000;  // in ns
-    int64_t max_target_latency = 200000; // in ns
+    int64_t min_target_latency = 1000000;  // in ns
+    int64_t max_target_latency = 200000000; // in ns
     int64_t txc_cnt = 0;
     int64_t violation_count = 0;
     int64_t interval_count = 0;       // number of passed intervals

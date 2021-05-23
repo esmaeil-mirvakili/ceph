@@ -122,4 +122,6 @@ void CoDel::reset() {
     coarse_interval_size = 0;
     slow_interval_throughput = 0;
     slow_interval_lat = 0;
+    std::cout << "slow freq:" << slow_interval_frequency << std::endl;
+    std::cout << "adaptive:" << adaptive_target << std::endl;
 }
