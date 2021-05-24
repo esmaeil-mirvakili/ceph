@@ -1846,6 +1846,7 @@ public:
         vector<double> txc_lat_vec;
         vector<double> txc_avg_lat_vec;
         vector<double> txc_bytes;
+        vector<double_t> delta_vec;
         vector<int64_t> interval_cnt_vec;
         vector<int64_t> throttle_max_vec;
         vector<int64_t> throttle_current_vec;

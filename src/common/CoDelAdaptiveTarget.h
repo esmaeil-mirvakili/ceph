@@ -51,6 +51,7 @@ protected:
     ceph::mutex timer_lock = ceph::make_mutex("CoDel::timer_lock");
     ceph::mutex register_lock = ceph::make_mutex("CoDel::register_lock");
     bool adaptive_target = false;
+    double_t delta;
 
 
     void register_queue_latency(int64_t queuing_latency, double_t throttle_usage, int64_t size);
