@@ -79,8 +79,7 @@ void CoDel::_coarse_interval_process() {
         auto cur_loss = pow(avg_lat, 0.5) / cur_throughput;
         auto pre_loss = pow(slow_interval_lat, 0.5) / slow_interval_throughput;
         if (slow_interval_throughput > 0){
-            delta = -(learning_rate * (cur_loss - pre_loss))/(target_latency - slow_interval_target);
-            slow_interval_target = target_latency;
+            delta = -(learning_rate * (cur_loss - pre_loss))/(avg_lat - slow_interval_lat);
             if (target_latency + delta >= min_target_latency && target_latency + delta <= max_target_latency)
                 target_latency = target_latency + delta;
         }
