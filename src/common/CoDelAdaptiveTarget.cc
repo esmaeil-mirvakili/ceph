@@ -15,13 +15,12 @@ void CoDel::initialize(int64_t init_interval, int64_t init_target, bool adaptive
     initial_interval = init_interval;
     initial_target_latency = init_target;
     adaptive_target = adaptive;
-    if(active) {
-        {
-            std::lock_guard l{timer_lock};
-            timer.cancel_all_events();
-        }
-        _interval_process();
+    activated = active;
+    {
+        std::lock_guard l{timer_lock};
+        timer.cancel_all_events();
     }
+    _interval_process();
 }
 
 void CoDel::register_queue_latency(int64_t latency, double_t throttle_usage, int64_t size) {
@@ -37,22 +36,24 @@ void CoDel::register_queue_latency(int64_t latency, double_t throttle_usage, int
 void CoDel::_interval_process() {
     std::lock_guard l(register_lock);
     if (min_latency != INT_NULL) {
-        if (_check_latency_violation()) {
-            // min latency violation
-            violation_count++;
-            _update_interval();
-            on_min_latency_violation(); // handle the violation
-        } else {
-            // no latency violation
-            violation_count = 0;
-            interval = initial_interval;
-            on_no_violation();
+        if (activated) {
+            if (_check_latency_violation()) {
+                // min latency violation
+                violation_count++;
+                _update_interval();
+                on_min_latency_violation(); // handle the violation
+            } else {
+                // no latency violation
+                violation_count = 0;
+                interval = initial_interval;
+                on_no_violation();
+            }
         }
 
         // reset interval
         min_latency = INT_NULL;
         interval_count++;
-        if (adaptive_target && interval_count >= slow_interval_frequency) {
+        if (interval_count >= slow_interval_frequency) {
             _coarse_interval_process();
         }
         on_interval_finished();
@@ -78,7 +79,7 @@ void CoDel::_coarse_interval_process() {
         avg_lat = (sum_latency * 1.0) / txc_cnt;
         auto cur_loss = pow(avg_lat, 0.2) / cur_throughput;
         auto pre_loss = pow(slow_interval_lat, 0.2) / slow_interval_throughput;
-        if (slow_interval_throughput > 0){
+        if (slow_interval_throughput > 0 && activated && adaptive_target){
             delta = -(learning_rate * (cur_loss - pre_loss))/(avg_lat - slow_interval_lat);
             double_t lim = 1000000;
             delta = std::min(delta, lim);
