@@ -46,6 +46,7 @@ protected:
     mono_clock::time_point slow_interval_start = mono_clock::zero();
     double_t slow_interval_throughput;
     double_t slow_interval_lat;
+    double_t slow_interval_target;
     double_t learning_rate = 0.01;
     int64_t coarse_interval_size;
     SafeTimer timer;

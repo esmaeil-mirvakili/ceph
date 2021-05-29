@@ -74,19 +74,20 @@ void CoDel::_coarse_interval_process() {
     int64_t time = 0;
     if (!mono_clock::is_zero(slow_interval_start)) {
         time = std::chrono::nanoseconds(now - slow_interval_start).count();
-//        time = time / 1000000.0;    // to ms
+        time = time / 1000.0;    // to ms
         cur_throughput = (coarse_interval_size * 1.0) / time;
-        avg_lat = (sum_latency * 1.0) / txc_cnt;
-        auto cur_loss = pow(avg_lat, 0.2) / cur_throughput;
-        auto pre_loss = pow(slow_interval_lat, 0.2) / slow_interval_throughput;
+        avg_lat = (sum_latency / 1000.0) / txc_cnt;
+        auto cur_loss = 1000 * pow(1.001,avg_lat) / pow(1.12, cur_throughput);
+        auto pre_loss = 1000 * pow(1.001,slow_interval_lat) / pow(1.12, slow_interval_throughput);
         if (slow_interval_throughput > 0 && activated && adaptive_target){
-//            delta = -(learning_rate * (cur_loss - pre_loss))/(avg_lat - slow_interval_lat);
-//            double_t lim = 1000000;
-//            delta = std::min(delta, lim);
-//            delta = std::max(delta, -lim);
-            delta = 500000;
-            if (target_latency + delta >= min_target_latency && target_latency + delta <= max_target_latency)
-                target_latency = target_latency + delta;
+            delta = -(learning_rate * (cur_loss - pre_loss))/(target_latency - slow_interval_target);
+            slow_interval_target = target_latency;
+            delta = delta * 1000;
+            double_t lim = 1000000;
+            delta = std::min(delta, lim);
+            delta = std::max(delta, -lim);
+//            if (target_latency + delta >= min_target_latency && target_latency + delta <= max_target_latency)
+            target_latency = target_latency + delta;
         }
     }
     interval_count = 0;
