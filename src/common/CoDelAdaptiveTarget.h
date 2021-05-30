@@ -47,6 +47,7 @@ protected:
     double_t slow_interval_lat;
     double_t slow_interval_target;
     double_t learning_rate = 0.01;
+    int64_t interval_count = 0;
     int64_t coarse_interval_size;
     SafeTimer fast_timer;
     SafeTimer slow_timer;
