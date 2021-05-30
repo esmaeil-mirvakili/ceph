@@ -91,7 +91,7 @@ void CoDel::_coarse_interval_process() {
         if (slow_interval_throughput > 0 && slow_interval_target > 0 && activated && adaptive_target){
             if (target_latency != slow_interval_target) {
                 delta = -(learning_rate * (cur_loss - pre_loss)) / (target_latency - slow_interval_target);
-                delta = delta / 10;
+                delta = delta;
             }
             double_t lim = 500000;
             delta = std::min(delta, lim);
