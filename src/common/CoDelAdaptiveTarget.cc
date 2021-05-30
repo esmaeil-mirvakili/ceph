@@ -7,11 +7,11 @@ CoDel::CoDel(CephContext *_cct): fast_timer(_cct, fast_timer_lock), slow_timer(_
 }
 
 CoDel::~CoDel() {
-    std::lock_guard l{fast_timer_lock};
+    std::lock_guard l1{fast_timer_lock};
     fast_timer.cancel_all_events();
     fast_timer.shutdown();
 
-    std::lock_guard l{slow_timer_lock};
+    std::lock_guard l2{slow_timer_lock};
     slow_timer.cancel_all_events();
     slow_timer.shutdown();
 }
@@ -22,12 +22,12 @@ void CoDel::initialize(int64_t init_interval, int64_t init_target, bool adaptive
     adaptive_target = adaptive;
     activated = active;
     {
-        std::lock_guard l{fast_timer_lock};
+        std::lock_guard l1{fast_timer_lock};
         fast_timer.cancel_all_events();
     }
     _interval_process();
     {
-        std::lock_guard l{slow_timer_lock};
+        std::lock_guard l2{slow_timer_lock};
         slow_timer.cancel_all_events();
     }
     _coarse_interval_process();
