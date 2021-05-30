@@ -1,11 +1,16 @@
 
 #include "CoDelAdaptiveTarget.h"
 
-CoDel::CoDel(CephContext *_cct): timer(_cct, timer_lock){
-    timer.init();
+CoDel::CoDel(CephContext *_cct): fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock){
+    fast_timer.init();
+    slow_timer.init();
 }
 
 CoDel::~CoDel() {
+    std::lock_guard l{fast_timer_lock};
+    fast_timer.cancel_all_events();
+    fast_timer.shutdown();
+
     std::lock_guard l{timer_lock};
     timer.cancel_all_events();
     timer.shutdown();
@@ -17,10 +22,15 @@ void CoDel::initialize(int64_t init_interval, int64_t init_target, bool adaptive
     adaptive_target = adaptive;
     activated = active;
     {
-        std::lock_guard l{timer_lock};
-        timer.cancel_all_events();
+        std::lock_guard l{fast_timer_lock};
+        fast_timer.cancel_all_events();
     }
     _interval_process();
+    {
+        std::lock_guard l{slow_timer_lock};
+        slow_timer.cancel_all_events();
+    }
+    _coarse_interval_process();
 }
 
 void CoDel::register_queue_latency(int64_t latency, double_t throttle_usage, int64_t size) {
@@ -52,10 +62,6 @@ void CoDel::_interval_process() {
 
         // reset interval
         min_latency = INT_NULL;
-        interval_count++;
-        if (interval_count >= slow_interval_frequency) {
-            _coarse_interval_process();
-        }
         on_interval_finished();
     }
 
@@ -64,10 +70,11 @@ void CoDel::_interval_process() {
                 _interval_process();
             });
     auto interval_duration = std::chrono::nanoseconds(interval);
-    timer.add_event_after(interval_duration, codel_ctx);
+    fast_timer.add_event_after(interval_duration, codel_ctx);
 }
 
 void CoDel::_coarse_interval_process() {
+    std::lock_guard l(register_lock);
     mono_clock::time_point now = mono_clock::now();
     double_t cur_throughput = 0;
     double_t avg_lat = 0;
@@ -95,7 +102,6 @@ void CoDel::_coarse_interval_process() {
                 target_latency = target_latency + delta;
         }
     }
-    interval_count = 0;
     slow_interval_start = mono_clock::now();
     coarse_interval_size = 0;
     sum_latency = 0;
@@ -103,6 +109,13 @@ void CoDel::_coarse_interval_process() {
     slow_interval_throughput = cur_throughput;
     slow_interval_lat = avg_lat;
     slow_interval_target = target_temp;
+
+    auto codel_ctx = new LambdaContext(
+            [this](int r) {
+                _coarse_interval_process();
+            });
+    auto interval_duration = std::chrono::nanoseconds(initial_interval * slow_interval_frequency);
+    slow_timer.add_event_after(interval_duration, codel_ctx);
 }
 
 /**
@@ -133,7 +146,6 @@ void CoDel::reset() {
     interval = initial_interval;
     target_latency = initial_target_latency;
     min_latency = INT_NULL;
-    interval_count = 0;
     coarse_interval_size = 0;
     slow_interval_start = mono_clock::zero();
     coarse_interval_size = 0;
