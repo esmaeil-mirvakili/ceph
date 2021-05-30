@@ -11,9 +11,9 @@ CoDel::~CoDel() {
     fast_timer.cancel_all_events();
     fast_timer.shutdown();
 
-    std::lock_guard l{timer_lock};
-    timer.cancel_all_events();
-    timer.shutdown();
+    std::lock_guard l{slow_timer_lock};
+    slow_timer.cancel_all_events();
+    slow_timer.shutdown();
 }
 
 void CoDel::initialize(int64_t init_interval, int64_t init_target, bool adaptive, bool active){
