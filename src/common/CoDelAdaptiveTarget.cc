@@ -78,12 +78,12 @@ void CoDel::_coarse_interval_process() {
     mono_clock::time_point now = mono_clock::now();
     double_t cur_throughput = 0;
     double_t avg_lat = 0;
-    int64_t time = 0;
+    double_t time = 0;
     delta = 0;
     auto target_temp = target_latency;
-    if (!mono_clock::is_zero(slow_interval_start)) {
+    if (!mono_clock::is_zero(slow_interval_start) && txc_cnt > 0) {
         time = std::chrono::nanoseconds(now - slow_interval_start).count();
-        time = time / 1000000000.0;    // to s
+        time = time / 1000000000.0;
         cur_throughput = (coarse_interval_size * 1.0) / time;
         cur_throughput = cur_throughput / 1024;
         cur_throughput = cur_throughput / 1024;
@@ -98,8 +98,6 @@ void CoDel::_coarse_interval_process() {
             double_t lim = 1000000;
             delta = std::min(delta, lim);
             delta = std::max(delta, -lim);
-            if (delta == 0)
-                delta = 1000;
             if (target_latency + delta >= min_target_latency && target_latency + delta <= max_target_latency)
                 target_latency = target_latency + delta;
         }
