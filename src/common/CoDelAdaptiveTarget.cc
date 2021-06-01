@@ -88,8 +88,8 @@ void CoDel::_coarse_interval_process() {
         cur_throughput = cur_throughput / 1024;
         cur_throughput = cur_throughput / 1024;
         avg_lat = (sum_latency / 1000000.0) / txc_cnt;
-        auto cur_loss = (0.3 * pow(0.9, -avg_lat*3)) + (700*pow(0.9, cur_throughput/2));
-        auto pre_loss = (0.3 * pow(0.9, -slow_interval_lat*3)) + (700*pow(0.9, slow_interval_throughput/2));
+        auto cur_loss = (pow(0.9, -avg_lat*3)) + (100*pow(0.9, cur_throughput/2));
+        auto pre_loss = (pow(0.9, -slow_interval_lat*3)) + (100*pow(0.9, slow_interval_throughput/2));
         if (slow_interval_throughput > 0 && slow_interval_target > 0 && activated && adaptive_target){
             if (target_latency != slow_interval_target) {
                 delta = -(learning_rate * (cur_loss - pre_loss)) / (target_latency - slow_interval_target);
