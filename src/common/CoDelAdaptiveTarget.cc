@@ -103,6 +103,8 @@ void CoDel::_coarse_interval_process() {
             }
             target_latency = target_latency + delta;
         }
+        target_latency = std::max(target_latency, min_target_latency);
+        target_latency = std::min(target_latency, max_target_latency);
     }
     slow_interval_start = mono_clock::now();
     coarse_interval_size = 0;
