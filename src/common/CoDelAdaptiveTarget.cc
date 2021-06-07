@@ -79,7 +79,7 @@ void CoDel::_coarse_interval_process() {
     double_t cur_throughput = 0;
     double_t avg_lat = 0;
     double_t time = 0;
-    delta = 0;
+    delta = learning_rate / 2;
     auto target_temp = target_latency;
     if (!mono_clock::is_zero(slow_interval_start) && txc_cnt > 0) {
         time = std::chrono::nanoseconds(now - slow_interval_start).count();
@@ -91,14 +91,15 @@ void CoDel::_coarse_interval_process() {
         auto delta_lat = avg_lat - slow_interval_lat;
         auto delta_throughput = cur_throughput - slow_interval_throughput;
         if (activated && adaptive_target) {
-            if (slow_interval_throughput > 0 && slow_interval_target > 0) {
-                if(delta_lat * delta_throughput < 0){
-                    delta = - learning_rate;
-                }else{
-                    delta = (delta_throughput - delta_lat)/(delta_throughput + delta_lat);
-                    if(delta_lat < 0){
-                        delta = - delta;
+            if (slow_interval_throughput > 0 && slow_interval_lat > 0) {
+                if (slow_interval_throughput > 0.1 && slow_interval_lat > 100000) {
+                    if (delta_lat * delta_throughput < 0) {
+                        delta = -learning_rate;
+                    } else {
+                        delta = (delta_throughput - delta_lat) / (delta_throughput + delta_lat);
                     }
+                } else {
+                    delta = 0;
                 }
             }
             target_latency = target_latency + delta;
