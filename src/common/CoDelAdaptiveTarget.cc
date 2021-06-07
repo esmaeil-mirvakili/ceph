@@ -97,6 +97,7 @@ void CoDel::_coarse_interval_process() {
                         delta = -learning_rate;
                     } else {
                         delta = (delta_throughput - delta_lat) / (delta_throughput + delta_lat);
+                        delta = delta * learning_rate;
                     }
                 } else {
                     delta = 0;
