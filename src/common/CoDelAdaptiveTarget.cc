@@ -80,6 +80,7 @@ void CoDel::_coarse_interval_process() {
     double_t avg_lat = 0;
     double_t time = 0;
     delta = 0;
+    int64_t max_step = 500000;
     auto target_temp = target_latency;
     if (!mono_clock::is_zero(slow_interval_start) && txc_cnt > 0) {
         time = std::chrono::nanoseconds(now - slow_interval_start).count();
@@ -88,23 +89,20 @@ void CoDel::_coarse_interval_process() {
         cur_throughput = cur_throughput / 1024;
         cur_throughput = cur_throughput / 1024;
         avg_lat = (sum_latency / 1000000.0) / txc_cnt;
-        auto cur_loss = (pow(0.9, -avg_lat*5)) + (2000*pow(0.9, cur_throughput/3));
-        auto pre_loss = (pow(0.9, -slow_interval_lat*5)) + (2000*pow(0.9, slow_interval_throughput/3));
+        auto delta_lat avg_lat - slow_interval_lat;
+        auto delta_throughput = cur_throughput - slow_interval_throughput;
         if (activated && adaptive_target) {
             if (slow_interval_throughput > 0 && slow_interval_target > 0) {
-                if (target_latency != slow_interval_target) {
-                    delta = -(learning_rate * (cur_loss - pre_loss)) / (avg_lat - slow_interval_lat);
+                if(delta_lat * delta_throughput < 0){
+                    delta = - max_step;
+                }else{
+                    delta = (delta_throughput - delta_lat)/(delta_throughput + delta_lat);
+                    if(delta_lat < 0){
+                        delta = - delta;
+                    }
                 }
-                double_t lim = 1000000;
-                delta = std::min(delta, lim);
-                delta = std::max(delta, -lim);
-                if (delta == 0)
-                    delta = 100;
-                if (target_latency + delta >= min_target_latency && target_latency + delta <= max_target_latency)
-                    target_latency = target_latency + delta;
-            } else {
-                target_latency = target_latency + 1000000;
             }
+            target_latency = target_latency + delta;
         }
     }
     slow_interval_start = mono_clock::now();
