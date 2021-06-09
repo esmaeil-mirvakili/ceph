@@ -92,7 +92,7 @@ void CoDel::_coarse_interval_process() {
         auto delta_throughput = cur_throughput - slow_interval_throughput;
         if (activated && adaptive_target) {
             if (slow_interval_throughput > 0 && slow_interval_lat > 0) {
-                if (delta_throughput > 0.1 && delta_lat > 0.1) {
+                if ((delta_throughput > 1 || delta_throughput < -1) && (delta_lat > 0.05 || delta_lat < -0.05)) {
                     if (delta_lat * delta_throughput < 0) {
                         delta = -1;
                     } else {
