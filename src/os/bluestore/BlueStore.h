@@ -1883,7 +1883,7 @@ public:
         int64_t max_queue_length = min_bluestore_budget;
         bool batch_started = false;
         BlueStoreThrottle *throttle;
-        double throttle_usage_threshold = 0.5;
+        double throttle_usage_threshold = 0;
         bool only_4k = false;
 
 
