@@ -1,6 +1,8 @@
 
 #include "CoDelAdaptiveTarget.h"
 
+# define PI 3.14159265358979323846
+
 CoDel::CoDel(CephContext *_cct): fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock){
     fast_timer.init();
     slow_timer.init();
@@ -16,11 +18,13 @@ CoDel::~CoDel() {
     slow_timer.shutdown();
 }
 
-void CoDel::initialize(int64_t init_interval, int64_t init_target, bool adaptive, bool active){
+void CoDel::initialize(int64_t init_interval, int64_t init_target, bool adaptive, bool active, double beta_deg){
     initial_interval = init_interval;
     initial_target_latency = init_target;
     adaptive_target = adaptive;
     activated = active;
+    auto beta_rad = beta_deg * PI / 180.0;
+    beta = std::tan(beta_rad);
     {
         std::lock_guard l1{fast_timer_lock};
         fast_timer.cancel_all_events();
@@ -96,13 +100,17 @@ void CoDel::_coarse_interval_process() {
                     if (delta_lat * delta_throughput < 0) {
                         delta = -1;
                     } else {
-                        delta = (delta_throughput - delta_lat) / (delta_throughput + delta_lat);
+                        delta = (delta_throughput - (beta * delta_lat)) / ((beta * delta_throughput) + delta_lat);
+                        if (delta < 0)
+                            delta = delta / beta;
+                        else
+                            delta = delta * beta;
                     }
                 } else {
                     delta = 0.1;
                 }
             }
-            target_latency = target_latency + delta * learning_rate;
+            target_latency = target_latency + delta * step_size;
         }
         target_latency = std::max(target_latency, min_target_latency);
         target_latency = std::min(target_latency, max_target_latency);

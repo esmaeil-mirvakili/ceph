@@ -46,7 +46,8 @@ protected:
     double_t slow_interval_throughput;
     double_t slow_interval_lat;
     double_t slow_interval_target;
-    double_t learning_rate = 0.01;
+    double_t step_size = 0.01;
+    double_t beta = 1;
     int64_t interval_count = 0;
     int64_t coarse_interval_size;
     SafeTimer fast_timer;
@@ -59,7 +60,7 @@ protected:
 
 
     void register_queue_latency(int64_t queuing_latency, double_t throttle_usage, int64_t size);
-    void initialize(int64_t init_interval, int64_t init_target, bool adaptive_target, bool active);
+    void initialize(int64_t init_interval, int64_t init_target, bool adaptive_target, bool active, double beta_deg);
 
     /**
      * react properly if min latency is greater than target latency (min latency violation)
