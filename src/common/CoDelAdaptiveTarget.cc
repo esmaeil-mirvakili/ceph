@@ -102,7 +102,7 @@ void CoDel::_coarse_interval_process() {
                     } else {
                         delta = (delta_throughput - (beta * delta_lat)) / ((beta * delta_throughput) + delta_lat);
                         if (delta < 0)
-                            delta = delta / (beta * -1);
+                            delta = delta / beta;
                         else
                             delta = delta * beta;
                     }
