@@ -15873,6 +15873,7 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     throttle_current_vec.clear();
     target_vec.clear();
     throughput_vec.clear();
+    activated = true;
 }
 
 void BlueStore::BlueStoreCoDel::dump_log_data() {
