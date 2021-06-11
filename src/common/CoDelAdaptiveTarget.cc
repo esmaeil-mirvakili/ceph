@@ -93,6 +93,7 @@ void CoDel::_coarse_interval_process() {
         cur_throughput = cur_throughput / 1024;
         avg_lat = (sum_latency / 1000000.0) / txc_cnt;
         auto delta_lat = avg_lat - slow_interval_lat;
+        delta_lat = delta_lat * 10;
         auto delta_throughput = cur_throughput - slow_interval_throughput;
         if (activated && adaptive_target) {
             if (slow_interval_throughput > 0 && slow_interval_lat > 0) {
