@@ -102,7 +102,7 @@ void CoDel::_coarse_interval_process() {
                     } else {
                         delta = (delta_throughput - (beta * delta_lat)) / ((beta * delta_throughput) + delta_lat);
                         if (delta < 0)
-                            delta = delta / beta;
+                            delta = delta / (beta * -1);
                         else
                             delta = delta * beta;
                     }
@@ -110,6 +110,13 @@ void CoDel::_coarse_interval_process() {
                     delta = 0.1;
                 }
             }
+            sliding_window.push_back(delta);
+            if(sliding_window.size() > sliding_window_size)
+                sliding_window.erase(sliding_window.begin());
+            double sum = 0;
+            for (unsigned int i = 0; i < sliding_window.size(); i++)
+                sum += sliding_window[i];
+            delta = sum / sliding_window.size();
             target_latency = target_latency + delta * step_size;
         }
         target_latency = std::max(target_latency, min_target_latency);

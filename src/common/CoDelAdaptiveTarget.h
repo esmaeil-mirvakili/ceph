@@ -5,6 +5,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <vector>
 #include <map>
 #include "ceph_time.h"
 #include "common/Timer.h"
@@ -48,6 +49,8 @@ protected:
     double_t slow_interval_target;
     double_t step_size = 0.01;
     double_t beta = 1;
+    vector<double_t> sliding_window;
+    int sliding_window_size = 1;
     int64_t interval_count = 0;
     int64_t coarse_interval_size;
     SafeTimer fast_timer;
