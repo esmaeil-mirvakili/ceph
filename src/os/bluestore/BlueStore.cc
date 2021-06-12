@@ -15848,6 +15848,18 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
         if (getline(settingFile, line)) {
             min_target_latency = std::stoi(line);
         }
+        if (getline(settingFile, line)) {
+            sliding_window_size = std::stoi(line);
+        }
+        if (getline(settingFile, line)) {
+            lat_normalization_factor = std::stod(line);
+        }
+        if (getline(settingFile, line)) {
+            bw_noise_threshold = std::stod(line);
+        }
+        if (getline(settingFile, line)) {
+            lat_noise_threshold = std::stod(line);
+        }
     }
     settingFile.close();
     bluestore_budget = starting_bluestore_budget;

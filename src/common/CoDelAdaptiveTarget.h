@@ -46,9 +46,12 @@ protected:
     mono_clock::time_point slow_interval_start = mono_clock::zero();
     double_t slow_interval_throughput;
     double_t slow_interval_lat;
+    double_t bw_noise_threshold;
+    double_t lat_noise_threshold;
     double_t slow_interval_target;
     double_t step_size = 0.01;
     double_t beta = 1;
+    double_t lat_normalization_factor = 1;
     vector<double_t> sliding_window;
     int sliding_window_size = 10;
     int64_t interval_count = 0;
