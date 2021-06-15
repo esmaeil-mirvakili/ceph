@@ -1873,18 +1873,9 @@ public:
         int64_t min_bluestore_budget = 100;
         int64_t starting_bluestore_budget = 100;
         double bluestore_budget_limit_ratio = 1.5;
-        bool adaptive_down_sizing = true;
         int64_t bluestore_budget;
-        int64_t registered = 0;
-        int64_t ios_registered = 0;
-        mono_clock::time_point first_txc_start;
-        mono_clock::time_point last_txc_end;
-        int64_t latency_sum = 0;
         int64_t max_queue_length = min_bluestore_budget;
-        bool batch_started = false;
         BlueStoreThrottle *throttle;
-        double throttle_usage_threshold = 0;
-        bool only_4k = false;
 
 
         void on_min_latency_violation();

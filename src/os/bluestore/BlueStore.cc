@@ -15737,8 +15737,7 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
     int64_t latency = std::chrono::nanoseconds(now - txc->start_time).count();
     if (max_queue_length < throttle->get_current())
         max_queue_length = throttle->get_current();
-    if(txc->throttle_usage > throttle_usage_threshold)
-        register_queue_latency(latency, txc->throttle_usage, txc->bytes);
+    register_queue_latency(latency, txc->throttle_usage, txc->bytes);
     txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
     txc_lat_vec.push_back(latency);
     delta_vec.push_back(delta);
@@ -15753,19 +15752,15 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
 
 void BlueStore::BlueStoreCoDel::on_min_latency_violation() {
     if(target_latency > 0){
-        if (adaptive_down_sizing) {
-            double diff = (double)(target_latency - min_latency);
-            auto error_ratio = std::abs(diff) / min_latency;
-            if(error_ratio > 0.5){
-                error_ratio = 0.5;
-            }
-            if(error_ratio < 0.05){
-                error_ratio = 0.05;
-            }
-            bluestore_budget = bluestore_budget * (1 - error_ratio);
-        } else {
-            bluestore_budget = bluestore_budget / 2;
+        double diff = (double)(target_latency - min_latency);
+        auto error_ratio = std::abs(diff) / min_latency;
+        if(error_ratio > 0.5){
+            error_ratio = 0.5;
         }
+        if(error_ratio < 0.05){
+            error_ratio = 0.05;
+        }
+        bluestore_budget = bluestore_budget * (1 - error_ratio);
         if(bluestore_budget <= min_bluestore_budget){
             bluestore_budget = min_bluestore_budget;
         }
@@ -15787,6 +15782,8 @@ void BlueStore::BlueStoreCoDel::on_interval_finished() {
 void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     int64_t init_interval = 0;
     int64_t init_target = 0;
+    bool adaptive_t = false;
+    double theta_deg;
     if (cct->_conf->bluestore_codel) {
         activated = cct->_conf->bluestore_codel;
     }
@@ -15798,75 +15795,44 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     }
     if (cct->_conf->bluestore_codel_starting_budget) {
         starting_bluestore_budget = cct->_conf->bluestore_codel_starting_budget;
-        bluestore_budget = starting_bluestore_budget;
-        min_bluestore_budget = starting_bluestore_budget;
     }
-    bool adaptive_t = false;
-    double beta_deg;
-    std::string line;
-    std::ifstream settingFile("codel.settings");
-    if(settingFile.good()){
-        if (getline(settingFile, line)) {
-            activated = std::stoi(line) > 0;
-        }
-        if (getline(settingFile, line)) {
-            init_target = std::stoi(line);
-        }
-        if (getline(settingFile, line)) {
-            init_interval = std::stoi(line);
-        }
-        if (getline(settingFile, line)) {
-            starting_bluestore_budget = std::stoi(line);
-        }
-        if (getline(settingFile, line)) {
-            min_bluestore_budget = std::stoi(line);
-        }
-        if (getline(settingFile, line)) {
-            beta_deg = std::stod(line);
-        }
-        if (getline(settingFile, line)) {
-            adaptive_down_sizing = std::stoi(line) > 0;
-        }
-        if (getline(settingFile, line)) {
-            only_4k = std::stoi(line) > 0;
-        }
-        if (getline(settingFile, line)) {
-            adaptive_t = std::stoi(line) > 0;
-        }
-        if (getline(settingFile, line)) {
-            slow_interval_frequency = std::stoi(line);
-        }
-        if (getline(settingFile, line)) {
-            step_size = std::stod(line);
-        }
-        if (getline(settingFile, line)) {
-            adaptive_down_sizing = std::stoi(line) > 0;
-        }
-        if (getline(settingFile, line)) {
-            max_target_latency = std::stoi(line);
-        }
-        if (getline(settingFile, line)) {
-            min_target_latency = std::stoi(line);
-        }
-        if (getline(settingFile, line)) {
-            sliding_window_size = std::stoi(line);
-        }
-        if (getline(settingFile, line)) {
-            lat_normalization_factor = std::stod(line);
-        }
-        if (getline(settingFile, line)) {
-            bw_noise_threshold = std::stod(line);
-        }
-        if (getline(settingFile, line)) {
-            lat_noise_threshold = std::stod(line);
-        }
+    if (cct->_conf->bluestore_codel_min_budget) {
+        min_bluestore_budget = cct->_conf->bluestore_codel_min_budget;
     }
-    settingFile.close();
+    if (cct->_conf->bluestore_codel_theta) {
+        theta_deg = cct->_conf->bluestore_codel_theta
+    }
+    if (cct->_conf->bluestore_codel_adaptive) {
+        adaptive_t = cct->_conf->bluestore_codel_adaptive
+    }
+    if (cct->_conf->bluestore_codel_slow_interval) {
+        slow_interval_frequency = cct->_conf->bluestore_codel_slow_interval
+    }
+    if (cct->_conf->bluestore_codel_step_size) {
+        step_size = cct->_conf->bluestore_codel_step_size
+    }
+    if (cct->_conf->bluestore_codel_max_target) {
+        max_target_latency = cct->_conf->bluestore_codel_max_target
+    }
+    if (cct->_conf->bluestore_codel_min_target) {
+        min_target_latency = cct->_conf->bluestore_codel_min_target
+    }
+    if (cct->_conf->bluestore_codel_sliding_window_size) {
+        sliding_window_size = cct->_conf->bluestore_codel_sliding_window_size
+    }
+    if (cct->_conf->bluestore_codel_lat_normalization_factor) {
+        lat_normalization_factor = cct->_conf->bluestore_codel_lat_normalization_factor
+    }
+    if (cct->_conf->bluestore_codel_bw_noise_threshold) {
+        bw_noise_threshold = cct->_conf->bluestore_codel_bw_noise_threshold
+    }
+    if (cct->_conf->bluestore_codel_lat_noise_threshold) {
+        lat_noise_threshold = cct->_conf->bluestore_codel_lat_noise_threshold
+    }
+
     bluestore_budget = starting_bluestore_budget;
     max_queue_length = min_bluestore_budget;
-    bluestore_budget_limit_ratio = 1.5;
-
-    initialize(init_interval, init_target, adaptive_t, activated, beta_deg);
+    initialize(init_interval, init_target, adaptive_t, activated, theta_deg);
     this->reset();
 }
 

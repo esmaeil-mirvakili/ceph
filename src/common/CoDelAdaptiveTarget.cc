@@ -108,7 +108,7 @@ void CoDel::_coarse_interval_process() {
                             delta = delta * beta;
                     }
                 } else {
-                    delta = 0.1;
+                    delta = 0;
                 }
             }
             sliding_window.push_back(delta);

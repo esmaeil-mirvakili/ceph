@@ -49,12 +49,11 @@ protected:
     double_t bw_noise_threshold;
     double_t lat_noise_threshold;
     double_t slow_interval_target;
-    double_t step_size = 0.01;
-    double_t beta = 1;
+    double_t step_size = 500000;    // in ns
+    double_t beta = 1;  // pi/4 rad (45 deg)
     double_t lat_normalization_factor = 1;
     vector<double_t> sliding_window;
     int sliding_window_size = 10;
-    int64_t interval_count = 0;
     int64_t coarse_interval_size;
     SafeTimer fast_timer;
     SafeTimer slow_timer;
