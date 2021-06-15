@@ -99,7 +99,7 @@ void CoDel::_coarse_interval_process() {
             if (slow_interval_throughput > 0 && slow_interval_lat > 0) {
                 if ((delta_throughput > bw_noise_threshold || delta_throughput < -bw_noise_threshold) && (delta_lat > lat_noise_threshold || delta_lat < -lat_noise_threshold)) {
                     if (delta_lat * delta_throughput < 0) {
-                        delta = -0.2;
+                        delta = -0.1;
                     } else {
                         delta = (delta_throughput - (beta * delta_lat)) / ((beta * delta_throughput) + delta_lat);
                         if (delta < 0)
