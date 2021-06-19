@@ -66,7 +66,7 @@ protected:
 
 
     void register_queue_latency(int64_t queuing_latency, double_t throttle_usage, int64_t size);
-    void initialize(int64_t init_interval, int64_t init_target, bool adaptive_target, bool active, double beta_deg);
+    void initialize(int64_t init_interval, int64_t init_target, bool adaptive_target, bool active);
 
     /**
      * react properly if min latency is greater than target latency (min latency violation)

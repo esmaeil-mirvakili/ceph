@@ -18,13 +18,11 @@ CoDel::~CoDel() {
     slow_timer.shutdown();
 }
 
-void CoDel::initialize(int64_t init_interval, int64_t init_target, bool adaptive, bool active, double beta_deg){
+void CoDel::initialize(int64_t init_interval, int64_t init_target, bool adaptive, bool active){
     initial_interval = init_interval;
     initial_target_latency = init_target;
     adaptive_target = adaptive;
     activated = active;
-    auto beta_rad = beta_deg * PI / 180.0;
-    beta = std::tan(beta_rad);
     {
         std::lock_guard l1{fast_timer_lock};
         fast_timer.cancel_all_events();
@@ -80,8 +78,8 @@ void CoDel::_interval_process() {
 void CoDel::_coarse_interval_process() {
     std::lock_guard l(register_lock);
     mono_clock::time_point now = mono_clock::now();
-    double_t cur_throughput = 0;
-    double_t avg_lat = 0;
+    double_t cur_throughput = -1;
+    double_t avg_lat = -1;
     double_t time = 0;
     delta = 1;
     auto target_temp = target_latency;
@@ -96,7 +94,7 @@ void CoDel::_coarse_interval_process() {
         delta_lat = delta_lat * lat_normalization_factor;
         auto delta_throughput = cur_throughput - slow_interval_throughput;
         if (activated && adaptive_target) {
-            if (slow_interval_throughput > 0 && slow_interval_lat > 0) {
+            if (slow_interval_throughput >= 0 && slow_interval_lat >= 0) {
                 if ((delta_throughput > bw_noise_threshold || delta_throughput < -bw_noise_threshold) && (delta_lat > lat_noise_threshold || delta_lat < -lat_noise_threshold)) {
                     if (delta_lat * delta_throughput < 0) {
                         delta = -0.1;
