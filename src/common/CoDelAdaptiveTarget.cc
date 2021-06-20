@@ -90,7 +90,14 @@ void CoDel::_coarse_interval_process() {
         cur_throughput = cur_throughput / 1024;
         cur_throughput = cur_throughput / 1024;
         avg_lat = (sum_latency / 1000000.0) / txc_cnt;
-        auto delta_lat = avg_lat - slow_interval_lat;
+        sliding_window.push_back(cur_throughput);
+        if(sliding_window.size() > sliding_window_size)
+            sliding_window.erase(sliding_window.begin());
+        double sum = 0;
+        for (unsigned int i = 0; i < sliding_window.size(); i++)
+            sum += sliding_window[i];
+        cur_throughput = sum / sliding_window.size();
+        auto delta_lat = target_latency - slow_interval_target;
         delta_lat = delta_lat * lat_normalization_factor;
         auto delta_throughput = cur_throughput - slow_interval_throughput;
         if (activated && adaptive_target) {
@@ -109,13 +116,6 @@ void CoDel::_coarse_interval_process() {
                     delta = 0.1;
                 }
             }
-            sliding_window.push_back(delta);
-            if(sliding_window.size() > sliding_window_size)
-                sliding_window.erase(sliding_window.begin());
-            double sum = 0;
-            for (unsigned int i = 0; i < sliding_window.size(); i++)
-                sum += sliding_window[i];
-            delta = sum / sliding_window.size();
             target_latency = target_latency + delta * step_size;
         }
         target_latency = std::max(target_latency, min_target_latency);
