@@ -102,19 +102,19 @@ void CoDel::_coarse_interval_process() {
         auto delta_throughput = cur_throughput - slow_interval_throughput;
         if (activated && adaptive_target) {
             if (slow_interval_throughput >= 0 && slow_interval_lat >= 0) {
-                if ((delta_throughput > bw_noise_threshold || delta_throughput < -bw_noise_threshold) && (delta_lat > lat_noise_threshold || delta_lat < -lat_noise_threshold)) {
-                    if (delta_lat * delta_throughput < 0) {
-                        delta = -0.1;
-                    } else {
-                        delta = (delta_throughput - (beta * delta_lat)) / ((beta * delta_throughput) + delta_lat);
-                        if (delta < 0)
-                            delta = delta / beta;
-                        else
-                            delta = delta * beta;
-                    }
+                //if ((delta_throughput > bw_noise_threshold || delta_throughput < -bw_noise_threshold) && (delta_lat > lat_noise_threshold || delta_lat < -lat_noise_threshold)) {
+                if (delta_lat * delta_throughput < 0) {
+                    delta = 0;
                 } else {
-                    delta = 0.1;
+                    delta = (delta_throughput - (beta * delta_lat)) / ((beta * delta_throughput) + delta_lat);
+                    if (delta < 0)
+                        delta = delta / beta;
+                    else
+                        delta = delta * beta;
                 }
+//                } else {
+//                    delta = 0.1;
+//                }
             }
             target_latency = target_latency + delta * step_size;
         }
