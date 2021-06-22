@@ -131,8 +131,8 @@ void CoDel::_coarse_interval_process() {
             }
             if(avg_throttle_usage < 0.5)
                 delta = -1;
-            delta = std::max(delta, 0.1)
-            delta = std::min(delta, -0.1)
+            delta = std::max(delta, 0.1);
+            delta = std::min(delta, -0.1);
             target_latency = target_latency + delta * step_size;
         }
         target_latency = std::max(target_latency, min_target_latency);
