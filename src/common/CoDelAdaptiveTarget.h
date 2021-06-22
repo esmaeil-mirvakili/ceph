@@ -52,7 +52,8 @@ protected:
     double_t step_size = 0.01;
     double_t beta = 1;
     double_t lat_normalization_factor = 1;
-    vector<double_t> sliding_window;
+    vector<double_t> throughput_sliding_window;
+    vector<double_t> latency_sliding_window;
     int sliding_window_size = 10;
     int64_t interval_count = 0;
     int64_t coarse_interval_size;
