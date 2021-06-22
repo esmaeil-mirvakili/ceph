@@ -90,15 +90,24 @@ void CoDel::_coarse_interval_process() {
         cur_throughput = cur_throughput / 1024;
         cur_throughput = cur_throughput / 1024;
         avg_lat = (sum_latency / 1000000.0) / txc_cnt;
-        sliding_window.push_back(cur_throughput);
-        if(sliding_window.size() > sliding_window_size)
-            sliding_window.erase(sliding_window.begin());
+        throughput_sliding_window.push_back(cur_throughput);
+        if(throughput_sliding_window.size() > sliding_window_size)
+            throughput_sliding_window.erase(throughput_sliding_window.begin());
         double sum = 0;
-        for (unsigned int i = 0; i < sliding_window.size(); i++)
-            sum += sliding_window[i];
-        cur_throughput = sum / sliding_window.size();
-//        auto delta_lat = avg_lat - slow_interval_lat;
-        auto delta_lat = target_latency - slow_interval_target;
+        for (unsigned int i = 0; i < throughput_sliding_window.size(); i++)
+            sum += throughput_sliding_window[i];
+        cur_throughput = sum / throughput_sliding_window.size();
+
+        latency_sliding_window.push_back(avg_lat);
+        if(latency_sliding_window.size() > sliding_window_size)
+            latency_sliding_window.erase(latency_sliding_window.begin());
+        sum = 0;
+        for (unsigned int i = 0; i < latency_sliding_window.size(); i++)
+            sum += latency_sliding_window[i];
+        avg_lat = sum / latency_sliding_window.size();
+
+        auto delta_lat = avg_lat - slow_interval_lat;
+//        auto delta_lat = target_latency - slow_interval_target;
 //        delta_lat = delta_lat * lat_normalization_factor;
         auto delta_throughput = cur_throughput - slow_interval_throughput;
         if (activated && adaptive_target) {
