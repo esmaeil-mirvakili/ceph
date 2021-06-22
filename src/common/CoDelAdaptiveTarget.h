@@ -57,6 +57,7 @@ protected:
     int sliding_window_size = 10;
     int64_t interval_count = 0;
     int64_t coarse_interval_size;
+    double_t coarse_interval_usage;
     SafeTimer fast_timer;
     SafeTimer slow_timer;
     ceph::mutex fast_timer_lock = ceph::make_mutex("CoDel::fast_timer_lock");

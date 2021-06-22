@@ -43,6 +43,7 @@ void CoDel::register_queue_latency(int64_t latency, double_t throttle_usage, int
     sum_latency += latency;
     txc_cnt++;
     coarse_interval_size += size;
+    coarse_interval_usage += throttle_usage;
 }
 
 void CoDel::_interval_process() {
@@ -110,6 +111,8 @@ void CoDel::_coarse_interval_process() {
 //        auto delta_lat = target_latency - slow_interval_target;
 //        delta_lat = delta_lat * lat_normalization_factor;
         auto delta_throughput = cur_throughput - slow_interval_throughput;
+
+        auto avg_throttle_usage = coarse_interval_usage / txc_cnt;
         if (activated && adaptive_target) {
             if (slow_interval_throughput >= 0 && slow_interval_lat >= 0) {
                 //if ((delta_throughput > bw_noise_threshold || delta_throughput < -bw_noise_threshold) && (delta_lat > lat_noise_threshold || delta_lat < -lat_noise_threshold)) {
@@ -126,8 +129,10 @@ void CoDel::_coarse_interval_process() {
 //                    delta = 0.1;
 //                }
             }
-            if(delta == 0)
-                delta = 0.1;
+            if(avg_throttle_usage < 0.5)
+                delta = -1;
+            delta = std::max(delta, 0.1)
+            delta = std::min(delta, -0.1)
             target_latency = target_latency + delta * step_size;
         }
         target_latency = std::max(target_latency, min_target_latency);
@@ -135,6 +140,7 @@ void CoDel::_coarse_interval_process() {
     }
     slow_interval_start = mono_clock::now();
     coarse_interval_size = 0;
+    coarse_interval_usage = 0;
     sum_latency = 0;
     txc_cnt = 0;
     slow_interval_throughput = cur_throughput;
@@ -179,7 +185,7 @@ void CoDel::reset() {
     min_latency = INT_NULL;
     coarse_interval_size = 0;
     slow_interval_start = mono_clock::zero();
-    coarse_interval_size = 0;
+    coarse_interval_usage = 0;
     slow_interval_throughput = 0;
     slow_interval_lat = 0;
     std::cout << "slow freq:" << slow_interval_frequency << std::endl;
