@@ -129,7 +129,7 @@ void CoDel::_coarse_interval_process() {
 //                    delta = 0.1;
 //                }
             }
-            if(avg_throttle_usage < 0.5)
+            if(avg_throttle_usage < bw_noise_threshold)
                 delta = -1;
             delta = std::max(delta, 0.1);
             delta = std::min(delta, -0.1);
