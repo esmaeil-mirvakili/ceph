@@ -49,6 +49,7 @@ void CoDel::register_queue_latency(int64_t latency, double_t throttle_usage, int
 
 void CoDel::_interval_process() {
     std::lock_guard l(register_lock);
+    double_t time = 0;
     mono_clock::time_point now = mono_clock::now();
     if (min_latency != INT_NULL) {
         if (activated) {
