@@ -40,10 +40,12 @@ protected:
     int64_t sum_latency = 0;
     int64_t min_target_latency = 1000000;  // in ns
     int64_t max_target_latency = 200000000; // in ns
-    int64_t txc_cnt = 0;
+    int64_t slow_interval_txc_cnt = 0;
+    int64_t max_throughput = 0;
     int64_t violation_count = 0;
     int64_t slow_interval_frequency = 10;
     mono_clock::time_point slow_interval_start = mono_clock::zero();
+    mono_clock::time_point fast_interval_start = mono_clock::zero();
     double_t slow_interval_throughput;
     double_t slow_interval_lat;
     double_t bw_noise_threshold;
@@ -57,6 +59,7 @@ protected:
     int sliding_window_size = 10;
     int64_t interval_count = 0;
     int64_t coarse_interval_size;
+    int64_t fast_interval_size;
     double_t coarse_interval_usage;
     SafeTimer fast_timer;
     SafeTimer slow_timer;
@@ -64,6 +67,7 @@ protected:
     ceph::mutex slow_timer_lock = ceph::make_mutex("CoDel::slow_timer_lock");
     ceph::mutex register_lock = ceph::make_mutex("CoDel::register_lock");
     bool adaptive_target = false;
+    bool optimize_using_target = false;
     double_t delta;
 
 

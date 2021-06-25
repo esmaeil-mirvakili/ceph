@@ -15859,6 +15859,9 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
         if (getline(settingFile, line)) {
             lat_noise_threshold = std::stod(line);
         }
+        if (getline(settingFile, line)) {
+            optimize_using_target = std::stoi(line) > 0;
+        }
     }
     settingFile.close();
     bluestore_budget = starting_bluestore_budget;

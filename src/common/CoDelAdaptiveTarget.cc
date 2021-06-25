@@ -41,13 +41,15 @@ void CoDel::register_queue_latency(int64_t latency, double_t throttle_usage, int
         min_latency = latency;
     }
     sum_latency += latency;
-    txc_cnt++;
+    slow_interval_txc_cnt++;
     coarse_interval_size += size;
+    fast_interval_size += size;
     coarse_interval_usage += throttle_usage;
 }
 
 void CoDel::_interval_process() {
     std::lock_guard l(register_lock);
+    mono_clock::time_point now = mono_clock::now();
     if (min_latency != INT_NULL) {
         if (activated) {
             if (_check_latency_violation()) {
@@ -63,11 +65,21 @@ void CoDel::_interval_process() {
             }
         }
 
+        // calculate throughput
+        time = std::chrono::nanoseconds(now - fast_interval_start).count();
+        time = time / 1000000000.0;
+        auto throughput = (fast_interval_size * 1.0) / time;
+        throughput /= 1024;
+        throughput /= 1024;
+        if (throughput > max_throughput)
+            max_throughput = throughput;
+
         // reset interval
         min_latency = INT_NULL;
         on_interval_finished();
+        fast_interval_size = 0;
     }
-
+    fast_interval_start = mono_clock::now();
     auto codel_ctx = new LambdaContext(
             [this](int r) {
                 _interval_process();
@@ -84,13 +96,14 @@ void CoDel::_coarse_interval_process() {
     double_t time = 0;
     delta = 1;
     auto target_temp = target_latency;
-    if (!mono_clock::is_zero(slow_interval_start) && txc_cnt > 0) {
-        time = std::chrono::nanoseconds(now - slow_interval_start).count();
-        time = time / 1000000000.0;
-        cur_throughput = (coarse_interval_size * 1.0) / time;
-        cur_throughput = cur_throughput / 1024;
-        cur_throughput = cur_throughput / 1024;
-        avg_lat = (sum_latency / 1000000.0) / txc_cnt;
+    if (!mono_clock::is_zero(slow_interval_start) && slow_interval_txc_cnt > 0) {
+//        time = std::chrono::nanoseconds(now - slow_interval_start).count();
+//        time = time / 1000000000.0;
+//        cur_throughput = (coarse_interval_size * 1.0) / time;
+//        cur_throughput = cur_throughput / 1024;
+//        cur_throughput = cur_throughput / 1024;
+        cur_throughput = max_throughput;
+        avg_lat = (sum_latency / 1000000.0) / slow_interval_txc_cnt;
         throughput_sliding_window.push_back(cur_throughput);
         if(throughput_sliding_window.size() > sliding_window_size)
             throughput_sliding_window.erase(throughput_sliding_window.begin());
@@ -107,34 +120,35 @@ void CoDel::_coarse_interval_process() {
             sum += latency_sliding_window[i];
         avg_lat = sum / latency_sliding_window.size();
 
-        auto delta_lat = avg_lat - slow_interval_lat;
-//        auto delta_lat = target_latency - slow_interval_target;
-//        delta_lat = delta_lat * lat_normalization_factor;
+        auto delta_lat = 0;
+        if(optimize_using_target)
+            delta_lat = (target_latency - slow_interval_target) / 1000000.0;
+        else
+            delta_lat = avg_lat - slow_interval_lat;
+
         auto delta_throughput = cur_throughput - slow_interval_throughput;
 
-        auto avg_throttle_usage = coarse_interval_usage / txc_cnt;
+        auto avg_throttle_usage = coarse_interval_usage / slow_interval_txc_cnt;
         if (activated && adaptive_target) {
             if (slow_interval_throughput >= 0 && slow_interval_lat >= 0) {
-                //if ((delta_throughput > bw_noise_threshold || delta_throughput < -bw_noise_threshold) && (delta_lat > lat_noise_threshold || delta_lat < -lat_noise_threshold)) {
-                if (delta_lat * delta_throughput < 0) {
-                    delta = lat_normalization_factor;
+                if (std::abs(delta_lat) > lat_noise_threshold) {
+                    if (delta_lat * delta_throughput < 0 && std::abs(delta_lat) > 10 * lat_noise_threshold ) {
+                        delta = lat_normalization_factor;
+                    } else {
+                        delta = (delta_throughput - (beta * delta_lat)) / ((beta * delta_throughput) + delta_lat);
+                        if (delta < 0)
+                            delta = delta / beta;
+                        else
+                            delta = delta * beta;
+                    }
                 } else {
-                    delta = (delta_throughput - (beta * delta_lat)) / ((beta * delta_throughput) + delta_lat);
-                    if (delta < 0)
-                        delta = delta / beta;
-                    else
-                        delta = delta * beta;
+                    delta = lat_noise_threshold;
                 }
-//                } else {
-//                    delta = 0.1;
-//                }
             }
-            if(avg_throttle_usage < bw_noise_threshold)
-                delta = -1;
             if(delta > 0)
-                delta = std::max(delta, 0.1);
+                delta = std::max(delta, lat_noise_threshold);
             else
-                delta = std::min(delta, -0.1);
+                delta = std::min(delta, -lat_noise_threshold);
             target_latency = target_latency + delta * step_size;
         }
         target_latency = std::max(target_latency, min_target_latency);
@@ -144,7 +158,8 @@ void CoDel::_coarse_interval_process() {
     coarse_interval_size = 0;
     coarse_interval_usage = 0;
     sum_latency = 0;
-    txc_cnt = 0;
+    slow_interval_txc_cnt = 0;
+    max_throughput = 0;
     slow_interval_throughput = cur_throughput;
     slow_interval_lat = avg_lat;
     slow_interval_target = target_temp;
