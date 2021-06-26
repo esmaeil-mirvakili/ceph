@@ -41,7 +41,8 @@ protected:
     int64_t min_target_latency = 1000000;  // in ns
     int64_t max_target_latency = 200000000; // in ns
     int64_t slow_interval_txc_cnt = 0;
-    int64_t max_throughput = 0;
+    int64_t fast_interval_txc_cnt = 0;
+    vector<double_t> fast_throughput_vector;
     int64_t violation_count = 0;
     int64_t slow_interval_frequency = 10;
     mono_clock::time_point slow_interval_start = mono_clock::zero();
@@ -68,7 +69,10 @@ protected:
     ceph::mutex register_lock = ceph::make_mutex("CoDel::register_lock");
     bool adaptive_target = false;
     bool optimize_using_target = false;
+    bool throughput_outlier_detection = false;
     double_t delta;
+    double_t delta_lat;
+    double_t delta_throughput;
 
 
     void register_queue_latency(int64_t queuing_latency, double_t throttle_usage, int64_t size);

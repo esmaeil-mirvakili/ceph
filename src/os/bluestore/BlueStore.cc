@@ -15742,6 +15742,8 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
     txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
     txc_lat_vec.push_back(latency);
     delta_vec.push_back(delta);
+    delta_throughput_vec.push_back(delta_throughput);
+    delta_lat_vec.push_back(delta_lat);
     interval_cnt_vec.push_back(interval_count);
     txc_avg_lat_vec.push_back(slow_interval_lat);
     txc_bytes.push_back(txc->bytes);
@@ -15862,6 +15864,9 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
         if (getline(settingFile, line)) {
             optimize_using_target = std::stoi(line) > 0;
         }
+        if (getline(settingFile, line)) {
+            throughput_outlier_detection = std::stoi(line) > 0;
+        }
     }
     settingFile.close();
     bluestore_budget = starting_bluestore_budget;
@@ -15881,6 +15886,8 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     txc_lat_vec.clear();
     txc_bytes.clear();
     delta_vec.clear();
+    delta_lat_vec.clear();
+    delta_throughput_vec.clear();
     txc_avg_lat_vec.clear();
     interval_cnt_vec.clear();
     throttle_max_vec.clear();
@@ -15896,7 +15903,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
 
     std::ofstream txc_file(prefix + "txc" + index + ".csv");
     // add column names
-    txc_file << "start, lat, size, budget, throttle, throughput, target, avg_lat, interval_cnt, delta" << "\n";
+    txc_file << "start, lat, size, budget, throttle, throughput, target, avg_lat, interval_cnt, delta_throughput, delta_lat, delta" << "\n";
 
     for (unsigned int i = 0; i < txc_start_vec.size(); i++){
         txc_file << std::fixed << txc_start_vec[i];
@@ -15917,10 +15924,97 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
         txc_file << ",";
         txc_file << std::fixed << interval_cnt_vec[i];
         txc_file << ",";
+        txc_file << std::fixed << delta_throughput_vec[i];
+        txc_file << ",";
+        txc_file << std::fixed << delta_lat_vec[i];
+        txc_file << ",";
         txc_file << std::fixed << delta_vec[i];
         txc_file << "\n";
     }
     txc_file.close();
+
+    std::ofstream params_file(prefix + "params" + index + ".csv");
+
+    params_file << "activated: ";
+    params_file << std::fixed << activated;
+    params_file << "\n";
+
+    params_file << "init_target: ";
+    params_file << std::fixed << init_target;
+    params_file << "\n";
+
+    params_file << "init_interval: ";
+    params_file << std::fixed << init_interval;
+    params_file << "\n";
+
+    params_file << "starting_bluestore_budget: ";
+    params_file << std::fixed << starting_bluestore_budget;
+    params_file << "\n";
+
+    params_file << "min_bluestore_budget: ";
+    params_file << std::fixed << min_bluestore_budget;
+    params_file << "\n";
+
+    params_file << "beta: ";
+    params_file << std::fixed << beta;
+    params_file << "\n";
+
+    params_file << "adaptive_down_sizing: ";
+    params_file << std::fixed << adaptive_down_sizing;
+    params_file << "\n";
+
+    params_file << "only_4k: ";
+    params_file << std::fixed << only_4k;
+    params_file << "\n";
+
+    params_file << "adaptive_t: ";
+    params_file << std::fixed << adaptive_t;
+    params_file << "\n";
+
+    params_file << "slow_interval_frequency: ";
+    params_file << std::fixed << slow_interval_frequency;
+    params_file << "\n";
+
+    params_file << "step_size: ";
+    params_file << std::fixed << step_size;
+    params_file << "\n";
+
+    params_file << "adaptive_down_sizing: ";
+    params_file << std::fixed << adaptive_down_sizing;
+    params_file << "\n";
+
+    params_file << "max_target_latency: ";
+    params_file << std::fixed << max_target_latency;
+    params_file << "\n";
+
+    params_file << "min_target_latency: ";
+    params_file << std::fixed << min_target_latency;
+    params_file << "\n";
+
+    params_file << "sliding_window_size: ";
+    params_file << std::fixed << sliding_window_size;
+    params_file << "\n";
+
+    params_file << "lat_normalization_factor: ";
+    params_file << std::fixed << lat_normalization_factor;
+    params_file << "\n";
+
+    params_file << "bw_noise_threshold: ";
+    params_file << std::fixed << bw_noise_threshold;
+    params_file << "\n";
+
+    params_file << "lat_noise_threshold: ";
+    params_file << std::fixed << lat_noise_threshold;
+    params_file << "\n";
+
+    params_file << "optimize_using_target: ";
+    params_file << std::fixed << optimize_using_target;
+    params_file << "\n";
+
+    params_file << "throughput_outlier_detection: ";
+    params_file << std::fixed << throughput_outlier_detection;
+    params_file << "\n";
+    params_file.close();
 }
 
 // DB key value Histogram
