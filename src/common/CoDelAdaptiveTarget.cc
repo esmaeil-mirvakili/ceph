@@ -156,10 +156,10 @@ void CoDel::_coarse_interval_process() {
             if (slow_interval_throughput >= 0 && slow_interval_lat >= 0) {
                 if (std::abs(delta_lat) > lat_noise_threshold) {
                     if (delta_lat * delta_throughput < 0 ) {
-                        if(std::abs(delta_lat) >= 10 * lat_noise_threshold)
+                        if(std::abs(delta_lat) >= lat_noise_threshold)
                             delta = lat_normalization_factor;
                         else
-                            delta = lat_noise_threshold;
+                            delta = 0;
                     } else {
                         delta = (delta_throughput - (beta * delta_lat)) / ((beta * delta_throughput) + delta_lat);
                         if (delta < 0)
@@ -168,7 +168,7 @@ void CoDel::_coarse_interval_process() {
                             delta = delta * beta;
                     }
                 } else {
-                    delta = lat_noise_threshold;
+                    delta = 0;
                 }
             }
             if(delta > 0)
