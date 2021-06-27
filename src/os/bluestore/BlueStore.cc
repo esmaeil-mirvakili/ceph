@@ -15940,11 +15940,11 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     params_file << "\n";
 
     params_file << "init_target: ";
-    params_file << std::fixed << init_target;
+    params_file << std::fixed << initial_target_latency;
     params_file << "\n";
 
     params_file << "init_interval: ";
-    params_file << std::fixed << init_interval;
+    params_file << std::fixed << initial_interval;
     params_file << "\n";
 
     params_file << "starting_bluestore_budget: ";
@@ -15963,12 +15963,8 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     params_file << std::fixed << adaptive_down_sizing;
     params_file << "\n";
 
-    params_file << "only_4k: ";
-    params_file << std::fixed << only_4k;
-    params_file << "\n";
-
     params_file << "adaptive_t: ";
-    params_file << std::fixed << adaptive_t;
+    params_file << std::fixed << adaptive_target;
     params_file << "\n";
 
     params_file << "slow_interval_frequency: ";
