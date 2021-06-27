@@ -15867,6 +15867,9 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
         if (getline(settingFile, line)) {
             throughput_outlier_detection = std::stoi(line) > 0;
         }
+        if (getline(settingFile, line)) {
+            delta_threshold = std::stod(line);
+        }
     }
     settingFile.close();
     bluestore_budget = starting_bluestore_budget;

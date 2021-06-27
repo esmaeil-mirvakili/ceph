@@ -71,6 +71,7 @@ protected:
     bool optimize_using_target = false;
     bool throughput_outlier_detection = false;
     double_t delta;
+    double_t delta_threshold;
     double_t delta_lat;
     double_t delta_throughput;
 
