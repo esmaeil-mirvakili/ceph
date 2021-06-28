@@ -97,7 +97,6 @@ void CoDel::_coarse_interval_process() {
     double_t time = 0;
     double sum = 0;
     delta = 1;
-    bool register_data = false;
     auto target_temp = target_latency;
     if (!mono_clock::is_zero(slow_interval_start) && slow_interval_txc_cnt > 0) {
         if (throughput_outlier_detection) {
@@ -158,7 +157,7 @@ void CoDel::_coarse_interval_process() {
                 if (std::abs(delta_lat) > lat_noise_threshold) {
                     if (delta_lat * delta_throughput < 0 ) {
                         if(std::abs(delta_lat) >= lat_noise_threshold)
-                            delta = -1;
+                            delta = lat_normalization_factor;
                         else
                             delta = 0;
                     } else {
@@ -172,11 +171,11 @@ void CoDel::_coarse_interval_process() {
                     delta = 0;
                 }
             }
-            if(std::abs(delta) > bw_noise_threshold) {
-                register_data = true;
-                auto d = delta > 0?1:-1;
-                target_latency = target_latency + (d * step_size);
-            }
+            if(delta > 0)
+                delta = std::max(delta, delta_threshold);
+            else
+                delta = std::min(delta, -delta_threshold);
+            target_latency = target_latency + (delta * step_size);
         }
         target_latency = std::max(target_latency, min_target_latency);
         target_latency = std::min(target_latency, max_target_latency);
@@ -187,11 +186,9 @@ void CoDel::_coarse_interval_process() {
     sum_latency = 0;
     slow_interval_txc_cnt = 0;
     fast_throughput_vector.clear();
-    if(register_data){
-        slow_interval_throughput = cur_throughput;
-        slow_interval_lat = avg_lat;
-        slow_interval_target = target_temp;
-    }
+    slow_interval_throughput = cur_throughput;
+    slow_interval_lat = avg_lat;
+    slow_interval_target = target_temp;
 
     auto codel_ctx = new LambdaContext(
             [this](int r) {
