@@ -172,7 +172,7 @@ void CoDel::_coarse_interval_process() {
                 }
             }
 
-            auto d = delta > 0?1:-1;
+            auto d = delta >= 0?1:-1;
             target_latency = target_latency + (d * step_size);
         }
         target_latency = std::max(target_latency, min_target_latency);
