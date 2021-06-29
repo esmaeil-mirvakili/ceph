@@ -136,13 +136,15 @@ void CoDel::_coarse_interval_process() {
             sum += throughput_sliding_window[i];
         cur_throughput = sum / throughput_sliding_window.size();
 
-        latency_sliding_window.push_back(avg_lat);
-        if(latency_sliding_window.size() > sliding_window_size)
-            latency_sliding_window.erase(latency_sliding_window.begin());
-        sum = 0;
-        for (unsigned int i = 0; i < latency_sliding_window.size(); i++)
-            sum += latency_sliding_window[i];
-        avg_lat = sum / latency_sliding_window.size();
+        if (!optimize_using_target) {
+            latency_sliding_window.push_back(avg_lat);
+            if (latency_sliding_window.size() > sliding_window_size)
+                latency_sliding_window.erase(latency_sliding_window.begin());
+            sum = 0;
+            for (unsigned int i = 0; i < latency_sliding_window.size(); i++)
+                sum += latency_sliding_window[i];
+            avg_lat = sum / latency_sliding_window.size();
+        }
 
         if(optimize_using_target)
             delta_lat = (target_latency - slow_interval_target) / 1000000.0;
@@ -156,7 +158,10 @@ void CoDel::_coarse_interval_process() {
             if (slow_interval_throughput >= 0 && slow_interval_lat >= 0) {
                 if (std::abs(delta_lat) > lat_noise_threshold) {
                     if (delta_lat * delta_throughput < 0 ) {
-                        delta = bw_noise_threshold;
+                        if(std::abs(delta_throughput) > beta)
+                            delta = -1;
+                        else
+                            delta = bw_noise_threshold;
                     } else {
                         delta = (delta_throughput - (beta * delta_lat)) / ((beta * delta_throughput) + delta_lat);
                         if (delta < 0)
