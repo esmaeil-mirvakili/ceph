@@ -159,7 +159,7 @@ void CoDel::_coarse_interval_process() {
                 if (std::abs(delta_lat) > lat_noise_threshold) {
                     if (delta_lat * delta_throughput < 0 ) {
                         if(std::abs(delta_throughput) > beta)
-                            delta = -1;
+                            delta = delta_threshold;
                         else
                             delta = bw_noise_threshold;
                     } else {
