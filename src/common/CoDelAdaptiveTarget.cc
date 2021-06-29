@@ -156,10 +156,7 @@ void CoDel::_coarse_interval_process() {
             if (slow_interval_throughput >= 0 && slow_interval_lat >= 0) {
                 if (std::abs(delta_lat) > lat_noise_threshold) {
                     if (delta_lat * delta_throughput < 0 ) {
-                        if(std::abs(delta_lat) >= lat_noise_threshold)
-                            delta = -1;
-                        else
-                            delta = 0;
+                        delta = bw_noise_threshold;
                     } else {
                         delta = (delta_throughput - (beta * delta_lat)) / ((beta * delta_throughput) + delta_lat);
                         if (delta < 0)
@@ -173,6 +170,8 @@ void CoDel::_coarse_interval_process() {
             }
 
             auto d = delta >= 0?1:-1;
+            if(delta == -2)
+                d = 0;
             target_latency = target_latency + (d * step_size);
         }
         target_latency = std::max(target_latency, min_target_latency);
@@ -184,9 +183,11 @@ void CoDel::_coarse_interval_process() {
     sum_latency = 0;
     slow_interval_txc_cnt = 0;
     fast_throughput_vector.clear();
-    slow_interval_throughput = cur_throughput;
-    slow_interval_lat = avg_lat;
-    slow_interval_target = target_temp;
+    if (target_latency != target_temp) {
+        slow_interval_throughput = cur_throughput;
+        slow_interval_lat = avg_lat;
+        slow_interval_target = target_temp;
+    }
 
     auto codel_ctx = new LambdaContext(
             [this](int r) {
