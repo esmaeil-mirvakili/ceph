@@ -42,7 +42,6 @@ protected:
     int64_t max_target_latency = 200000000; // in ns
     int64_t slow_interval_txc_cnt = 0;
     int64_t fast_interval_txc_cnt = 0;
-    vector<double_t> fast_throughput_vector;
     int64_t violation_count = 0;
     int64_t slow_interval_frequency = 10;
     mono_clock::time_point slow_interval_start = mono_clock::zero();
@@ -60,8 +59,6 @@ protected:
     int sliding_window_size = 10;
     int64_t interval_count = 0;
     int64_t coarse_interval_size;
-    int64_t fast_interval_size;
-    double_t coarse_interval_usage;
     SafeTimer fast_timer;
     SafeTimer slow_timer;
     ceph::mutex fast_timer_lock = ceph::make_mutex("CoDel::fast_timer_lock");
