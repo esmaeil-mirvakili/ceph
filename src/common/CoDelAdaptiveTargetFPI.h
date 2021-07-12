@@ -35,13 +35,13 @@ protected:
     int64_t initial_interval;     // Initial interval to start the algorithm
     int64_t initial_target_latency;     // Initial target latency to start the algorithm
     int64_t interval = INT_NULL;       // current interval that algorithm is using
-    int64_t target_latency = INT_NULL;       // current target latency that algorithm is using
+    int64_t selected_target_index = 0;
+    int64_t selected_target_offset = 0;
     int64_t min_latency = INT_NULL;       // min latency in the current interval
-    int64_t sum_latency = 0;
     int64_t min_target_latency = 1000000;  // in ns
     int64_t max_target_latency = 200000000; // in ns
+    double_t step_size = 0.01;
     int64_t slow_interval_txc_cnt = 0;
-    int64_t fast_interval_txc_cnt = 0;
     int64_t violation_count = 0;
     int64_t slow_interval_frequency = 10;
     mono_clock::time_point slow_interval_start = mono_clock::zero();
@@ -51,13 +51,9 @@ protected:
     double_t bw_noise_threshold;
     double_t lat_noise_threshold;
     double_t slow_interval_target;
-    double_t step_size = 0.01;
     double_t beta = 1;
     double_t lat_normalization_factor = 1;
-    vector<double_t> throughput_sliding_window;
-    vector<double_t> latency_sliding_window;
     int sliding_window_size = 10;
-    int64_t interval_count = 0;
     int64_t coarse_interval_size;
     SafeTimer fast_timer;
     SafeTimer slow_timer;
@@ -71,10 +67,22 @@ protected:
     double_t delta_threshold;
     double_t delta_lat;
     double_t delta_throughput;
+    ThroughputInfo *throughput_target_fx;
+    int64_t fx_size;
+    bool reconfigure = false;
+
+    struct ThroughputInfo{
+        vector<double_t> throughput_vec,
+        mono_clock::time_point last_update
+    };
 
 
     void register_queue_latency(int64_t queuing_latency, double_t throttle_usage, int64_t size);
     void initialize(int64_t init_interval, int64_t init_target, bool adaptive_target, bool active);
+    int64_t calculate_target();
+    int64_t get_index();
+    void re_configure(int offset);
+    double_t calculate_throughput(ThroughputInfo throughputInfo);
 
     /**
      * react properly if min latency is greater than target latency (min latency violation)
