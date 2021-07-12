@@ -130,13 +130,14 @@ void CoDel::_coarse_interval_process() {
                             delta = delta * beta;
                     }
                 } else {
-                    delta = delta_lat > 0 ? delta_threshold : -delta_threshold;
+                    ignore_interval = true;
                 }
             }
             if (delta == 0)
                 ignore_interval = true;
-            if (!ignore_interval)
-                target_latency = target_latency + (delta * step_size);
+            if (ignore_interval)
+                delta = delta_lat > 0 ? delta_threshold : -delta_threshold;
+            target_latency = target_latency + (delta * step_size);
         }
         target_latency = std::max(target_latency, min_target_latency);
         target_latency = std::min(target_latency, max_target_latency);
@@ -145,7 +146,7 @@ void CoDel::_coarse_interval_process() {
     coarse_interval_size = 0;
     sum_latency = 0;
     slow_interval_txc_cnt = 0;
-    if (target_latency != target_temp && !ignore_interval) {
+    if (target_latency != target_temp || ignore_interval) {
         slow_interval_throughput = cur_throughput;
         slow_interval_lat = avg_lat;
         slow_interval_target = target_temp;
