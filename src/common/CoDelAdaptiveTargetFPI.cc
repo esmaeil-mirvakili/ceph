@@ -101,9 +101,7 @@ void CoDel::_coarse_interval_process() {
         } else{
 //            auto normalized_target = (target_latency - min_target_latency);
             auto normalized_throughput = cur_throughput - base_throughput;
-            if (normalized_throughput <= 0){
-                target_latency += step_size;
-            } else{
+            if (normalized_throughput > 0){
                 auto new_normalized_target = normalized_throughput / beta;
                 target_latency = min_target_latency + new_normalized_target;
             }
