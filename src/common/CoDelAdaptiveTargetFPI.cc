@@ -102,7 +102,7 @@ void CoDel::_coarse_interval_process() {
 //            auto normalized_target = (target_latency - min_target_latency);
             if (throughput_cnt >= sliding_window_size) {
                 auto th = throughput_sum / (throughput_cnt * 1.0);
-                auto normalized_throughput = cur_throughput - base_throughput;
+                auto normalized_throughput = th - base_throughput;
                 delta_throughput = normalized_throughput;
                 if (normalized_throughput > 0) {
                     auto new_normalized_target = normalized_throughput / beta;
