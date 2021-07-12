@@ -87,10 +87,10 @@ void CoDel::_coarse_interval_process() {
         double_t cur_throughput = (coarse_interval_size * 1.0) / time;
         cur_throughput = cur_throughput / 1024;
         cur_throughput = cur_throughput / 1024;
-
+        throughput_cnt++;
+        throughput_sum += cur_throughput;
         if (reconfigure_phase){
-            throughput_cnt++;
-            throughput_sum += cur_throughput;
+            target_latency = min_target_latency;
             if (throughput_cnt >= sliding_window_size){
                 reconfigure_phase = false;
                 base_throughput = throughput_sum / (throughput_cnt * 1.0);
@@ -100,10 +100,15 @@ void CoDel::_coarse_interval_process() {
             }
         } else{
 //            auto normalized_target = (target_latency - min_target_latency);
-            auto normalized_throughput = cur_throughput - base_throughput;
-            if (normalized_throughput > 0){
-                auto new_normalized_target = normalized_throughput / beta;
-                target_latency = min_target_latency + new_normalized_target;
+            if (throughput_cnt >= sliding_window_size) {
+                auto th = throughput_sum / (throughput_cnt * 1.0);
+                auto normalized_throughput = cur_throughput - base_throughput;
+                if (normalized_throughput > 0) {
+                    auto new_normalized_target = normalized_throughput / beta;
+                    target_latency = min_target_latency + new_normalized_target;
+                    throughput_sum = 0;
+                    throughput_cnt = 0;
+                }
             }
         }
         target_latency = std::max(target_latency, min_target_latency);
