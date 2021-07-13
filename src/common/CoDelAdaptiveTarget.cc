@@ -94,10 +94,15 @@ void CoDel::_coarse_interval_process() {
         throughput_sliding_window.push_back(cur_throughput);
         if (throughput_sliding_window.size() > sliding_window_size)
             throughput_sliding_window.erase(throughput_sliding_window.begin());
+//        sum = 0;
+//        for (unsigned int i = 0; i < throughput_sliding_window.size(); i++)
+//            sum += throughput_sliding_window[i];
+//        cur_throughput = sum / throughput_sliding_window.size();
+
         sum = 0;
         for (unsigned int i = 0; i < throughput_sliding_window.size(); i++)
-            sum += throughput_sliding_window[i];
-        cur_throughput = sum / throughput_sliding_window.size();
+            if (throughput_sliding_window[i] > cur_throughput)
+                cur_throughput = throughput_sliding_window[i];
 
         avg_lat = (sum_latency / (1000 * 1000.0)) / slow_interval_txc_cnt;
 
