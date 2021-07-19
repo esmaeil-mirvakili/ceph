@@ -15967,30 +15967,17 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     params_file << std::fixed << min_target_latency;
     params_file << "\n";
 
-    params_file << "sliding_window_size: ";
-    params_file << std::fixed << sliding_window_size;
+    params_file << "time_window_size: ";
+    params_file << std::fixed << time_window_size;
     params_file << "\n";
 
-    params_file << "lat_normalization_factor: ";
-    params_file << std::fixed << lat_normalization_factor;
+    params_file << "time_window_duration: ";
+    params_file << std::fixed << time_window_duration;
     params_file << "\n";
 
-    params_file << "bw_noise_threshold: ";
-    params_file << std::fixed << bw_noise_threshold;
+    params_file << "smoothing_activated: ";
+    params_file << std::fixed << smoothing_activated;
     params_file << "\n";
-
-    params_file << "lat_noise_threshold: ";
-    params_file << std::fixed << lat_noise_threshold;
-    params_file << "\n";
-
-    params_file << "optimize_using_target: ";
-    params_file << std::fixed << optimize_using_target;
-    params_file << "\n";
-
-    params_file << "throughput_outlier_detection: ";
-    params_file << std::fixed << throughput_outlier_detection;
-    params_file << "\n";
-    params_file.close();
 }
 
 // DB key value Histogram
