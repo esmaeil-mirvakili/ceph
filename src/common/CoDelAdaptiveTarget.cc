@@ -131,7 +131,7 @@ vector<TimePoint> CoDel::_smoothing(vector<TimePoint> time_points) {
     vector<TimePoint> temp;
     for (unsigned int i = 0; i < time_points.size(); i++) {
         auto z_score = (time_points[i].value - mean) / standard_deviation;
-        if (std::abs(z_score) < 2)
+        if (std::abs(z_score) < 3)
             temp.push_back(time_points[i]);
     }
     return temp;
