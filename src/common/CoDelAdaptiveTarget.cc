@@ -97,21 +97,41 @@ double_t CoDel::_estimate_slope_by_regression(vector<TimePoint> time_points) {
 }
 
 vector<TimePoint> CoDel::_smoothing(vector<TimePoint> time_points) {
-    if(time_points.size() == 0)
-        return time_points;
-    std::sort(time_points.begin(), time_points.end(), CoDel::compare_time_point);
-    double_t thresh = 0;
-    if( time_points.size() % 2 == 1) {
-        unsigned int i = int(std::floor(time_points.size() / 2)) + 1;
-        thresh = time_points[i].value;
-    } else{
-        unsigned int i = int(std::floor(time_points.size() / 2));
-        thresh = (time_points[i].value + time_points[i+1].value) / 2;
-    }
-    vector<TimePoint> temp;
+//    if(time_points.size() == 0)
+//        return time_points;
+//    std::sort(time_points.begin(), time_points.end(), CoDel::compare_time_point);
+//    double_t thresh = 0;
+//    if( time_points.size() % 2 == 1) {
+//        unsigned int i = int(std::floor(time_points.size() / 2)) + 1;
+//        thresh = time_points[i].value;
+//    } else{
+//        unsigned int i = int(std::floor(time_points.size() / 2));
+//        thresh = (time_points[i].value + time_points[i+1].value) / 2;
+//    }
+//    vector<TimePoint> temp;
+//    for (unsigned int i = 0; i < time_points.size(); i++)
+//        if(time_points[i].value >= thresh)
+//            temp.push_back(time_points[i]);
+//    return temp;
+
+    int n = time_points.size();
+    double_t mean = 0;
     for (unsigned int i = 0; i < time_points.size(); i++)
-        if(time_points[i].value >= thresh)
+        mean += time_points[i].value;
+    mean /= n;
+    double_t standard_deviation = 0;
+    for (unsigned int i = 0; i < time_points.size(); i++) {
+        auto diff = time_points[i] - mean;
+        standard_deviation += diff;
+    }
+    standard_deviation = std::sqrt(standard_deviation);
+
+    vector<TimePoint> temp;
+    for (unsigned int i = 0; i < time_points.size(); i++) {
+        auto z_score = (time_points[i] - mean) / standard_deviation;
+        if (std::abs(z_score) < 2)
             temp.push_back(time_points[i]);
+    }
     return temp;
 }
 
