@@ -99,7 +99,7 @@ double_t CoDel::_estimate_slope_by_regression(vector<TimePoint> time_points) {
 }
 
 vector<TimePoint> CoDel::_smoothing(vector<TimePoint> time_points) {
-    std::sort(temp.begin(), temp.end(), CoDel::compare_time_point);
+    std::sort(time_points.begin(), time_points.end(), CoDel::compare_time_point);
     int n = time_points.size();
     double_t mean = 0;
     for (unsigned int i = 0; i < time_points.size(); i++)
@@ -121,11 +121,11 @@ vector<TimePoint> CoDel::_smoothing(vector<TimePoint> time_points) {
     }
 
     vector<TimePoint> temp2;
-    for (unsigned int i = 0; i < (temp.size() - window_size); i++) {
+    for (unsigned int i = 0; i < (temp.size() - smoothing_window); i++) {
         double_t sum = 0;
-        for (unsigned int j = i; j < i + window_size; j++)
+        for (unsigned int j = i; j < i + smoothing_window; j++)
             sum += temp[j].value;
-        TimePoint time_point = {temp[i].time, sum / window_size};
+        TimePoint time_point = {temp[i].time, sum / smoothing_window};
         temp2.push_back(time_point);
     }
     return temp2;
