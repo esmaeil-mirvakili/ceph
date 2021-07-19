@@ -100,7 +100,7 @@ double_t CoDel::_estimate_slope_by_regression(vector<TimePoint> time_points) {
 
 vector<TimePoint> CoDel::_smoothing(vector<TimePoint> time_points) {
     std::sort(time_points.begin(), time_points.end(), CoDel::compare_time_point);
-    std::cout << "1: " << time_points.size() << std::endl;
+
     int n = time_points.size();
     double_t mean = 0;
     for (unsigned int i = 0; i < time_points.size(); i++)
@@ -116,26 +116,23 @@ vector<TimePoint> CoDel::_smoothing(vector<TimePoint> time_points) {
 
     vector<TimePoint> temp;
     for (unsigned int i = 0; i < time_points.size(); i++) {
-        auto z_score = (time_points[i].value - mean) / standard_deviation;
+        double_t z_score = 0;
+        if(standard_deviation != 0)
+            z_score = (time_points[i].value - mean) / standard_deviation;
         if (std::abs(z_score) < 2)
             temp.push_back(time_points[i]);
     }
 
-    std::cout << "2: " << temp.size() << std::endl;
     vector<TimePoint> temp2;
-    for (unsigned int i = 0; i < (temp.size() - smoothing_window); i++) {
-        std::cout << "3:" << i << std::endl;
-        double_t sum = 0;
-        for (unsigned int j = i; j < i + smoothing_window; j++) {
-            sum += temp[j].value;
-            std::cout << "4:" << j << std::endl;
+    if(temp.size() > 0)
+        for (unsigned int i = 0; i < (temp.size() - smoothing_window); i++) {
+            double_t sum = 0;
+            for (unsigned int j = i; j < i + smoothing_window; j++) {
+                sum += temp[j].value;
+            }
+            TimePoint time_point = {temp[i].time, sum / smoothing_window};
+            temp2.push_back(time_point);
         }
-        std::cout << "5:" << i << std::endl;
-        TimePoint time_point = {temp[i].time, sum / smoothing_window};
-        std::cout << "6:" << i << std::endl;
-        temp2.push_back(time_point);
-        std::cout << "7:" << i << std::endl;
-    }
     return temp2;
 }
 
