@@ -97,23 +97,21 @@ double_t CoDel::_estimate_slope_by_regression(vector<TimePoint> time_points) {
 }
 
 vector<TimePoint> CoDel::_smoothing(vector<TimePoint> time_points) {
+    if(time_points.size() == 0)
+        return time_points;
     std::sort(time_points.begin(), time_points.end(), CoDel::compare_time_point);
     double_t thresh = 0;
-    std::cout << "smoothing: " << time_points.size() << std::endl;
     if( time_points.size() % 2 == 1) {
         unsigned int i = int(std::floor(time_points.size() / 2)) + 1;
-        std::cout << "i: " << i << std::endl;
         thresh = time_points[i].value;
     } else{
         unsigned int i = int(std::floor(time_points.size() / 2));
-        std::cout << "i: " << i << std::endl;
         thresh = (time_points[i].value + time_points[i+1].value) / 2;
     }
     vector<TimePoint> temp;
     for (unsigned int i = 0; i < time_points.size(); i++)
         if(time_points[i].value >= thresh)
             temp.push_back(time_points[i]);
-    std::cout << "done: " << thresh << std::endl;
     return temp;
 }
 
@@ -149,12 +147,11 @@ void CoDel::_coarse_interval_process() {
         slow_interval_lat = (sum_latency / (1000 * 1000.0)) / slow_interval_txc_cnt;
         auto temp_target = target_latency;
         temp_target /= 1000000;
-        if (activated && adaptive_target) {
+        if (activated && adaptive_target && time_series.size() > 0) {
             {
                 vector<TimePoint> temp = time_series;
                 if(smoothing_activated) {
                     temp = _smoothing(temp);
-                    std::cout << "out: " << temp.size() << std::endl;
                 }
                 slope = _estimate_slope_by_regression(temp);
             }
@@ -172,8 +169,8 @@ void CoDel::_coarse_interval_process() {
             else
                 delta = std::min(delta, - delta_threshold);
             target_latency += delta * step_size;
-            _add_time_point(temp_target, slow_interval_throughput);
         }
+        _add_time_point(temp_target, slow_interval_throughput);
     } else{
         target_latency += step_size;
     }
