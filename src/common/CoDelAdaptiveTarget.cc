@@ -121,7 +121,7 @@ vector<TimePoint> CoDel::_smoothing(vector<TimePoint> time_points) {
     mean /= n;
     double_t standard_deviation = 0;
     for (unsigned int i = 0; i < time_points.size(); i++) {
-        auto diff = time_points[i] - mean;
+        auto diff = time_points[i].value - mean;
         standard_deviation += diff;
     }
     standard_deviation = std::sqrt(standard_deviation);
