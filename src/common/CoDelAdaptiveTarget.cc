@@ -138,6 +138,7 @@ void CoDel::_coarse_interval_process() {
         slow_interval_throughput /= 1024.0 * 1024.0;
         slow_interval_lat = (sum_latency / (1000 * 1000.0)) / slow_interval_txc_cnt;
         auto temp_target = target_latency;
+        temp_target /= 1000000;
         if (activated && adaptive_target) {
             {
                 vector<TimePoint> temp = time_series;
