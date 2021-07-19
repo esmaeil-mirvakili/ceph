@@ -37,7 +37,7 @@ private:
     void _coarse_interval_process();
     void _add_time_point(double_t time, double_t value);
     double_t _estimate_slope_by_regression(vector<TimePoint> time_points);
-    vector<TimePoint> _moving_average(vector<TimePoint> time_points, int window_size);
+    vector<TimePoint> _smoothing(vector<TimePoint> time_points);
 
 protected:
     bool activated = false;
@@ -81,7 +81,7 @@ protected:
     void register_queue_latency(int64_t queuing_latency, double_t throttle_usage, int64_t size);
     void initialize(int64_t init_interval, int64_t init_target, bool adaptive_target, bool active);
     bool static compare_time_point(TimePoint timePoint1, TimePoint timePoint2){
-        return timePoint1.time < timePoint2.time;
+        return timePoint1.value < timePoint2.value;
     }
     /**
      * react properly if min latency is greater than target latency (min latency violation)

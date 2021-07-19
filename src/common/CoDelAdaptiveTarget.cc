@@ -96,15 +96,20 @@ double_t CoDel::_estimate_slope_by_regression(vector<TimePoint> time_points) {
     return SS_xy / SS_xx;
 }
 
-vector<TimePoint> CoDel::_moving_average(vector<TimePoint> time_points, int window_size) {
-    vector<TimePoint> temp;
-    for (unsigned int i = 0; i < (time_points.size() - window_size); i++) {
-        double_t sum = 0;
-        for (unsigned int j = i; j < i + window_size; j++)
-            sum += time_points[j].value;
-        TimePoint time_point = {time_points[i].time, sum / window_size};
-        temp.push_back(time_point);
+vector<TimePoint> CoDel::_smoothing(vector<TimePoint> time_points) {
+    std::sort(time_points.begin(), time_points.end(), CoDel::compare_time_point);
+    double_t thresh = 0;
+    if( time_points.size() % 2 == 1) {
+        unsigned int i = int(std::floor(time_points.size() / 2)) + 1;
+        thresh = time_points[i].value;
+    } else{
+        unsigned int i = int(std::floor(time_points.size() / 2));
+        thresh = (time_points[i].value + time_points[i+1].value) / 2;
     }
+    vector<TimePoint> temp;
+    for (unsigned int i = 0; i < time_points.size(); i++)
+        if(time_points[i].value >= thresh)
+            temp.push_back(time_points[i]);
     return temp;
 }
 
@@ -143,9 +148,8 @@ void CoDel::_coarse_interval_process() {
         if (activated && adaptive_target) {
             {
                 vector<TimePoint> temp = time_series;
-                std::sort(temp.begin(), temp.end(), CoDel::compare_time_point);
                 if(smoothing_activated)
-                    temp = _moving_average(temp, smoothing_window);
+                    temp = _smoothing(temp);
                 slope = _estimate_slope_by_regression(temp);
             }
             if(slope >= 0){
