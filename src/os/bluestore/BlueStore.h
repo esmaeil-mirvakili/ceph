@@ -1885,7 +1885,6 @@ public:
         bool batch_started = false;
         BlueStoreThrottle *throttle;
         double throttle_usage_threshold = 0;
-        bool only_4k = false;
 
 
         void on_min_latency_violation();

@@ -72,7 +72,7 @@ protected:
     double_t time_limit = 0; // in ns
     double_t delta_threshold = 0.1;
     double_t delta;
-    bool smoothing_activated;
+    bool smoothing_activated = false;
     int64_t smoothing_window;
     bool adaptive_target = false;
     double_t slope;

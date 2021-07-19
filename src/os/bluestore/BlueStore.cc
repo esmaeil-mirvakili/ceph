@@ -15828,9 +15828,6 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
             adaptive_down_sizing = std::stoi(line) > 0;
         }
         if (getline(settingFile, line)) {
-            only_4k = std::stoi(line) > 0;
-        }
-        if (getline(settingFile, line)) {
             adaptive_t = std::stoi(line) > 0;
         }
         if (getline(settingFile, line)) {
@@ -15840,34 +15837,22 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
             step_size = std::stod(line);
         }
         if (getline(settingFile, line)) {
-            adaptive_down_sizing = std::stoi(line) > 0;
-        }
-        if (getline(settingFile, line)) {
             max_target_latency = std::stoi(line);
         }
         if (getline(settingFile, line)) {
             min_target_latency = std::stoi(line);
         }
         if (getline(settingFile, line)) {
-            sliding_window_size = std::stoi(line);
-        }
-        if (getline(settingFile, line)) {
-            lat_normalization_factor = std::stod(line);
-        }
-        if (getline(settingFile, line)) {
-            bw_noise_threshold = std::stod(line);
-        }
-        if (getline(settingFile, line)) {
-            lat_noise_threshold = std::stod(line);
-        }
-        if (getline(settingFile, line)) {
-            optimize_using_target = std::stoi(line) > 0;
-        }
-        if (getline(settingFile, line)) {
-            throughput_outlier_detection = std::stoi(line) > 0;
-        }
-        if (getline(settingFile, line)) {
             delta_threshold = std::stod(line);
+        }
+        if (getline(settingFile, line)) {
+            time_window_duration = std::stod(line);
+        }
+        if (getline(settingFile, line)) {
+            time_window_size = std::stoi(line);
+        }
+        if (getline(settingFile, line)) {
+            smoothing_activated = std::stoi(line) > 0;
         }
     }
     settingFile.close();
