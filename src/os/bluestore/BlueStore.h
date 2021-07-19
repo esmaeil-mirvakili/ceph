@@ -1848,7 +1848,6 @@ public:
         vector<double> txc_bytes;
         vector<double_t> delta_vec;
         vector<double_t> slope_vec;
-        vector<int64_t> interval_cnt_vec;
         vector<int64_t> throttle_max_vec;
         vector<int64_t> throttle_current_vec;
         vector<int64_t> target_vec;

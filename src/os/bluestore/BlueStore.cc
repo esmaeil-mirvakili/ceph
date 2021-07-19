@@ -15742,8 +15742,7 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
     txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
     txc_lat_vec.push_back(latency);
     delta_vec.push_back(delta);
-    delta_lat_vec.push_back(slope);
-    interval_cnt_vec.push_back(interval_count);
+    slope_vec.push_back(slope);
     txc_avg_lat_vec.push_back(slow_interval_lat);
     txc_bytes.push_back(txc->bytes);
     throttle_max_vec.push_back(txc->throttle_max);
@@ -15875,7 +15874,6 @@ void BlueStore::BlueStoreCoDel::clear_log_data() {
     delta_vec.clear();
     slope_vec.clear();
     txc_avg_lat_vec.clear();
-    interval_cnt_vec.clear();
     throttle_max_vec.clear();
     throttle_current_vec.clear();
     target_vec.clear();
@@ -15889,7 +15887,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
 
     std::ofstream txc_file(prefix + "txc" + index + ".csv");
     // add column names
-    txc_file << "start, lat, size, budget, throttle, throughput, target, avg_lat, interval_cnt, slope, delta" << "\n";
+    txc_file << "start, lat, size, budget, throttle, throughput, target, avg_lat, slope, delta" << "\n";
 
     for (unsigned int i = 0; i < txc_start_vec.size(); i++){
         txc_file << std::fixed << txc_start_vec[i];
