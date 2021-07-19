@@ -73,7 +73,7 @@ protected:
     double_t delta_threshold = 0.1;
     double_t delta;
     bool smoothing_activated = false;
-    int64_t smoothing_window;
+    int64_t smoothing_window = 3;
     bool adaptive_target = false;
     double_t slope;
 
@@ -81,7 +81,7 @@ protected:
     void register_queue_latency(int64_t queuing_latency, double_t throttle_usage, int64_t size);
     void initialize(int64_t init_interval, int64_t init_target, bool adaptive_target, bool active);
     bool static compare_time_point(TimePoint timePoint1, TimePoint timePoint2){
-        return timePoint1.value < timePoint2.value;
+        return timePoint1.time < timePoint2.time;
     }
     /**
      * react properly if min latency is greater than target latency (min latency violation)
