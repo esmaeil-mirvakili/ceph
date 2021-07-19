@@ -105,6 +105,7 @@ vector<TimePoint> CoDel::_moving_average(vector<TimePoint> time_points, int wind
         TimePoint time_point = {time_points[i].time, sum / window_size};
         temp.push_back(time_point);
     }
+    return temp;
 }
 
 void CoDel::_add_time_point(double_t time, double_t value) {
