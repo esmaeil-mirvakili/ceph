@@ -93,6 +93,8 @@ double_t CoDel::_estimate_slope_by_regression(vector<TimePoint> time_points) {
     Y_mean /= n;
     SS_xy = multiply_sum - (n * X_mean * Y_mean);
     SS_xx = time_square_sum - (n * X_mean * X_mean);
+    if(SS_xx == 0)
+        return 999999;
     return SS_xy / SS_xx;
 }
 
