@@ -188,6 +188,8 @@ void CoDel::_coarse_interval_process() {
                 delta = std::max(delta, delta_threshold);
             else
                 delta = std::min(delta, - delta_threshold);
+            if(target_latency == min_target_latency && delta < 0)
+                delta = 1;
             target_latency += delta * step_size;
         }
         _add_time_point(temp_target, slow_interval_throughput);
