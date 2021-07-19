@@ -120,15 +120,15 @@ vector<TimePoint> CoDel::_smoothing(vector<TimePoint> time_points) {
             temp.push_back(time_points[i]);
     }
 
-    vector<TimePoint> temp;
-    for (unsigned int i = 0; i < (time_points.size() - window_size); i++) {
+    vector<TimePoint> temp2;
+    for (unsigned int i = 0; i < (temp.size() - window_size); i++) {
         double_t sum = 0;
         for (unsigned int j = i; j < i + window_size; j++)
-            sum += time_points[j].value;
-        TimePoint timePoint = {time_points[i].time, sum / window_size};
-        temp.push_back(time_point);
+            sum += temp[j].value;
+        TimePoint time_point = {temp[i].time, sum / window_size};
+        temp2.push_back(time_point);
     }
-    return temp;
+    return temp2;
 }
 
 void CoDel::_add_time_point(double_t time, double_t value) {
