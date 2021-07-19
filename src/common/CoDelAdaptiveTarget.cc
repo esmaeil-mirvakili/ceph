@@ -86,14 +86,14 @@ double_t CoDel::_estimate_slope_by_regression(vector<TimePoint> time_points) {
     for (unsigned int i = 0; i < time_points.size(); i++) {
         X_mean += time_points[i].time;
         Y_mean += time_points[i].value;
-        multiply_sum += (time_points[i].time * time_points[i].value)
-        time_square_sum += (time_points[i].time * time_points[i].time)
+        multiply_sum += (time_points[i].time * time_points[i].value);
+        time_square_sum += (time_points[i].time * time_points[i].time);
     }
     X_mean /= n;
     Y_mean /= n;
     SS_xy = multiply_sum - (n * X_mean * Y_mean);
     SS_xx = time_square_sum - (n * X_mean * X_mean);
-    B_1 =  SS_xy / SS_xx;
+    return SS_xy / SS_xx;
 }
 
 vector<TimePoint> CoDel::_moving_average(vector<TimePoint> time_points, int window_size) {
@@ -102,7 +102,7 @@ vector<TimePoint> CoDel::_moving_average(vector<TimePoint> time_points, int wind
         double_t sum = 0;
         for (unsigned int j = i; j < i + window_size; j++)
             sum += time_points[j].value;
-        TimePoint timePoint = {time_points[i].time, sum / window_size};
+        TimePoint time_point = {time_points[i].time, sum / window_size};
         temp.push_back(time_point);
     }
 }
@@ -132,7 +132,7 @@ void CoDel::_coarse_interval_process() {
     mono_clock::time_point now = mono_clock::now();
 
     if (!mono_clock::is_zero(slow_interval_start) && slow_interval_txc_cnt > 0) {
-        time = std::chrono::nanoseconds(now - slow_interval_start).count();
+        double_t time = std::chrono::nanoseconds(now - slow_interval_start).count();
         time = time / (1000 * 1000 * 1000.0);
         slow_interval_throughput = (coarse_interval_size * 1.0) / time;
         slow_interval_throughput /= 1024.0 * 1024.0;
@@ -141,7 +141,7 @@ void CoDel::_coarse_interval_process() {
         if (activated && adaptive_target) {
             {
                 vector<TimePoint> temp = time_series;
-                std::sort(temp.begin(), temp.end(), compare_time_point);
+                std::sort(temp.begin(), temp.end(), CoDel::compare_time_point);
                 if(smoothing_activated)
                     temp = _moving_average(temp, smoothing_window);
                 slope = _estimate_slope_by_regression(temp);

@@ -35,7 +35,7 @@ private:
     void _update_interval();
     void _interval_process();
     void _coarse_interval_process();
-    void _add_time_point();
+    void _add_time_point(double_t time, double_t value);
     double_t _estimate_slope_by_regression(vector<TimePoint> time_points);
     vector<TimePoint> _moving_average(vector<TimePoint> time_points, int window_size);
 
