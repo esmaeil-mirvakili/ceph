@@ -113,7 +113,7 @@ void CoDel::_add_time_point(double_t time, double_t value) {
     if(time < time_limit - time_window_duration)
         time_limit = time + time_window_duration - 1;
 
-    TimePoint timePoint = {time, value};
+    TimePoint time_point = {time, value};
     time_series.push_back(time_point);
 
     if (time_series.size() > time_window_size && time_window_size > 0)

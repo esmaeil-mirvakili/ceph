@@ -80,7 +80,7 @@ protected:
 
     void register_queue_latency(int64_t queuing_latency, double_t throttle_usage, int64_t size);
     void initialize(int64_t init_interval, int64_t init_target, bool adaptive_target, bool active);
-    bool compare_time_point(TimePoint timePoint1, TimePoint timePoint2){
+    bool static compare_time_point(TimePoint timePoint1, TimePoint timePoint2){
         return timePoint1.time < timePoint2.time;
     }
     /**
