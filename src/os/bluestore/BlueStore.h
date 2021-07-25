@@ -1831,7 +1831,7 @@ public:
         void set_throttle(BlueStoreThrottle *bs_throttle) {
             throttle = bs_throttle;
             if(activated) {
-                bluestore_budget = throttle->get_max();
+                bluestore_budget = starting_bluestore_budget;
                 throttle->reset_max(bluestore_budget);
             }
         }
