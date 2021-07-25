@@ -15741,8 +15741,8 @@ void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
         register_queue_latency(latency, txc->throttle_usage, txc->bytes);
     txc_start_vec.push_back(std::chrono::nanoseconds(txc->start_time - mono_clock::zero()).count());
     txc_lat_vec.push_back(latency);
-    delta_vec.push_back(delta);
-    slope_vec.push_back(slope);
+    delta_vec.push_back(0);
+    slope_vec.push_back(*slope);
     txc_avg_lat_vec.push_back(slow_interval_lat);
     txc_bytes.push_back(txc->bytes);
     throttle_max_vec.push_back(txc->throttle_max);
@@ -15833,25 +15833,22 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
             slow_interval_frequency = std::stoi(line);
         }
         if (getline(settingFile, line)) {
-            step_size = std::stod(line);
-        }
-        if (getline(settingFile, line)) {
             max_target_latency = std::stoi(line);
         }
         if (getline(settingFile, line)) {
             min_target_latency = std::stoi(line);
         }
         if (getline(settingFile, line)) {
-            delta_threshold = std::stod(line);
+            outlier_detection = std::stoi(line) > 0;
         }
         if (getline(settingFile, line)) {
-            time_window_duration = std::stod(line);
+            range = std::stoi(line);
         }
         if (getline(settingFile, line)) {
-            time_window_size = std::stoi(line);
+            config_latency_threshold = std::stoi(line);
         }
         if (getline(settingFile, line)) {
-            smoothing_activated = std::stoi(line) > 0;
+            size_threshold = std::stoi(line);
         }
     }
     settingFile.close();
@@ -15884,6 +15881,10 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     // create an filestream object
     std::string prefix = "codel_log_";
     std::string index = "";
+
+    std::ofstream model_file(prefix + "model" + index + ".json");
+    model_file << model.to_string();
+    model_file.close();
 
     std::ofstream txc_file(prefix + "txc" + index + ".csv");
     // add column names

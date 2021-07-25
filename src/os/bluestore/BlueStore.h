@@ -44,7 +44,7 @@
 #include "common/Finisher.h"
 #include "common/ceph_mutex.h"
 #include "common/Throttle.h"
-#include "common/CoDelAdaptiveTarget.h"
+#include "common/CoDelAdaptiveTargetModel.h"
 #include "common/perf_counters.h"
 #include "common/PriorityCache.h"
 #include "compressor/Compressor.h"
