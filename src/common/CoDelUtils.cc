@@ -1,12 +1,12 @@
 #include "CoDelUtils.h"
 
-double_t CoDelUtils::estimate_slope_by_regression(vector <DataPoint> &data_points) {
-    double_t X_mean = 0;
-    double_t Y_mean = 0;
-    double_t SS_xy = 0;
-    double_t SS_xx = 0;
-    double_t multiply_sum = 0;
-    double_t time_square_sum = 0;
+double CoDelUtils::estimate_slope_by_regression(std::vector <DataPoint> &data_points) {
+    double X_mean = 0;
+    double Y_mean = 0;
+    double SS_xy = 0;
+    double SS_xx = 0;
+    double multiply_sum = 0;
+    double time_square_sum = 0;
     int n = data_points.size();
     for (int i = 0; i < data_points.size(); i++) {
         X_mean += data_points[i].time;
@@ -23,13 +23,13 @@ double_t CoDelUtils::estimate_slope_by_regression(vector <DataPoint> &data_point
     return SS_xy / SS_xx;
 }
 
-void CoDelUtils::reject_outlier(vector<DataPoint> &data_points) {
+void CoDelUtils::reject_outlier(std::vector<DataPoint> &data_points) {
     int n = data_points.size();
-    double_t mean = 0;
+    double mean = 0;
     for (int i = 0; i < data_points.size(); i++)
         mean += data_points[i].value;
     mean /= n;
-    double_t standard_deviation = 0;
+    double standard_deviation = 0;
     for (int i = 0; i < data_points.size(); i++) {
         auto diff = data_points[i].value - mean;
         standard_deviation += diff * diff;
@@ -37,9 +37,9 @@ void CoDelUtils::reject_outlier(vector<DataPoint> &data_points) {
     standard_deviation /= n;
     standard_deviation = std::sqrt(standard_deviation);
 
-    vector<int> to_be_removed;
+    std::vector<int> to_be_removed;
     for (int i = 0; i < data_points.size(); i++) {
-        double_t z_score = 0;
+        double z_score = 0;
         if(standard_deviation != 0)
             z_score = (data_points[i].value - mean) / standard_deviation;
         if (std::abs(z_score) < 2)

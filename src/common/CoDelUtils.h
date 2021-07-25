@@ -5,15 +5,17 @@
 #include <vector>
 #include "ceph_time.h"
 
+using ceph::mono_clock;
+
 class CoDelUtils {
 public:
-    static struct DataPoint{
+    struct DataPoint{
         double time;
         double value;
         mono_clock::time_point created;
     };
-    static double_t estimate_slope_by_regression(vector<DataPoint> &data_points);
-    static void reject_outlier(vector<DataPoint> &data_points);
+    static double estimate_slope_by_regression(std::vector<DataPoint> &data_points);
+    static void reject_outlier(std::vector<DataPoint> &data_points);
 };
 
 
