@@ -26,6 +26,7 @@ public:
     * reset the algorithm
     */
     void reset();
+    bool activated = false;
 
 private:
     bool _check_latency_violation();
@@ -34,7 +35,6 @@ private:
     void _coarse_interval_process();
 
 protected:
-    bool activated = false;
     int64_t initial_interval;     // Initial interval to start the algorithm
     int64_t initial_target_latency;     // Initial target latency to start the algorithm
     int64_t interval = INT_NULL;       // current interval that algorithm is using
