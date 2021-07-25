@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+#include <cmath>
 #include "ceph_time.h"
 
 using ceph::mono_clock;
