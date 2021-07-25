@@ -61,7 +61,7 @@ protected:
 
     bool adaptive_target = true;
     double *slope;
-    CoDelModel model;
+    CoDelModel *model;
     int64_t range;
     int64_t config_latency_threshold;
     int size_threshold;

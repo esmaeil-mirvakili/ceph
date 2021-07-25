@@ -86,10 +86,10 @@ void CoDel::_coarse_interval_process() {
         slow_interval_throughput = (coarse_interval_size * 1.0) / time;
         slow_interval_throughput /= 1024.0 * 1024.0;
         slow_interval_lat = (sum_latency / (1000 * 1000.0)) / slow_interval_txc_cnt;
-        model.add_point(target_latency, slow_interval_throughput);
-        model.get_slope(target_latency, slope);
+        model->add_point(target_latency, slow_interval_throughput);
+        model->get_slope(target_latency, slope);
         if (activated && adaptive_target) {
-            target_latency = model.get_latency_for_slope(target_latency, beta);
+            target_latency = model->get_latency_for_slope(target_latency, beta);
         }
     }
     target_latency = std::max(target_latency, min_target_latency);

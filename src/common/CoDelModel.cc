@@ -28,7 +28,7 @@ void LatencyRange::add_point(double latency, double throughput) {
 }
 
 void LatencyRange::update_slope() {
-    temp = time_series;
+    auto temp = time_series;
     if(outlier_detection)
         CoDelUtils::reject_outlier(temp)
     slope = CoDelUtils::estimate_slope_by_regression(temp);
@@ -40,7 +40,7 @@ void LatencyRange::clean() {
         std::vector<DataPoint>::iterator it = time_series.begin();
         while (it != time_series.end()) {
             if (std::chrono::nanoseconds(now - (*it).created).count() > ttl)
-                it = v.erase(it);
+                it = time_series.erase(it);
             else
                 ++it;
         }
