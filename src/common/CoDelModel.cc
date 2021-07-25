@@ -30,7 +30,7 @@ void LatencyRange::add_point(double latency, double throughput) {
 void LatencyRange::update_slope() {
     auto temp = time_series;
     if(outlier_detection)
-        CoDelUtils::reject_outlier(temp)
+        CoDelUtils::reject_outlier(temp);
     slope = CoDelUtils::estimate_slope_by_regression(temp);
 }
 
@@ -105,14 +105,14 @@ double CoDelModel::get_latency_for_slope(double latency, double threshold_slope)
         return range_start + interval * offset;
     }
     if(config_mode || latency_ranges[index].get_slope() >= threshold_slope) {
-        int new_latency = min_latency + (index + 1) * interval;
+        int64_t new_latency = min_latency + (index + 1) * interval;
         if(config_mode && new_latency > config_latency_threshold){
             config_mode = false;
             new_latency = min_latency;
         }
         return std::min(new_latency, max_latency);
     }
-    int new_latency = min_latency + (index - 1) * interval;
+    int64_t new_latency = min_latency + (index - 1) * interval;
     return std::max(new_latency, min_latency);
 }
 
