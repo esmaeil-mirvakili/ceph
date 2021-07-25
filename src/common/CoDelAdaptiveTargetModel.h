@@ -27,6 +27,7 @@ public:
     */
     void reset();
     bool activated = false;
+    bool activated_init = true;
 
 private:
     bool _check_latency_violation();

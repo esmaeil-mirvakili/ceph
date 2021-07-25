@@ -4506,7 +4506,7 @@ private:
         else if (command == "reset kvq vector")
         {
             store->codel.clear_log_data();
-            store->codel.activated = true;
+            store->codel.activated = store->codel.activated_init;
             store->codel.reset();
         }
         return 0;
@@ -4533,8 +4533,8 @@ BlueStore::BlueStore(CephContext *cct,
   _init_logger();
   cct->_conf.add_observer(this);
   set_cache_shards(1);
-  codel.set_throttle(&throttle);
   codel.init(cct);
+  codel.set_throttle(&throttle);
   asok_hook = SocketHook::create(this);
 }
 
@@ -15788,8 +15788,9 @@ void BlueStore::BlueStoreCoDel::on_interval_finished() {
 void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     int64_t init_interval = 0;
     int64_t init_target = 0;
+    bool active = false;
     if (cct->_conf->bluestore_codel) {
-        activated = cct->_conf->bluestore_codel;
+        active = cct->_conf->bluestore_codel;
     }
     if (cct->_conf->bluestore_codel_target_latency) {
         init_target = cct->_conf->bluestore_codel_target_latency;
@@ -15807,7 +15808,7 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     std::ifstream settingFile("codel.settings");
     if(settingFile.good()){
         if (getline(settingFile, line)) {
-            activated = std::stoi(line) > 0;
+            active = std::stoi(line) > 0;
         }
         if (getline(settingFile, line)) {
             init_target = std::stoi(line);
@@ -15857,12 +15858,17 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
     max_queue_length = min_bluestore_budget;
     bluestore_budget_limit_ratio = 1.5;
 
-    initialize(init_interval, init_target, adaptive_t, activated);
+    initialize(init_interval, init_target, adaptive_t, active);
     this->reset();
 }
 
 int64_t BlueStore::BlueStoreCoDel::get_bluestore_budget() {
     return bluestore_budget;
+}
+
+void BlueStore::BlueStoreCoDel::reset() {
+    set_throttle(throttle);
+    BlueStore::BlueStoreCoDel::reset();
 }
 
 void BlueStore::BlueStoreCoDel::clear_log_data() {

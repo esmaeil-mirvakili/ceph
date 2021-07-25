@@ -1867,8 +1867,6 @@ public:
 
         void clear_log_data();
 
-        bool activated = false;
-
     protected:
         int64_t min_bluestore_budget = 100;
         int64_t starting_bluestore_budget = 100;
