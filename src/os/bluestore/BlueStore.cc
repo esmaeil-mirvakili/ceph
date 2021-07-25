@@ -15868,7 +15868,7 @@ int64_t BlueStore::BlueStoreCoDel::get_bluestore_budget() {
 
 void BlueStore::BlueStoreCoDel::reset() {
     set_throttle(throttle);
-    BlueStore::BlueStoreCoDel::reset();
+    CoDel::reset();
 }
 
 void BlueStore::BlueStoreCoDel::clear_log_data() {
