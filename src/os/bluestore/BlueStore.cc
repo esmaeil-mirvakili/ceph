@@ -15883,7 +15883,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     std::string index = "";
 
     std::ofstream model_file(prefix + "model" + index + ".json");
-    model_file << model.to_string();
+    model_file << model->to_string();
     model_file.close();
 
     std::ofstream txc_file(prefix + "txc" + index + ".csv");
@@ -15952,10 +15952,6 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     params_file << std::fixed << slow_interval_frequency;
     params_file << "\n";
 
-    params_file << "step_size: ";
-    params_file << std::fixed << step_size;
-    params_file << "\n";
-
     params_file << "adaptive_down_sizing: ";
     params_file << std::fixed << adaptive_down_sizing;
     params_file << "\n";
@@ -15966,18 +15962,6 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
 
     params_file << "min_target_latency: ";
     params_file << std::fixed << min_target_latency;
-    params_file << "\n";
-
-    params_file << "time_window_size: ";
-    params_file << std::fixed << time_window_size;
-    params_file << "\n";
-
-    params_file << "time_window_duration: ";
-    params_file << std::fixed << time_window_duration;
-    params_file << "\n";
-
-    params_file << "smoothing_activated: ";
-    params_file << std::fixed << smoothing_activated;
     params_file << "\n";
 }
 
