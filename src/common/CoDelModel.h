@@ -36,7 +36,7 @@ private:
     int max_size = 0;
     int64_t ttl = 0;    // in ns
     double_t slope;
-    std::vector<DataPoint> time_series;
+    std::vector<DataPoint*> time_series;
     bool outlier_detection = false;
 };
 

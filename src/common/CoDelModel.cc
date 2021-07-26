@@ -30,7 +30,7 @@ void LatencyRange::add_point(double latency, double throughput, std::ofstream& o
     data_point.created = now;
     outfile << "2_2_3" << std::endl;
     outfile.flush();
-    time_series.push_back(data_point);
+    time_series.push_back(&data_point);
     outfile << "2_2_4" << std::endl;
     outfile.flush();
     if (max_size > 0 && time_series.size() > max_size)

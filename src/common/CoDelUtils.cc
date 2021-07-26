@@ -1,6 +1,6 @@
 #include "CoDelUtils.h"
 
-double CoDelUtils::estimate_slope_by_regression(std::vector <DataPoint> &data_points) {
+double CoDelUtils::estimate_slope_by_regression(std::vector <DataPoint*> &data_points) {
     double X_mean = 0;
     double Y_mean = 0;
     double SS_xy = 0;
@@ -9,10 +9,10 @@ double CoDelUtils::estimate_slope_by_regression(std::vector <DataPoint> &data_po
     double time_square_sum = 0;
     int n = data_points.size();
     for (int i = 0; i < data_points.size(); i++) {
-        X_mean += data_points[i].time;
-        Y_mean += data_points[i].value;
-        multiply_sum += (data_points[i].time * data_points[i].value);
-        time_square_sum += (data_points[i].time * data_points[i].time);
+        X_mean += data_points[i]->time;
+        Y_mean += data_points[i]->value;
+        multiply_sum += (data_points[i]->time * data_points[i]->value);
+        time_square_sum += (data_points[i]->time * data_points[i]->time);
     }
     X_mean /= n;
     Y_mean /= n;
@@ -23,15 +23,15 @@ double CoDelUtils::estimate_slope_by_regression(std::vector <DataPoint> &data_po
     return SS_xy / SS_xx;
 }
 
-void CoDelUtils::reject_outlier(std::vector<DataPoint> &data_points) {
+void CoDelUtils::reject_outlier(std::vector<DataPoint*> &data_points) {
     int n = data_points.size();
     double mean = 0;
     for (int i = 0; i < data_points.size(); i++)
-        mean += data_points[i].value;
+        mean += data_points[i]->value;
     mean /= n;
     double standard_deviation = 0;
     for (int i = 0; i < data_points.size(); i++) {
-        auto diff = data_points[i].value - mean;
+        auto diff = data_points[i]->value - mean;
         standard_deviation += diff * diff;
     }
     standard_deviation /= n;
@@ -41,7 +41,7 @@ void CoDelUtils::reject_outlier(std::vector<DataPoint> &data_points) {
     for (int i = 0; i < data_points.size(); i++) {
         double z_score = 0;
         if(standard_deviation != 0)
-            z_score = (data_points[i].value - mean) / standard_deviation;
+            z_score = (data_points[i]->value - mean) / standard_deviation;
         if (std::abs(z_score) < 2)
             to_be_removed.push_back(i);
     }
