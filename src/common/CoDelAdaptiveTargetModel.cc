@@ -86,8 +86,8 @@ void CoDel::_coarse_interval_process() {
         slow_interval_throughput = (coarse_interval_size * 1.0) / time;
         slow_interval_throughput /= 1024.0 * 1024.0;
         slow_interval_lat = (sum_latency / (1000 * 1000.0)) / slow_interval_txc_cnt;
-        target_vec.push_back(target_latency / 1000000);
-        throughput_vec.push_back(slow_interval_throughput);
+        slow_target_vec.push_back(target_latency / 1000000);
+        slow_throughput_vec.push_back(slow_interval_throughput);
         cnt++;
         if (activated && adaptive_target) {
             if(cnt >= size_threshold){
@@ -114,7 +114,7 @@ void CoDel::_coarse_interval_process() {
         slow_timer.add_event_after(interval_duration, codel_ctx);
     } else{
         double theta[2];
-        CoDelUtils::log_fit(target_vec, throughput_vec, theta);
+        CoDelUtils::log_fit(slow_target_vec, slow_throughput_vec, theta);
         target_latency = (theta[1] / beta) * 1000000;
         target_latency = std::max(target_latency, min_target_latency);
         target_latency = std::min(target_latency, max_target_latency);

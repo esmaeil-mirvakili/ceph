@@ -60,8 +60,8 @@ protected:
     double slow_interval_throughput;
     double slow_interval_lat;
 
-    std::vector<double> target_vec;
-    std::vector<double> throughput_vec;
+    std::vector<double> slow_target_vec;
+    std::vector<double> slow_throughput_vec;
     bool adaptive_target = true;
     double *slope;
     int64_t range;
