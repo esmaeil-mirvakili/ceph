@@ -2,7 +2,7 @@
 
 LatencyRange::LatencyRange(int64_t start_time, int64_t range, bool outlier_detection, int max_size, int64_t ttl)
     : start_time(start_time), range(range), max_size(max_size), ttl(ttl), outlier_detection(outlier_detection)  {
-    std::string fn = "log_"+std::to_string(start_time)+".log"
+    std::string fn = "log_"+std::to_string(start_time)+".log";
     outfile.open(fn);
 }
 
