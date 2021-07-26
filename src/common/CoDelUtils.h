@@ -15,8 +15,8 @@ public:
         double value;
 //        mono_clock::time_point created;
     };
-    static double estimate_slope_by_regression(std::vector<DataPoint*> &data_points);
-    static void reject_outlier(std::vector<DataPoint*> &data_points);
+    static double estimate_slope_by_regression(std::vector<DataPoint> &data_points);
+    static void reject_outlier(std::vector<DataPoint> &data_points);
 };
 
 
