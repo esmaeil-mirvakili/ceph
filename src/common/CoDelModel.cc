@@ -16,15 +16,25 @@ void LatencyRange::reset() {
     slope = 0;
 }
 
-void LatencyRange::add_point(double latency, double throughput) {
+void LatencyRange::add_point(double latency, double throughput, std::ofstream outfile) {
+    outfile << "2_2_1" << std::endl;
+    outfile.flush();
     mono_clock::time_point now = mono_clock::now();
     DataPoint data_point;
+    outfile << "2_2_2" << std::endl;
+    outfile.flush();
     data_point.time = latency / 1000000;
     data_point.value = throughput;
     data_point.created = now;
+    outfile << "2_2_3" << std::endl;
+    outfile.flush();
     time_series.push_back(data_point);
+    outfile << "2_2_4" << std::endl;
+    outfile.flush();
     if (max_size > 0 && time_series.size() > max_size)
         time_series.erase(time_series.begin());
+    outfile << "2_2_5" << std::endl;
+    outfile.flush();
 }
 
 void LatencyRange::update_slope() {
@@ -67,6 +77,7 @@ int64_t LatencyRange::get_range() {
 
 CoDelModel::CoDelModel(int64_t min_latency ,int64_t max_latency, int64_t interval, int64_t config_latency_threshold, bool outlier_detection, int threshold)
     : min_latency(min_latency), max_latency(max_latency), interval(interval), config_latency_threshold(config_latency_threshold), outlier_detection(outlier_detection) {
+    outfile.open("log2.log");
     size = int(std::ceil((max_latency - min_latency) / interval));
     latency_ranges = (LatencyRange*)malloc(sizeof(LatencyRange) * size);;
     for(int i = 0; i < size; i++)
@@ -80,6 +91,7 @@ CoDelModel::CoDelModel(int64_t min_latency ,int64_t max_latency, int64_t interva
     : CoDelModel(min_latency, max_latency, interval, config_latency_threshold, outlier_detection, -1) {}
 
 CoDelModel::~CoDelModel() {
+    outfile.close();
     delete latency_ranges;
 }
 
@@ -93,8 +105,14 @@ int CoDelModel::get_index(double latency) {
 }
 
 void CoDelModel::add_point(double latency, double throughput) {
+    outfile << "2_1" << std::endl;
+    outfile.flush();
     int index = get_index(latency);
+    outfile << "2_2" << std::endl;
+    outfile.flush();
     latency_ranges[index].add_point(latency, throughput);
+    outfile << "2_3" << std::endl;
+    outfile.flush();
 }
 
 double CoDelModel::get_latency_for_slope(double latency, double threshold_slope) {

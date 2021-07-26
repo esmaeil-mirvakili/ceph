@@ -7,6 +7,7 @@
 #include <string>
 #include <stdlib.h>
 #include <time.h>
+#include <fstream>
 #include "ceph_time.h"
 #include "CoDelUtils.h"
 
@@ -21,7 +22,7 @@ public:
     ~LatencyRange();
 
     void reset();
-    void add_point(double latency, double throughput);
+    void add_point(double latency, double throughput, std::ofstream outfile);
     double get_slope();
     int get_size();
     int64_t get_start_time();
@@ -50,6 +51,7 @@ public:
     void get_slope(double latency, double *slope);
     void add_point(double latency, double throughput);
     std::string to_string();
+    std::ofstream outfile;
 private:
     LatencyRange* latency_ranges;
     int64_t min_latency;
