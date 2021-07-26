@@ -28,6 +28,7 @@ public:
     */
     void reset();
     bool activated = false;
+    std::ofstream outfile;
 
 private:
     bool _check_latency_violation();
@@ -59,8 +60,6 @@ protected:
     int64_t slow_interval_txc_cnt = 0;
     double slow_interval_throughput;
     double slow_interval_lat;
-
-    std::ofstream outfile;
 
     bool adaptive_target = true;
     double *slope;
