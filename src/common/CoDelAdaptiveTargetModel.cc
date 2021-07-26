@@ -133,11 +133,16 @@ void CoDel::_update_interval() {
 * reset the algorithm
 */
 void CoDel::reset() {
+    std::cout << "1" << std::endl;
+    std::lock_guard l(register_lock);
+    std::cout << "2" << std::endl;
     interval = initial_interval;
     target_latency = initial_target_latency;
     min_latency = INT_NULL;
     coarse_interval_size = 0;
+    std::cout << "3" << std::endl;
     slow_interval_start = mono_clock::zero();
+    std::cout << "4" << std::endl;
     slow_interval_throughput = 0;
     slow_interval_lat = 0;
     std::cout << "slow freq:" << slow_interval_frequency << std::endl;
