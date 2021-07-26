@@ -4512,7 +4512,9 @@ private:
         }
         else if (command == "reset kvq vector")
         {
+            std::cout << "reset kvq vector start"<< std::endl;
             if (store->codel.activated) {
+                std::cout << "reset kvq vector done!"<< std::endl;
                 store->codel.clear_log_data();
                 store->codel.set_throttle(&store->throttle);
                 store->codel.reset();
