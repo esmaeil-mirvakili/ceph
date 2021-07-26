@@ -4,6 +4,9 @@
 CoDel::CoDel(CephContext *_cct) : fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock) {
     fast_timer.init();
     slow_timer.init();
+    register_lock = ceph::make_mutex("CoDel::register_lock");
+    fast_timer_lock = ceph::make_mutex("CoDel::fast_timer_lock");
+    slow_timer_lock = ceph::make_mutex("CoDel::slow_timer_lock");
 }
 
 CoDel::~CoDel() {

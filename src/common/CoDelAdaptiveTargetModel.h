@@ -43,9 +43,9 @@ protected:
     int64_t min_target_latency = 1000000;  // in ns
     int64_t max_target_latency = 200000000; // in ns
     int64_t violation_count = 0;
-    ceph::mutex fast_timer_lock = ceph::make_mutex("CoDel::fast_timer_lock");
-    ceph::mutex slow_timer_lock = ceph::make_mutex("CoDel::slow_timer_lock");
-    ceph::mutex register_lock = ceph::make_mutex("CoDel::register_lock");
+    ceph::mutex fast_timer_lock;
+    ceph::mutex slow_timer_lock;
+    ceph::mutex register_lock;
     SafeTimer fast_timer;
     SafeTimer slow_timer;
 
