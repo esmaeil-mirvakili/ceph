@@ -27,6 +27,7 @@ public:
     int get_size();
     int64_t get_start_time();
     int64_t get_range();
+    static std::ofstream outfile;
 private:
     void update_slope();
     void clean();
