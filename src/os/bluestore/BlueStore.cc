@@ -4507,15 +4507,13 @@ private:
     {
         if (command == "dump kvq vector")
         {
-            if (store->codel.activated)
-                store->codel.dump_log_data();
+            store->codel.dump_log_data();
         }
         else if (command == "reset kvq vector")
         {
-            std::cout << "reset kvq vector start"<< std::endl;
+
+            store->codel.clear_log_data();
             if (store->codel.activated) {
-                std::cout << "reset kvq vector done!"<< std::endl;
-                store->codel.clear_log_data();
                 store->codel.set_throttle(&store->throttle);
                 store->codel.reset();
             }
@@ -4527,7 +4525,6 @@ private:
         else if (command == "enable codel")
         {
             store->codel.activated = true;
-            std::cout << "activated: " << store->codel.activated << std::endl;
         }
         return 0;
     }
