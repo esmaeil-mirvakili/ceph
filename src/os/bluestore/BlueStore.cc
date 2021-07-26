@@ -15780,7 +15780,7 @@ void BlueStore::BlueStoreCoDel::on_no_violation() {
 }
 
 void BlueStore::BlueStoreCoDel::on_interval_finished() {
-    std::cout << "target: " << std::to_string(target_latecy) << std::endl;
+    std::cout << "target: " << std::to_string(target_latency) << std::endl;
     std::cout << "throttle: " << std::to_string(throttle->get_max()) << std::endl;
     if(activated) {
         throttle->reset_max(bluestore_budget);
