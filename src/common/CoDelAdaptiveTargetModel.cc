@@ -87,7 +87,7 @@ void CoDel::_coarse_interval_process() {
         slow_interval_throughput /= 1024.0 * 1024.0;
         slow_interval_lat = (sum_latency / (1000 * 1000.0)) / slow_interval_txc_cnt;
         if(config_mode){
-            slow_target_vec.push_back(target_latency / 1000000);
+            slow_target_vec.push_back(target_latency / 1000000.0);
             slow_throughput_vec.push_back(slow_interval_throughput);
             cnt++;
         }
