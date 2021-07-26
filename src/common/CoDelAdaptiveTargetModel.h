@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <vector>
 #include <map>
+#include <fstream>
 #include "ceph_time.h"
 #include "common/Timer.h"
 #include "include/Context.h"
@@ -58,6 +59,8 @@ protected:
     int64_t slow_interval_txc_cnt = 0;
     double slow_interval_throughput;
     double slow_interval_lat;
+
+    std::ofstream outfile;
 
     bool adaptive_target = true;
     double *slope;
