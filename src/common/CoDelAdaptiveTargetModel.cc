@@ -154,6 +154,10 @@ void CoDel::reset() {
     slow_interval_start = mono_clock::zero();
     slow_interval_throughput = 0;
     slow_interval_lat = 0;
+    cnt = 0;
+    config_mode = true;
+    slow_throughput_vec.clear();
+    slow_target_vec.clear();
     std::cout << "slow freq:" << slow_interval_frequency << std::endl;
     std::cout << "adaptive:" << adaptive_target << std::endl;
 }
