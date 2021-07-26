@@ -86,15 +86,17 @@ void CoDel::_coarse_interval_process() {
         slow_interval_throughput = (coarse_interval_size * 1.0) / time;
         slow_interval_throughput /= 1024.0 * 1024.0;
         slow_interval_lat = (sum_latency / (1000 * 1000.0)) / slow_interval_txc_cnt;
-        slow_target_vec.push_back(target_latency / 1000000);
-        slow_throughput_vec.push_back(slow_interval_throughput);
-        cnt++;
-        if (activated && adaptive_target) {
-            if(cnt >= size_threshold){
+        if(config_mode){
+            slow_target_vec.push_back(target_latency / 1000000);
+            slow_throughput_vec.push_back(slow_interval_throughput);
+            cnt++;
+        }
+        if (activated && adaptive_target && config_mode) {
+            if (cnt >= size_threshold) {
                 target_latency += range;
                 cnt = 0;
             }
-            if(target_latency > max_target_latency)
+            if (target_latency > max_target_latency)
                 config_mode = false;
         }
     }
@@ -105,14 +107,13 @@ void CoDel::_coarse_interval_process() {
     coarse_interval_size = 0;
     sum_latency = 0;
     slow_interval_txc_cnt = 0;
-    if (config_mode) {
-        auto codel_ctx = new LambdaContext(
-                [this](int r) {
-                    _coarse_interval_process();
-                });
-        auto interval_duration = std::chrono::nanoseconds(initial_interval * slow_interval_frequency);
-        slow_timer.add_event_after(interval_duration, codel_ctx);
-    } else{
+    auto codel_ctx = new LambdaContext(
+            [this](int r) {
+                _coarse_interval_process();
+            });
+    auto interval_duration = std::chrono::nanoseconds(initial_interval * slow_interval_frequency);
+    slow_timer.add_event_after(interval_duration, codel_ctx);
+    if (!config_mode) {
         double theta[2];
         CoDelUtils::log_fit(slow_target_vec, slow_throughput_vec, theta);
         target_latency = (theta[1] / beta) * 1000000;
