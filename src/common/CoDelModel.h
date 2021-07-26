@@ -22,7 +22,7 @@ public:
     ~LatencyRange();
 
     void reset();
-    void add_point(double latency, double throughput, std::ofstream outfile);
+    void add_point(double latency, double throughput);
     double get_slope();
     int get_size();
     int64_t get_start_time();
