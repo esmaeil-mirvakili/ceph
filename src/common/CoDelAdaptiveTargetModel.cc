@@ -4,17 +4,17 @@
 CoDel::CoDel(CephContext *_cct) : fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock) {
     fast_timer.init();
     slow_timer.init();
-    register_lock = ceph::make_mutex("CoDel::register_lock");
-    fast_timer_lock = ceph::make_mutex("CoDel::fast_timer_lock");
-    slow_timer_lock = ceph::make_mutex("CoDel::slow_timer_lock");
+    *register_lock = ceph::make_mutex("CoDel::register_lock");
+    *fast_timer_lock = ceph::make_mutex("CoDel::fast_timer_lock");
+    *slow_timer_lock = ceph::make_mutex("CoDel::slow_timer_lock");
 }
 
 CoDel::~CoDel() {
-    std::lock_guard l1{fast_timer_lock};
+    std::lock_guard l1{*fast_timer_lock};
     fast_timer.cancel_all_events();
     fast_timer.shutdown();
 
-    std::lock_guard l2{slow_timer_lock};
+    std::lock_guard l2{*slow_timer_lock};
     slow_timer.cancel_all_events();
     slow_timer.shutdown();
 }
@@ -28,19 +28,19 @@ void CoDel::initialize(int64_t init_interval, int64_t init_target, bool adaptive
     slope = &tmp;
     model = new CoDelModel(min_target_latency , max_target_latency, range, config_latency_threshold, outlier_detection, size_threshold);
     {
-        std::lock_guard l1{fast_timer_lock};
+        std::lock_guard l1{*fast_timer_lock};
         fast_timer.cancel_all_events();
     }
     _interval_process();
     {
-        std::lock_guard l2{slow_timer_lock};
+        std::lock_guard l2{*slow_timer_lock};
         slow_timer.cancel_all_events();
     }
     _coarse_interval_process();
 }
 
 void CoDel::register_queue_latency(int64_t latency, double_t throttle_usage, int64_t size) {
-    std::lock_guard l(register_lock);
+    std::lock_guard l(*register_lock);
     if (min_latency == INT_NULL || latency < min_latency) {
         min_latency = latency;
     }
@@ -50,7 +50,7 @@ void CoDel::register_queue_latency(int64_t latency, double_t throttle_usage, int
 }
 
 void CoDel::_interval_process() {
-    std::lock_guard l(register_lock);
+    std::lock_guard l(*register_lock);
     double time = 0;
     mono_clock::time_point now = mono_clock::now();
     if (min_latency != INT_NULL) {
@@ -82,7 +82,7 @@ void CoDel::_interval_process() {
 }
 
 void CoDel::_coarse_interval_process() {
-    std::lock_guard l(register_lock);
+    std::lock_guard l(*register_lock);
     mono_clock::time_point now = mono_clock::now();
 
     if (!mono_clock::is_zero(slow_interval_start) && slow_interval_txc_cnt > 0) {
@@ -136,7 +136,7 @@ void CoDel::_update_interval() {
 * reset the algorithm
 */
 void CoDel::reset() {
-    std::lock_guard l(register_lock);
+    std::lock_guard l(*register_lock);
     interval = initial_interval;
     target_latency = initial_target_latency;
     min_latency = INT_NULL;
