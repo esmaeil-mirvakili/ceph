@@ -4508,6 +4508,7 @@ private:
         {
             if (store->codel.activated) {
                 store->codel.clear_log_data();
+                store->codel.set_throttle(&throttle);
                 store->codel.reset();
             }
         }
@@ -15870,11 +15871,6 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
 
 int64_t BlueStore::BlueStoreCoDel::get_bluestore_budget() {
     return bluestore_budget;
-}
-
-void BlueStore::BlueStoreCoDel::reset() {
-    set_throttle(throttle);
-    CoDel::reset();
 }
 
 void BlueStore::BlueStoreCoDel::clear_log_data() {
