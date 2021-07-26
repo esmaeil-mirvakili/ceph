@@ -1867,7 +1867,6 @@ public:
 
         void clear_log_data();
 
-        void reset();
 
     protected:
         int64_t min_bluestore_budget = 100;
