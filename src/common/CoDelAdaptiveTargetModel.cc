@@ -2,11 +2,13 @@
 #include "CoDelAdaptiveTargetModel.h"
 
 CoDel::CoDel(CephContext *_cct) : fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock) {
+    outfile.open("log.log");
     fast_timer.init();
     slow_timer.init();
 }
 
 CoDel::~CoDel() {
+    outfile.close();
     std::lock_guard l1{fast_timer_lock};
     fast_timer.cancel_all_events();
     fast_timer.shutdown();
@@ -92,6 +94,8 @@ void CoDel::_coarse_interval_process() {
         model->get_slope(target_latency, slope);
         if (activated && adaptive_target) {
             target_latency = model->get_latency_for_slope(target_latency, beta);
+            outfile << "lat: " << std::to_string(target_latency) << std::endl;
+            outfile.flush();
         }
     }
     target_latency = std::max(target_latency, min_target_latency);
