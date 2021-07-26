@@ -86,12 +86,12 @@ void CoDel::_coarse_interval_process() {
         slow_interval_throughput = (coarse_interval_size * 1.0) / time;
         slow_interval_throughput /= 1024.0 * 1024.0;
         slow_interval_lat = (sum_latency / (1000 * 1000.0)) / slow_interval_txc_cnt;
-        if(config_mode){
-            slow_target_vec.push_back(target_latency / 1000000.0);
-            slow_throughput_vec.push_back(slow_interval_throughput);
-            cnt++;
-        }
-        if (activated && adaptive_target && config_mode) {
+        if (activated && adaptive_target) {
+            if(config_mode){
+                slow_target_vec.push_back(target_latency / 1000000.0);
+                slow_throughput_vec.push_back(slow_interval_throughput);
+                cnt++;
+            }
             if (cnt >= size_threshold) {
                 target_latency += range;
                 cnt = 0;
