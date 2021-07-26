@@ -4478,6 +4478,12 @@ public:
             r = admin_socket->register_command("reset kvq vector",
                                                hook,
                                                "reset vectors contains kvq_lat");
+            r = admin_socket->register_command("disable codel",
+                                               hook,
+                                               "disable codel module");
+            r = admin_socket->register_command("enable codel",
+                                               hook,
+                                               "enable codel module");
             if (r != 0)
             {
                 delete hook;
@@ -4511,6 +4517,14 @@ private:
                 store->codel.set_throttle(&throttle);
                 store->codel.reset();
             }
+        }
+        else if (command == "disable codel")
+        {
+            store->codel.activated = false;
+        }
+        else if (command == "ensable codel")
+        {
+            store->codel.activated = true;
         }
         return 0;
     }
