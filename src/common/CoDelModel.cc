@@ -2,7 +2,6 @@
 
 LatencyRange::LatencyRange(int64_t start_time, int64_t range, bool outlier_detection, int max_size, int64_t ttl)
     : start_time(start_time), range(range), max_size(max_size), ttl(ttl), outlier_detection(outlier_detection)  {
-    outfile.open("log_"+std::to_string(start_time)+".log");
 }
 
 LatencyRange::LatencyRange(int64_t start_time, int64_t range, bool outlier_detection, int max_size)
@@ -12,7 +11,6 @@ LatencyRange::LatencyRange(int64_t start_time, int64_t range, bool outlier_detec
         : LatencyRange(start_time, range, outlier_detection, 0)  {}
 
 LatencyRange::~LatencyRange() {
-    outfile.close();
 }
 
 void LatencyRange::reset() {
@@ -20,7 +18,7 @@ void LatencyRange::reset() {
     slope = 0;
 }
 
-void LatencyRange::add_point(double latency, double throughput) {
+void LatencyRange::add_point(double latency, double throughput, std::ofstream& outfile) {
     outfile << "2_2_1" << std::endl;
     outfile.flush();
     mono_clock::time_point now = mono_clock::now();
@@ -114,7 +112,7 @@ void CoDelModel::add_point(double latency, double throughput) {
     int index = get_index(latency);
     outfile << "2_2" << std::endl;
     outfile.flush();
-    latency_ranges[index].add_point(latency, throughput);
+    latency_ranges[index].add_point(latency, throughput, outfile);
     outfile << "2_3" << std::endl;
     outfile.flush();
 }
