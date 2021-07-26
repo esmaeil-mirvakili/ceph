@@ -51,3 +51,146 @@ void CoDelUtils::reject_outlier(std::vector<DataPoint> &data_points) {
         data_points.erase(position);
     }
 }
+
+void CoDelUtils::getCofactor(double A[N][N], double temp[N][N], int p, int q, int n)
+{
+    int i = 0, j = 0;
+
+    // Looping for each element of the matrix
+    for (int row = 0; row < n; row++)
+    {
+        for (int col = 0; col < n; col++)
+        {
+            //  Copying into temporary matrix only those element
+            //  which are not in given row and column
+            if (row != p && col != q)
+            {
+                temp[i][j++] = A[row][col];
+
+                // Row is filled, so increase row index and
+                // reset col index
+                if (j == n - 1)
+                {
+                    j = 0;
+                    i++;
+                }
+            }
+        }
+    }
+}
+
+int CoDelUtils::determinant(double A[N][N], int n)
+{
+    double D = 0; // Initialize result
+
+    //  Base case : if matrix contains single element
+    if (n == 1)
+        return A[0][0];
+
+    double temp[N][N]; // To store cofactors
+
+    int sign = 1;  // To store sign multiplier
+
+    // Iterate for each element of first row
+    for (int f = 0; f < n; f++)
+    {
+        // Getting Cofactor of A[0][f]
+        getCofactor(A, temp, 0, f, n);
+        D += sign * A[0][f] * determinant(temp, n - 1);
+
+        // terms are to be added with alternate sign
+        sign = -sign;
+    }
+
+    return D;
+}
+
+void CoDelUtils::adjoint(double A[N][N],double adj[N][N])
+{
+    if (N == 1)
+    {
+        adj[0][0] = 1;
+        return;
+    }
+
+    // temp is used to store cofactors of A[][]
+    int sign = 1;
+    double temp[N][N];
+
+    for (int i=0; i<N; i++)
+    {
+        for (int j=0; j<N; j++)
+        {
+            // Get cofactor of A[i][j]
+            getCofactor(A, temp, i, j, N);
+
+            // sign of adj[j][i] positive if sum of row
+            // and column indexes is even.
+            sign = ((i+j)%2==0)? 1: -1;
+
+            // Interchanging rows and columns to get the
+            // transpose of the cofactor matrix
+            adj[j][i] = (sign)*(determinant(temp, N-1));
+        }
+    }
+}
+
+bool CoDelUtils::inverse(double A[N][N], double inverse[N][N])
+{
+    // Find determinant of A[][]
+    double det = determinant(A, N);
+    if (det == 0)
+    {
+        std::cout << "Singular matrix, can't find its inverse";
+        return false;
+    }
+
+    // Find adjoint
+    double adj[N][N];
+    adjoint(A, adj);
+
+    // Find Inverse using formula "inverse(A) = adj(A)/det(A)"
+    for (int i=0; i<N; i++)
+        for (int j=0; j<N; j++)
+            inverse[i][j] = adj[i][j]/det;
+
+    return true;
+}
+
+void CoDelUtils::log_fit(std::vector<double> x, std::vector<double> y, double theta[2]) {
+    int n = x.size();
+    std::vector<double> x_log;
+    x_log.reserve(n);
+    for (int i = 0; i < n; i++)
+        x_log.push_back(std::log(x[i]));
+    double x_new[n][2];
+    double x_new_t[2][n];
+    for (int i = 0; i < n; i++) {
+        x_new[i][0] = 1;
+        x_new_t[0][i] = 1;
+        x_new[i][1] = x_log[i];
+        x_new_t[1][i] = x_log[i];
+    }
+
+    double x_new_t_dot_x_new[2][2] = {{0, 0},
+                                      {0, 0}};
+    int i;
+    for (i = 0; i < n; i++) {
+        x_new_t_dot_x_new[0][0] += x_new[i][0] * x_new_t[0][i];
+        x_new_t_dot_x_new[0][1] += x_new[i][0] * x_new_t[1][i];
+        x_new_t_dot_x_new[1][0] += x_new[i][1] * x_new_t[0][i];
+        x_new_t_dot_x_new[1][1] += x_new[i][1] * x_new_t[1][i];
+    }
+
+    double temp_1[2][2];
+    inverse(x_new_t_dot_x_new, temp_1);
+
+    double temp_2[2][1] = {{0}, {0}};
+
+    for (i = 0; i < n; i++) {
+        temp_2[0][0] += x_new_t[0][i] * y[i];
+        temp_2[1][0] += x_new_t[1][i] * y[i];
+    }
+    theta[0] = temp_1[0][0] * temp_2[0][0] + temp_1[0][1] * temp_2[1][0];
+    theta[1] = temp_1[1][0] * temp_2[0][0] + temp_1[1][1] * temp_2[1][0];
+}

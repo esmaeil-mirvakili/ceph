@@ -12,7 +12,7 @@
 #include "ceph_time.h"
 #include "common/Timer.h"
 #include "include/Context.h"
-#include "CoDelUtils.h"
+#include "CoDelModel.h"
 
 #define INT_NULL -1
 
@@ -28,6 +28,7 @@ public:
     */
     void reset();
     bool activated = false;
+    std::ofstream outfile;
 
 private:
     bool _check_latency_violation();
@@ -60,19 +61,19 @@ protected:
     double slow_interval_throughput;
     double slow_interval_lat;
 
-    std::vector<double> target_vec;
-    std::vector<double> throughput_vec;
     bool adaptive_target = true;
     double *slope;
+    CoDelModel *model;
     int64_t range;
     int64_t config_latency_threshold;
     int size_threshold;
     bool outlier_detection = false;
-    bool config_mode = true;
-    int cnt = 0;
 
     void register_queue_latency(int64_t queuing_latency, double throttle_usage, int64_t size);
     void initialize(int64_t init_interval, int64_t init_target, bool adaptive_target, bool active);
+    bool static compare_time_point(TimePoint timePoint1, TimePoint timePoint2){
+        return timePoint1.time < timePoint2.time;
+    }
     /**
      * react properly if min latency is greater than target latency (min latency violation)
      */

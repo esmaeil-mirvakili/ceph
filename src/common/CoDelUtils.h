@@ -6,6 +6,8 @@
 #include <cmath>
 #include "ceph_time.h"
 
+#define N 2
+
 using ceph::mono_clock;
 
 class CoDelUtils {
@@ -17,6 +19,11 @@ public:
     };
     static double estimate_slope_by_regression(std::vector<DataPoint> &data_points);
     static void reject_outlier(std::vector<DataPoint> &data_points);
+    static void getCofactor(double A[N][N], double temp[N][N], int p, int q, int n);
+    static int determinant(double A[N][N], int n);
+    static void adjoint(double A[N][N],double adj[N][N]);
+    static bool inverse(double A[N][N], double inverse[N][N]);
+    static void log_fit(std::vector<double> x, std::vector<double> y, double theta[2]);
 };
 
 

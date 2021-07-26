@@ -2,11 +2,13 @@
 #include "CoDelAdaptiveTargetModel.h"
 
 CoDel::CoDel(CephContext *_cct) : fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock) {
+    outfile.open("log.log");
     fast_timer.init();
     slow_timer.init();
 }
 
 CoDel::~CoDel() {
+    outfile.close();
     std::lock_guard l1{fast_timer_lock};
     fast_timer.cancel_all_events();
     fast_timer.shutdown();
@@ -23,8 +25,7 @@ void CoDel::initialize(int64_t init_interval, int64_t init_target, bool adaptive
     activated = active;
     double tmp = 0;
     slope = &tmp;
-    model = new CoDelModel(min_target_latency, max_target_latency, range, config_latency_threshold, outlier_detection,
-                           size_threshold);
+    model = new CoDelModel(min_target_latency , max_target_latency, range, config_latency_threshold, outlier_detection, size_threshold);
     {
         std::lock_guard l1{fast_timer_lock};
         fast_timer.cancel_all_events();
@@ -82,45 +83,52 @@ void CoDel::_interval_process() {
 void CoDel::_coarse_interval_process() {
     std::lock_guard l(register_lock);
     mono_clock::time_point now = mono_clock::now();
-    if (!mono_clock::is_zero(slow_interval_start) && slow_interval_txc_cnt > 0) {
-        double time = std::chrono::nanoseconds(now - slow_interval_start).count();
-        time = time / (1000 * 1000 * 1000.0);
-        slow_interval_throughput = (coarse_interval_size * 1.0) / time;
-        slow_interval_throughput /= 1024.0 * 1024.0;
-        slow_interval_lat = (sum_latency / (1000 * 1000.0)) / slow_interval_txc_cnt;
-        target_vec.push_back(target_latency / 1000000);
-        throughput_vec.push_back(slow_interval_throughput);
-        cnt++;
-        if (activated && adaptive_target) {
-            if(cnt >= size_threshold){
-                target_latency += range;
-                cnt = 0;
+    outfile << "1" << std::endl;
+    outfile.flush();
+    try {
+        if (!mono_clock::is_zero(slow_interval_start) && slow_interval_txc_cnt > 0) {
+            double time = std::chrono::nanoseconds(now - slow_interval_start).count();
+            time = time / (1000 * 1000 * 1000.0);
+            slow_interval_throughput = (coarse_interval_size * 1.0) / time;
+            slow_interval_throughput /= 1024.0 * 1024.0;
+            slow_interval_lat = (sum_latency / (1000 * 1000.0)) / slow_interval_txc_cnt;
+            outfile << "2" << std::endl;
+            outfile.flush();
+            model->add_point(target_latency, slow_interval_throughput);
+            outfile << "3" << std::endl;
+            outfile.flush();
+            model->get_slope(target_latency, slope);
+            outfile << "4" << std::endl;
+            outfile.flush();
+            if (activated && adaptive_target) {
+                target_latency = model->get_latency_for_slope(target_latency, beta);
+                outfile << "lat: " << std::to_string(target_latency) << std::endl;
+                outfile.flush();
             }
-            if(target_latency > max_target_latency)
-                config_mode = false;
+            outfile << "5" << std::endl;
+            outfile.flush();
         }
+        target_latency = std::max(target_latency, min_target_latency);
+        target_latency = std::min(target_latency, max_target_latency);
+    }catch (exception& e){
+        cout << e.what() << '\n';
+    } catch(...){
+        outfile << "ERROR" << std::endl;
+        outfile.flush();
     }
-    target_latency = std::max(target_latency, min_target_latency);
-    target_latency = std::min(target_latency, max_target_latency);
 
     slow_interval_start = mono_clock::now();
     coarse_interval_size = 0;
     sum_latency = 0;
     slow_interval_txc_cnt = 0;
-    if (config_mode) {
-        auto codel_ctx = new LambdaContext(
-                [this](int r) {
-                    _coarse_interval_process();
-                });
-        auto interval_duration = std::chrono::nanoseconds(initial_interval * slow_interval_frequency);
-        slow_timer.add_event_after(interval_duration, codel_ctx);
-    } else{
-        double theta[2];
-        CoDelUtils::log_fit(target_vec, throughput_vec, theta);
-        target_latency = (theta[1] / beta) * 1000000;
-        target_latency = std::max(target_latency, min_target_latency);
-        target_latency = std::min(target_latency, max_target_latency);
-    }
+    auto codel_ctx = new LambdaContext(
+            [this](int r) {
+                _coarse_interval_process();
+            });
+    auto interval_duration = std::chrono::nanoseconds(initial_interval * slow_interval_frequency);
+    slow_timer.add_event_after(interval_duration, codel_ctx);
+    outfile << "6" << std::endl;
+    outfile.flush();
 }
 
 /**
