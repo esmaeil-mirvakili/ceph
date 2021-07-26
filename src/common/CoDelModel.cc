@@ -23,7 +23,7 @@ void LatencyRange::add_point(double latency, double throughput) {
     data_point.value = throughput;
     data_point.created = now;
     time_series.push_back(data_point);
-    while (max_size > 0 && time_series.size() > max_size)
+    if (max_size > 0 && time_series.size() > max_size)
         time_series.erase(time_series.begin());
 }
 
