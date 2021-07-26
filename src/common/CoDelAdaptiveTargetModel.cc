@@ -85,30 +85,37 @@ void CoDel::_coarse_interval_process() {
     mono_clock::time_point now = mono_clock::now();
     outfile << "1" << std::endl;
     outfile.flush();
-    if (!mono_clock::is_zero(slow_interval_start) && slow_interval_txc_cnt > 0) {
-        double time = std::chrono::nanoseconds(now - slow_interval_start).count();
-        time = time / (1000 * 1000 * 1000.0);
-        slow_interval_throughput = (coarse_interval_size * 1.0) / time;
-        slow_interval_throughput /= 1024.0 * 1024.0;
-        slow_interval_lat = (sum_latency / (1000 * 1000.0)) / slow_interval_txc_cnt;
-        outfile << "2" << std::endl;
-        outfile.flush();
-        model->add_point(target_latency, slow_interval_throughput);
-        outfile << "3" << std::endl;
-        outfile.flush();
-        model->get_slope(target_latency, slope);
-        outfile << "4" << std::endl;
-        outfile.flush();
-        if (activated && adaptive_target) {
-            target_latency = model->get_latency_for_slope(target_latency, beta);
-            outfile << "lat: " << std::to_string(target_latency) << std::endl;
+    try {
+        if (!mono_clock::is_zero(slow_interval_start) && slow_interval_txc_cnt > 0) {
+            double time = std::chrono::nanoseconds(now - slow_interval_start).count();
+            time = time / (1000 * 1000 * 1000.0);
+            slow_interval_throughput = (coarse_interval_size * 1.0) / time;
+            slow_interval_throughput /= 1024.0 * 1024.0;
+            slow_interval_lat = (sum_latency / (1000 * 1000.0)) / slow_interval_txc_cnt;
+            outfile << "2" << std::endl;
+            outfile.flush();
+            model->add_point(target_latency, slow_interval_throughput);
+            outfile << "3" << std::endl;
+            outfile.flush();
+            model->get_slope(target_latency, slope);
+            outfile << "4" << std::endl;
+            outfile.flush();
+            if (activated && adaptive_target) {
+                target_latency = model->get_latency_for_slope(target_latency, beta);
+                outfile << "lat: " << std::to_string(target_latency) << std::endl;
+                outfile.flush();
+            }
+            outfile << "5" << std::endl;
             outfile.flush();
         }
-        outfile << "5" << std::endl;
+        target_latency = std::max(target_latency, min_target_latency);
+        target_latency = std::min(target_latency, max_target_latency);
+    }catch (exception& e){
+        cout << e.what() << '\n';
+    } catch(...){
+        outfile << "ERROR" << std::endl;
         outfile.flush();
     }
-    target_latency = std::max(target_latency, min_target_latency);
-    target_latency = std::min(target_latency, max_target_latency);
 
     slow_interval_start = mono_clock::now();
     coarse_interval_size = 0;
