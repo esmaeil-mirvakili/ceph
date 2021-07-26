@@ -2,7 +2,8 @@
 
 LatencyRange::LatencyRange(int64_t start_time, int64_t range, bool outlier_detection, int max_size, int64_t ttl)
     : start_time(start_time), range(range), max_size(max_size), ttl(ttl), outlier_detection(outlier_detection)  {
-    outfile.open("log3.log");
+    std::string fn = "log_"+std::to_string(start_time)+".log"
+    outfile.open(fn);
 }
 
 LatencyRange::LatencyRange(int64_t start_time, int64_t range, bool outlier_detection, int max_size)
@@ -83,7 +84,7 @@ CoDelModel::CoDelModel(int64_t min_latency ,int64_t max_latency, int64_t interva
     : min_latency(min_latency), max_latency(max_latency), interval(interval), config_latency_threshold(config_latency_threshold), outlier_detection(outlier_detection) {
     outfile.open("log2.log");
     size = int(std::ceil((max_latency - min_latency) / interval));
-    latency_ranges = (LatencyRange*)malloc(sizeof(LatencyRange) * size);;
+    latency_ranges = (LatencyRange*)malloc(sizeof(LatencyRange) * size);
     for(int i = 0; i < size; i++)
         latency_ranges[i] = LatencyRange(min_latency + i * interval, interval, outlier_detection);
     srand(time(0));
