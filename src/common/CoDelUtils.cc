@@ -51,7 +51,7 @@ void CoDelUtils::reject_outlier(std::vector<DataPoint> &data_points) {
         data_points.erase(position);
     }
 }
-
+#ifdef N
 void CoDelUtils::getCofactor(double A[N][N], double temp[N][N], int p, int q, int n)
 {
     int i = 0, j = 0;
@@ -194,3 +194,4 @@ void CoDelUtils::log_fit(std::vector<double> x, std::vector<double> y, double th
     theta[0] = temp_1[0][0] * temp_2[0][0] + temp_1[0][1] * temp_2[1][0];
     theta[1] = temp_1[1][0] * temp_2[0][0] + temp_1[1][1] * temp_2[1][0];
 }
+#endif
