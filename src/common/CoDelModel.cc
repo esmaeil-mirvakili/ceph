@@ -27,10 +27,10 @@ void LatencyRange::add_point(double latency, double throughput, std::ofstream& o
     outfile.flush();
     data_point.time = latency / 1000000;
     data_point.value = throughput;
-    data_point.created = now;
+//    data_point.created = now;
     outfile << "2_2_3" << std::endl;
     outfile.flush();
-    time_series.push_back(&data_point);
+    time_series.push_back(data_point);
     outfile << "2_2_4" << std::endl;
     outfile.flush();
     if (max_size > 0 && time_series.size() > max_size)
@@ -48,14 +48,14 @@ void LatencyRange::update_slope() {
 
 void LatencyRange::clean() {
     if(ttl > 0) {
-        mono_clock::time_point now = mono_clock::now();
-        std::vector<DataPoint*>::iterator it = time_series.begin();
-        while (it != time_series.end()) {
-            if (std::chrono::nanoseconds(now - (*it)->created).count() > ttl)
-                it = time_series.erase(it);
-            else
-                ++it;
-        }
+//        mono_clock::time_point now = mono_clock::now();
+//        std::vector<DataPoint>::iterator it = time_series.begin();
+//        while (it != time_series.end()) {
+//            if (std::chrono::nanoseconds(now - (*it).created).count() > ttl)
+//                it = time_series.erase(it);
+//            else
+//                ++it;
+//        }
     }
 }
 
