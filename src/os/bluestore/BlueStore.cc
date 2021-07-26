@@ -4514,7 +4514,7 @@ private:
         {
             if (store->codel.activated) {
                 store->codel.clear_log_data();
-                store->codel.set_throttle(&throttle);
+                store->codel.set_throttle(&store->throttle);
                 store->codel.reset();
             }
         }
