@@ -4501,13 +4501,15 @@ private:
     {
         if (command == "dump kvq vector")
         {
-            store->codel.dump_log_data();
+            if (store->codel.activated)
+                store->codel.dump_log_data();
         }
         else if (command == "reset kvq vector")
         {
-            store->codel.clear_log_data();
-            store->codel.activated = store->codel.activated_init;
-            store->codel.reset();
+            if (store->codel.activated) {
+                store->codel.clear_log_data();
+                store->codel.reset();
+            }
         }
         return 0;
     }
@@ -4534,7 +4536,8 @@ BlueStore::BlueStore(CephContext *cct,
   cct->_conf.add_observer(this);
   set_cache_shards(1);
   codel.init(cct);
-  codel.set_throttle(&throttle);
+  if (codel.activated)
+    codel.set_throttle(&throttle);
   asok_hook = SocketHook::create(this);
 }
 
@@ -11309,7 +11312,8 @@ void BlueStore::_txc_state_proc(TransContext *txc)
 
     case TransContext::STATE_KV_DONE:
       throttle.log_state_latency(*txc, logger, l_bluestore_state_kv_done_lat);
-      codel.register_txc(txc);
+      if (codel.activated)
+        codel.register_txc(txc);
       if (txc->deferred_txn) {
 	txc->set_state(TransContext::STATE_DEFERRED_QUEUED);
 	_deferred_queue(txc);
