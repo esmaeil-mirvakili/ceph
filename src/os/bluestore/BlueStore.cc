@@ -4525,6 +4525,7 @@ private:
         else if (command == "ensable codel")
         {
             store->codel.activated = true;
+            std::cout << "activated: " << store->codel.activated << std::endl;
         }
         return 0;
     }
