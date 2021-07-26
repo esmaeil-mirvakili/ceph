@@ -15906,8 +15906,14 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     std::string prefix = "codel_log_";
     std::string index = "";
 
-    std::ofstream model_file(prefix + "model" + index + ".json");
-    model_file << model->to_string();
+    std::ofstream model_file(prefix + "model" + index + ".csv");
+    model_file << "target, throughput";
+    for (unsigned int i = 0; i < target_vec.size(); i++){
+        model_file << std::fixed << target_vec[i];
+        model_file << ",";
+        model_file << std::fixed << throughput_vec[i];
+        txc_file << "\n";
+    }
     model_file.close();
 
     std::ofstream txc_file(prefix + "txc" + index + ".csv");

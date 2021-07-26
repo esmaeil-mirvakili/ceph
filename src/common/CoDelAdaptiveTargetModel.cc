@@ -23,8 +23,6 @@ void CoDel::initialize(int64_t init_interval, int64_t init_target, bool adaptive
     activated = active;
     double tmp = 0;
     slope = &tmp;
-    model = new CoDelModel(min_target_latency, max_target_latency, range, config_latency_threshold, outlier_detection,
-                           size_threshold);
     {
         std::lock_guard l1{fast_timer_lock};
         fast_timer.cancel_all_events();
