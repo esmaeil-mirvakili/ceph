@@ -15912,7 +15912,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
         model_file << std::fixed << target_vec[i];
         model_file << ",";
         model_file << std::fixed << throughput_vec[i];
-        txc_file << "\n";
+        model_file << "\n";
     }
     model_file.close();
 

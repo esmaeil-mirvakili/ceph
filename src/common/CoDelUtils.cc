@@ -51,8 +51,8 @@ void CoDelUtils::reject_outlier(std::vector<DataPoint> &data_points) {
         data_points.erase(position);
     }
 }
-#ifdef N
-void CoDelUtils::getCofactor(double A[N][N], double temp[N][N], int p, int q, int n)
+
+void CoDelUtils::getCofactor(double A[2][2], double temp[2][2], int p, int q, int n)
 {
     int i = 0, j = 0;
 
@@ -79,7 +79,7 @@ void CoDelUtils::getCofactor(double A[N][N], double temp[N][N], int p, int q, in
     }
 }
 
-int CoDelUtils::determinant(double A[N][N], int n)
+int CoDelUtils::determinant(double A[2][2], int n)
 {
     double D = 0; // Initialize result
 
@@ -87,7 +87,7 @@ int CoDelUtils::determinant(double A[N][N], int n)
     if (n == 1)
         return A[0][0];
 
-    double temp[N][N]; // To store cofactors
+    double temp[2][2]; // To store cofactors
 
     int sign = 1;  // To store sign multiplier
 
@@ -105,24 +105,19 @@ int CoDelUtils::determinant(double A[N][N], int n)
     return D;
 }
 
-void CoDelUtils::adjoint(double A[N][N],double adj[N][N])
+void CoDelUtils::adjoint(double A[2][2],double adj[2][2])
 {
-    if (N == 1)
-    {
-        adj[0][0] = 1;
-        return;
-    }
 
     // temp is used to store cofactors of A[][]
     int sign = 1;
-    double temp[N][N];
+    double temp[2][2];
 
-    for (int i=0; i<N; i++)
+    for (int i=0; i<2; i++)
     {
-        for (int j=0; j<N; j++)
+        for (int j=0; j<2; j++)
         {
             // Get cofactor of A[i][j]
-            getCofactor(A, temp, i, j, N);
+            getCofactor(A, temp, i, j, 2);
 
             // sign of adj[j][i] positive if sum of row
             // and column indexes is even.
@@ -130,15 +125,15 @@ void CoDelUtils::adjoint(double A[N][N],double adj[N][N])
 
             // Interchanging rows and columns to get the
             // transpose of the cofactor matrix
-            adj[j][i] = (sign)*(determinant(temp, N-1));
+            adj[j][i] = (sign)*(determinant(temp, 1));
         }
     }
 }
 
-bool CoDelUtils::inverse(double A[N][N], double inverse[N][N])
+bool CoDelUtils::inverse(double A[2][2], double inverse[2][2])
 {
     // Find determinant of A[][]
-    double det = determinant(A, N);
+    double det = determinant(A, 2);
     if (det == 0)
     {
         std::cout << "Singular matrix, can't find its inverse";
@@ -146,12 +141,12 @@ bool CoDelUtils::inverse(double A[N][N], double inverse[N][N])
     }
 
     // Find adjoint
-    double adj[N][N];
+    double adj[2][2];
     adjoint(A, adj);
 
     // Find Inverse using formula "inverse(A) = adj(A)/det(A)"
-    for (int i=0; i<N; i++)
-        for (int j=0; j<N; j++)
+    for (int i=0; i<2; i++)
+        for (int j=0; j<2; j++)
             inverse[i][j] = adj[i][j]/det;
 
     return true;
@@ -194,4 +189,3 @@ void CoDelUtils::log_fit(std::vector<double> x, std::vector<double> y, double th
     theta[0] = temp_1[0][0] * temp_2[0][0] + temp_1[0][1] * temp_2[1][0];
     theta[1] = temp_1[1][0] * temp_2[0][0] + temp_1[1][1] * temp_2[1][0];
 }
-#endif
