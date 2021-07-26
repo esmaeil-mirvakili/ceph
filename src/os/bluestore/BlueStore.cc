@@ -11327,8 +11327,7 @@ void BlueStore::_txc_state_proc(TransContext *txc)
 
     case TransContext::STATE_KV_DONE:
       throttle.log_state_latency(*txc, logger, l_bluestore_state_kv_done_lat);
-      if (codel.activated)
-        codel.register_txc(txc);
+      codel.register_txc(txc);
       if (txc->deferred_txn) {
 	txc->set_state(TransContext::STATE_DEFERRED_QUEUED);
 	_deferred_queue(txc);
