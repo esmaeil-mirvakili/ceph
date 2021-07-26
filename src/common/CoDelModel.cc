@@ -11,9 +11,7 @@ LatencyRange::LatencyRange(int64_t start_time, int64_t range, bool outlier_detec
 LatencyRange::LatencyRange(int64_t start_time, int64_t range, bool outlier_detection)
         : LatencyRange(start_time, range, outlier_detection, 0)  {}
 
-LatencyRange::~LatencyRange() {
-    outfile.close();
-}
+LatencyRange::~LatencyRange() {}
 
 void LatencyRange::reset() {
     time_series.clear();
@@ -83,7 +81,7 @@ CoDelModel::CoDelModel(int64_t min_latency ,int64_t max_latency, int64_t interva
     : min_latency(min_latency), max_latency(max_latency), interval(interval), config_latency_threshold(config_latency_threshold), outlier_detection(outlier_detection) {
     outfile.open("log2.log");
     std::ofstream * LatencyRange::outfile = NULL;
-    ofstream out("log3.log");
+    std::ofstream out("log3.log");
     LatencyRange::outfile = &out;
     size = int(std::ceil((max_latency - min_latency) / interval));
     latency_ranges = (LatencyRange*)malloc(sizeof(LatencyRange) * size);;
