@@ -49,9 +49,9 @@ void LatencyRange::update_slope() {
 void LatencyRange::clean() {
     if(ttl > 0) {
         mono_clock::time_point now = mono_clock::now();
-        std::vector<DataPoint>::iterator it = time_series.begin();
+        std::vector<DataPoint*>::iterator it = time_series.begin();
         while (it != time_series.end()) {
-            if (std::chrono::nanoseconds(now - (*it).created).count() > ttl)
+            if (std::chrono::nanoseconds(now - (*it)->created).count() > ttl)
                 it = time_series.erase(it);
             else
                 ++it;
