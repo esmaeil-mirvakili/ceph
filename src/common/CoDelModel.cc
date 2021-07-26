@@ -110,7 +110,7 @@ void CoDelModel::add_point(double latency, double throughput) {
     int index = get_index(latency);
     outfile << "2_2" << std::endl;
     outfile.flush();
-    latency_ranges[index].add_point(latency, throughput);
+    latency_ranges[index].add_point(latency, throughput, outfile);
     outfile << "2_3" << std::endl;
     outfile.flush();
 }
