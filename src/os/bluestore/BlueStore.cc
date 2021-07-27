@@ -15754,7 +15754,7 @@ void BlueStore::BlueStoreThrottle::complete(TransContext &txc)
 void BlueStore::BlueStoreCoDel::register_txc(TransContext *txc){
     mono_clock::time_point now = mono_clock::now();
     int64_t latency = std::chrono::nanoseconds(now - txc->start_time).count();
-    if (max_queue_length < throttle->get_current())
+    if (activated && max_queue_length < throttle->get_current())
         max_queue_length = throttle->get_current();
     if(txc->throttle_usage > throttle_usage_threshold)
         register_queue_latency(latency, txc->throttle_usage, txc->bytes);
