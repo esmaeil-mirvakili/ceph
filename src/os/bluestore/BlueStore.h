@@ -1824,8 +1824,8 @@ public:
      */
     class BlueStoreCoDel : public CoDel {
     public:
-        BlueStoreCoDel(CephContext *cct): CoDel(cct) {
-            init(cct);
+        BlueStoreCoDel(CephContext *cct1, const string& path1): CoDel(cct1), cct(cct1), path(path1) {
+            init(cct1);
         }
 
         void set_throttle(BlueStoreThrottle *bs_throttle) {
@@ -1881,9 +1881,10 @@ public:
         int64_t latency_sum = 0;
         int64_t max_queue_length = min_bluestore_budget;
         bool batch_started = false;
-        BlueStoreThrottle *throttle;
+        BlueStoreThrottle *throttle { nullptr };
         double throttle_usage_threshold = 0;
-
+        CephContext* cct;
+        const string& path;
 
         void on_min_latency_violation();
 
