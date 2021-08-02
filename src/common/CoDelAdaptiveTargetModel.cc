@@ -87,17 +87,26 @@ void CoDel::_coarse_interval_process() {
         slow_interval_throughput /= 1024.0 * 1024.0;
         slow_interval_lat = (sum_latency / (1000 * 1000.0)) / slow_interval_txc_cnt;
         if (activated && adaptive_target) {
+            slow_target_vec.push_back(target_latency / 1000000.0);
+            slow_throughput_vec.push_back(slow_interval_throughput);
             if(config_mode){
-                slow_target_vec.push_back(target_latency / 1000000.0);
-                slow_throughput_vec.push_back(slow_interval_throughput);
                 cnt++;
+                if (cnt >= size_threshold) {
+                    target_latency += range;
+                    cnt = 0;
+                }
+                if (target_latency > max_target_latency)
+                    config_mode = false;
+            } else{
+                slow_target_vec.erase(slow_target_vec.begin());
+                slow_throughput_vec.erase(slow_throughput_vec.begin());
             }
-            if (cnt >= size_threshold) {
-                target_latency += range;
-                cnt = 0;
+            if (!config_mode) {
+                double theta[2];
+                CoDelUtils::log_fit(slow_target_vec, slow_throughput_vec, theta);
+                target_latency = (theta[1] / beta) * 1000000;
+
             }
-            if (target_latency > max_target_latency)
-                config_mode = false;
         }
     }
     target_latency = std::max(target_latency, min_target_latency);
@@ -113,13 +122,6 @@ void CoDel::_coarse_interval_process() {
             });
     auto interval_duration = std::chrono::nanoseconds(initial_interval * slow_interval_frequency);
     slow_timer.add_event_after(interval_duration, codel_ctx);
-    if (!config_mode) {
-        double theta[2];
-        CoDelUtils::log_fit(slow_target_vec, slow_throughput_vec, theta);
-        target_latency = (theta[1] / beta) * 1000000;
-        target_latency = std::max(target_latency, min_target_latency);
-        target_latency = std::min(target_latency, max_target_latency);
-    }
 }
 
 /**
