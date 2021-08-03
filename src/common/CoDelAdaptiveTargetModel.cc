@@ -114,19 +114,21 @@ void CoDel::_coarse_interval_process() {
                         mode = NORMAL_PHASE;
                     break;
                 case CHECK_PHASE:
-                    throughput_sum += slow_interval_throughput;
+                    open_throttle();
+                    if(throughput_max < slow_interval_throughput)
+                        throughput_max = slow_interval_throughput;
                     cnt++;
                     if (cnt >= size_threshold / 2) {
-                        double th = throughput_sum / cnt;
-                        if (std::abs(th - previous_throughput) > 2 * beta) {
+                        if (std::abs(throughput_max - previous_throughput) > 5 * beta) {
                             target_latency = min_target_latency;
                             mode = CONFIG_PHASE;
                         } else {
                             mode = NORMAL_PHASE;
                             target_latency = previous_target;
                         }
-                        previous_throughput = th;
+                        previous_throughput = throughput_max;
                         cnt = 0;
+                        throughput_max = 0;
                         close_throttle();
                     }
                     break;
@@ -181,7 +183,10 @@ void CoDel::reset() {
     slow_interval_throughput = 0;
     slow_interval_lat = 0;
     cnt = 0;
-    mode = CONFIG_PHASE;
+    mode = CHECK_PHASE;
+    throughput_max = 0;
+    previous_target = 0;
+    previous_throughput = 0;
     slow_throughput_vec.clear();
     slow_target_vec.clear();
     std::cout << "slow freq:" << slow_interval_frequency << std::endl;

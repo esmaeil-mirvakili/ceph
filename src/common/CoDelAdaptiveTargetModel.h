@@ -67,14 +67,14 @@ protected:
     std::vector<double> slow_throughput_vec;
     bool adaptive_target = true;
     double *slope;
-    double throughput_sum = 0;
+    double throughput_max = 0;
     double previous_throughput = 0;
     int64_t previous_target = 0;
     int64_t range;
     int64_t config_latency_threshold;
     int size_threshold;
     bool outlier_detection = false;
-    int mode = CONFIG_PHASE;
+    int mode = CHECK_PHASE;
     int cnt = 0;
 
     void register_queue_latency(int64_t queuing_latency, double throttle_usage, int64_t size);
