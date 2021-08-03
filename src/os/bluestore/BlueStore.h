@@ -1892,6 +1892,10 @@ public:
 
         void on_interval_finished();
 
+        void open_throttle();
+
+        void close_throttle();
+
         bool has_bufferbloat_symptoms();
     } codel;
 
