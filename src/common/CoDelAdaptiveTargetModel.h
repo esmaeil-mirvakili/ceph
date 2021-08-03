@@ -67,7 +67,7 @@ protected:
     std::vector<double> slow_throughput_vec;
     bool adaptive_target = true;
     double *slope;
-    double throughput_max = 0;
+    double lat_sum = 0;
     double previous_throughput = 0;
     int64_t previous_target = 0;
     int64_t range;
