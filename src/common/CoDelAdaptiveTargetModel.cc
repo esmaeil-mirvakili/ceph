@@ -185,7 +185,7 @@ void CoDel::reset() {
     slow_interval_lat = 0;
     cnt = 0;
     mode = CHECK_PHASE;
-    throughput_max = 0;
+    lat_sum = 0;
     previous_target = 0;
     previous_throughput = 0;
     slow_throughput_vec.clear();
