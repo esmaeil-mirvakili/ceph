@@ -49,7 +49,7 @@ void CoDel::_interval_process() {
     std::lock_guard l(register_lock);
     double time = 0;
     mono_clock::time_point now = mono_clock::now();
-    if (min_latency != INT_NULL) {
+    if (target_latency != INT_NULL && min_latency != INT_NULL) {
         if (activated) {
             if (_check_latency_violation()) {
                 // min latency violation
@@ -94,7 +94,6 @@ void CoDel::_coarse_interval_process() {
                     target_latency = (theta[1] / beta) * 1000000;
                     cnt++;
                     if (cnt >= 10 * size_threshold) {
-                        target_latency += range;
                         cnt = 0;
                         mode = CHECK_PHASE;
                         previous_target = target_latency;
@@ -129,7 +128,7 @@ void CoDel::_coarse_interval_process() {
                         previous_throughput = l;
                         cnt = 0;
                         lat_sum = 0;
-                        close_throttle();
+//                        close_throttle();
                     }
                     break;
             }
