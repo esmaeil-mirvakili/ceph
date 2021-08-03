@@ -119,7 +119,7 @@ void CoDel::_coarse_interval_process() {
                     cnt++;
                     if (cnt >= 2 * size_threshold) {
                         double l = lat_sum / cnt;
-                        if (previous_throughput == 0 || std::abs(l - previous_throughput) > 2) {
+                        if (previous_throughput == 0 || std::abs(l - previous_throughput) > 5) {
                             target_latency = min_target_latency;
                             mode = CONFIG_PHASE;
                         } else {
