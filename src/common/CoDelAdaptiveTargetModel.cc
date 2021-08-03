@@ -116,6 +116,7 @@ void CoDel::_coarse_interval_process() {
                     open_throttle();
                     lat_sum += slow_interval_lat;
                     cnt++;
+                    target_latency = INT_NULL;
                     if (cnt >= 2 * size_threshold) {
                         double l = lat_sum / cnt;
                         if (previous_throughput == 0 || std::abs(l - previous_throughput) > 5) {
