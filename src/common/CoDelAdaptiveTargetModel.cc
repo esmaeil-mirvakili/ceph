@@ -93,7 +93,7 @@ void CoDel::_coarse_interval_process() {
                     CoDelUtils::log_fit(slow_target_vec, slow_throughput_vec, theta);
                     target_latency = (theta[1] / beta) * 1000000;
                     cnt++;
-                    if (cnt >= 30 * size_threshold) {
+                    if (cnt >= 10 * size_threshold) {
                         target_latency += range;
                         cnt = 0;
                         mode = CHECK_PHASE;
@@ -118,7 +118,7 @@ void CoDel::_coarse_interval_process() {
                     if(throughput_max < slow_interval_throughput)
                         throughput_max = slow_interval_throughput;
                     cnt++;
-                    if (cnt >= size_threshold / 2) {
+                    if (cnt >= 2 * size_threshold) {
                         if (previous_throughput == 0 || std::abs(throughput_max - previous_throughput) > 5 * beta) {
                             target_latency = min_target_latency;
                             mode = CONFIG_PHASE;
