@@ -99,6 +99,7 @@ void CoDel::_coarse_interval_process() {
                         mode = CHECK_PHASE;
                         previous_target = target_latency;
                         target_latency = INT_NULL;
+                        open_throttle();
                     }
                     break;
                 case CONFIG_PHASE:
@@ -126,6 +127,7 @@ void CoDel::_coarse_interval_process() {
                         }
                         previous_throughput = th;
                         cnt = 0;
+                        close_throttle();
                     }
                     break;
             }

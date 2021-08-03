@@ -88,6 +88,8 @@ protected:
      */
     virtual void on_no_violation() = 0;
     virtual void on_interval_finished() = 0;
+    virtual void open_throttle() = 0;
+    virtual void close_throttle() = 0;
 };
 
 
