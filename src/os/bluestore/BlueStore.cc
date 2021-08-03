@@ -15805,10 +15805,16 @@ void BlueStore::BlueStoreCoDel::on_interval_finished() {
 
 void BlueStore::BlueStoreCoDel::open_throttle() {
     bluestore_budget = 100 * 1024 * 1024 * 1024;
+    if(activated) {
+        throttle->reset_max(bluestore_budget);
+    }
 }
 
 void BlueStore::BlueStoreCoDel::close_throttle() {
     bluestore_budget = min_bluestore_budget;
+    if(activated) {
+        throttle->reset_max(bluestore_budget);
+    }
 }
 
 void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
