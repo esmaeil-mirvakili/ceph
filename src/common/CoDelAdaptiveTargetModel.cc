@@ -87,25 +87,47 @@ void CoDel::_coarse_interval_process() {
         slow_interval_throughput /= 1024.0 * 1024.0;
         slow_interval_lat = (sum_latency / (1000 * 1000.0)) / slow_interval_txc_cnt;
         if (activated && adaptive_target) {
-            slow_target_vec.push_back(target_latency / 1000000.0);
-            slow_throughput_vec.push_back(slow_interval_throughput);
-            if(config_mode){
-                cnt++;
-                if (cnt >= size_threshold) {
-                    target_latency += range;
-                    cnt = 0;
-                }
-                if (target_latency > max_target_latency)
-                    config_mode = false;
-            } else{
-                slow_target_vec.erase(slow_target_vec.begin());
-                slow_throughput_vec.erase(slow_throughput_vec.begin());
-            }
-            if (!config_mode) {
-                double theta[2];
-                CoDelUtils::log_fit(slow_target_vec, slow_throughput_vec, theta);
-                target_latency = (theta[1] / beta) * 1000000;
-
+            switch (mode) {
+                case NORMAL_PHASE:
+                    double theta[2];
+                    CoDelUtils::log_fit(slow_target_vec, slow_throughput_vec, theta);
+                    target_latency = (theta[1] / beta) * 1000000;
+                    cnt++;
+                    if (cnt >= 30 * size_threshold) {
+                        target_latency += range;
+                        cnt = 0;
+                        mode = CHECK_PHASE;
+                        previous_target = target_latency;
+                        target_latency = INT_NULL;
+                    }
+                    break;
+                case CONFIG_PHASE:
+                    slow_target_vec.push_back(target_latency / 1000000.0);
+                    slow_throughput_vec.push_back(slow_interval_throughput);
+                    cnt++;
+                    if (cnt >= size_threshold) {
+                        target_latency += range;
+                        cnt = 0;
+                    }
+                    if (target_latency > max_target_latency)
+                        mode = NORMAL_PHASE;
+                    break;
+                case CHECK_PHASE:
+                    throughput_sum += slow_interval_throughput;
+                    cnt++;
+                    if (cnt >= size_threshold / 2) {
+                        double th = throughput_sum / cnt;
+                        if (std::abs(th - previous_throughput) > 2 * beta) {
+                            target_latency = min_target_latency;
+                            mode = CONFIG_PHASE;
+                        } else {
+                            mode = NORMAL_PHASE;
+                            target_latency = previous_target;
+                        }
+                        previous_throughput = th;
+                        cnt = 0;
+                    }
+                    break;
             }
         }
     }
@@ -129,7 +151,7 @@ void CoDel::_coarse_interval_process() {
 * @return true if min latency violate the target, false otherwise
 */
 bool CoDel::_check_latency_violation() {
-    if (min_latency != INT_NULL) {
+    if (target_latency != INT_NULL && min_latency != INT_NULL) {
         if (min_latency > target_latency)
             return true;
     }
@@ -157,7 +179,7 @@ void CoDel::reset() {
     slow_interval_throughput = 0;
     slow_interval_lat = 0;
     cnt = 0;
-    config_mode = true;
+    mode = CONFIG_PHASE;
     slow_throughput_vec.clear();
     slow_target_vec.clear();
     std::cout << "slow freq:" << slow_interval_frequency << std::endl;
