@@ -119,7 +119,7 @@ void CoDel::_coarse_interval_process() {
                         throughput_max = slow_interval_throughput;
                     cnt++;
                     if (cnt >= size_threshold / 2) {
-                        if (std::abs(throughput_max - previous_throughput) > 5 * beta) {
+                        if (previous_throughput == 0 || std::abs(throughput_max - previous_throughput) > 5 * beta) {
                             target_latency = min_target_latency;
                             mode = CONFIG_PHASE;
                         } else {
