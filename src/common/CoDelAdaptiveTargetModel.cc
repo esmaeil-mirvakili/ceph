@@ -163,7 +163,7 @@ void CoDel::reset() {
     slow_interval_throughput = 0;
     slow_interval_lat = 0;
     cnt = 0;
-    mode = CHECK_PHASE;
+    mode = CONFIG_PHASE;
     lat_sum = 0;
     previous_target = 0;
     previous_throughput = 0;
