@@ -90,7 +90,7 @@ void CoDel::_coarse_interval_process() {
             slow_target_vec.push_back(target_latency / 1000000.0);
             slow_throughput_vec.push_back(slow_interval_throughput);
             switch (mode) {
-                case NORMAL_PHASE:
+                case NORMAL_PHASE: {
                     slow_target_vec.erase(slow_target_vec.begin());
                     slow_throughput_vec.erase(slow_throughput_vec.begin());
                     double theta[2];
@@ -99,6 +99,7 @@ void CoDel::_coarse_interval_process() {
                     std::default_random_engine generator;
                     std::normal_distribution<double> distribution(target, 1);
                     target_latency = distribution(generator) * 1000000.0;
+                }
                     break;
                 case CONFIG_PHASE:
                     cnt++;
