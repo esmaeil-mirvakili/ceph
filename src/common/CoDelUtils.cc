@@ -40,32 +40,36 @@ double CoDelUtils::calculate_mean_and_std_dev(std::vector<double> &data_points, 
     results[1] = standard_deviation;
 }
 
-void CoDelUtils::reject_outlier(std::vector<DataPoint> &data_points) {
-    int n = data_points.size();
+void CoDelUtils::reject_outlier(std::vector<double> &x, std::vector<double> &y) {
+    int n = y.size();
     double mean = 0;
-    for (int i = 0; i < data_points.size(); i++)
-        mean += data_points[i].value;
+    for (int i = 0; i < y.size(); i++)
+        mean += y[i];
     mean /= n;
     double standard_deviation = 0;
-    for (int i = 0; i < data_points.size(); i++) {
-        auto diff = data_points[i].value - mean;
+    for (int i = 0; i < y.size(); i++) {
+        auto diff = y[i] - mean;
         standard_deviation += diff * diff;
     }
     standard_deviation /= n;
     standard_deviation = std::sqrt(standard_deviation);
 
     std::vector<int> to_be_removed;
-    for (int i = 0; i < data_points.size(); i++) {
+    for (int i = 0; i < y.size(); i++) {
         double z_score = 0;
         if(standard_deviation != 0)
-            z_score = (data_points[i].value - mean) / standard_deviation;
+            z_score = (y[i] - mean) / standard_deviation;
         if (std::abs(z_score) < 2)
             to_be_removed.push_back(i);
     }
 
     for (std::vector<int>::iterator it = to_be_removed.begin() ; it < to_be_removed.end(); ++it) {
-        auto position = data_points.begin() + *it;
-        data_points.erase(position);
+        auto position = y.begin() + *it;
+        y.erase(position);
+    }
+    for (std::vector<int>::iterator it = to_be_removed.begin() ; it < to_be_removed.end(); ++it) {
+        auto position = x.begin() + *it;
+        x.erase(position);
     }
 }
 
@@ -169,7 +173,12 @@ bool CoDelUtils::inverse(double A[2][2], double inverse[2][2])
     return true;
 }
 
-void CoDelUtils::log_fit(std::vector<double> x, std::vector<double> y, double theta[2]) {
+void CoDelUtils::log_fit(std::vector<double> x_original, std::vector<double> y_original, double theta[2], bool outlier_detection) {
+    std::vector<double> x = x_original;
+    std::vector<double> y = y_original;
+    if(outlier_detection){
+        reject_outlier(x, y);
+    }
     int n = x.size();
     std::vector<double> x_log;
     x_log.reserve(n);
