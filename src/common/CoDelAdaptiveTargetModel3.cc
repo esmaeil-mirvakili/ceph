@@ -87,34 +87,55 @@ void CoDel::_coarse_interval_process() {
         slow_interval_throughput /= 1024.0 * 1024.0;
         slow_interval_lat = (sum_latency / (1000 * 1000.0)) / slow_interval_txc_cnt;
         if (activated && adaptive_target) {
-            slow_target_vec.push_back(target_latency / 1000000.0);
-            slow_throughput_vec.push_back(slow_interval_throughput);
             switch (mode) {
                 case NORMAL_PHASE:
-                    slow_target_vec.erase(slow_target_vec.begin());
-                    slow_throughput_vec.erase(slow_throughput_vec.begin());
                     double theta[2];
                     CoDelUtils::log_fit(slow_target_vec, slow_throughput_vec, theta);
-                    double target = (theta[1] / beta);
-                    std::default_random_engine generator;
-                    std::normal_distribution<double> distribution(target, 1);
-                    target_latency = distribution(generator) * 1000000.0;
+                    target_latency = (theta[1] / beta) * 1000000;
+                    cnt++;
+                    if (cnt >= 10 * size_threshold) {
+                        cnt = 0;
+                        mode = CHECK_PHASE;
+                        previous_target = target_latency;
+                        target_latency = INT_NULL;
+                        open_throttle();
+                    }
                     break;
                 case CONFIG_PHASE:
+                    slow_target_vec.push_back(target_latency / 1000000.0);
+                    slow_throughput_vec.push_back(slow_interval_throughput);
                     cnt++;
                     if (cnt >= size_threshold) {
                         target_latency += range;
                         cnt = 0;
                     }
-                    if (target_latency > max_target_latency) {
+                    if (target_latency > max_target_latency)
                         mode = NORMAL_PHASE;
-                        model_size = slow_target_vec.size();
+                    break;
+                case CHECK_PHASE:
+                    open_throttle();
+                    lat_sum += slow_interval_lat;
+                    cnt++;
+                    target_latency = INT_NULL;
+                    if (cnt >= 2 * size_threshold) {
+                        double l = lat_sum / cnt;
+                        if (previous_throughput == 0 || std::abs(l - previous_throughput) > 10) {
+                            target_latency = min_target_latency;
+                            mode = CONFIG_PHASE;
+                        } else {
+                            mode = NORMAL_PHASE;
+                            target_latency = previous_target;
+                        }
+                        previous_throughput = l;
+                        cnt = 0;
+                        lat_sum = 0;
+//                        close_throttle();
                     }
                     break;
             }
         }
     }
-    if (target_latency != INT_NULL) {
+    if(target_latency != INT_NULL) {
         target_latency = std::max(target_latency, min_target_latency);
         target_latency = std::min(target_latency, max_target_latency);
     }

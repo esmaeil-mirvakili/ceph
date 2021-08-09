@@ -6,7 +6,6 @@
 #include <cmath>
 #include <iostream>
 #include <algorithm>
-#include <random>
 #include <vector>
 #include <map>
 #include <fstream>
@@ -18,6 +17,7 @@
 #define INT_NULL -1
 #define NORMAL_PHASE 0
 #define CONFIG_PHASE 1
+#define CHECK_PHASE 3
 
 using ceph::mono_clock;
 using TimePoint = CoDelUtils::DataPoint;
@@ -73,9 +73,8 @@ protected:
     int64_t range;
     int64_t config_latency_threshold;
     int size_threshold;
-    int model_size;
     bool outlier_detection = false;
-    int mode = CONFIG_PHASE;
+    int mode = CHECK_PHASE;
     int cnt = 0;
 
     void register_queue_latency(int64_t queuing_latency, double throttle_usage, int64_t size);

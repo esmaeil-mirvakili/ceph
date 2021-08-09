@@ -23,6 +23,23 @@ double CoDelUtils::estimate_slope_by_regression(std::vector <DataPoint> &data_po
     return SS_xy / SS_xx;
 }
 
+double CoDelUtils::calculate_mean_and_std_dev(std::vector<double> &data_points, double *results) {
+    int n = data_points.size();
+    double mean = 0;
+    for (int i = 0; i < data_points.size(); i++)
+        mean += data_points[i];
+    mean /= n;
+    double standard_deviation = 0;
+    for (int i = 0; i < data_points.size(); i++) {
+        auto diff = data_points[i] - mean;
+        standard_deviation += diff * diff;
+    }
+    standard_deviation /= n;
+    standard_deviation = std::sqrt(standard_deviation);
+    results[0] = mean;
+    results[1] = standard_deviation;
+}
+
 void CoDelUtils::reject_outlier(std::vector<DataPoint> &data_points) {
     int n = data_points.size();
     double mean = 0;

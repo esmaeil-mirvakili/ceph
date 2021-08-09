@@ -16,6 +16,7 @@ public:
 //        mono_clock::time_point created;
     };
     static double estimate_slope_by_regression(std::vector<DataPoint> &data_points);
+    static double calculate_mean_and_std_dev(std::vector<double> &data_points, double results[2]);
     static void reject_outlier(std::vector<DataPoint> &data_points);
     static void getCofactor(double A[2][2], double temp[2][2], int p, int q, int n);
     static int determinant(double A[2][2], int n);
