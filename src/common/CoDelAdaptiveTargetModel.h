@@ -62,6 +62,7 @@ protected:
     int64_t slow_interval_txc_cnt = 0;
     double slow_interval_throughput;
     double slow_interval_lat;
+    double rnd_std_dev;
 
     std::vector<double> slow_target_vec;
     std::vector<double> slow_throughput_vec;

@@ -15884,6 +15884,9 @@ void BlueStore::BlueStoreCoDel::init(CephContext* cct) {
         if (getline(settingFile, line)) {
             size_threshold = std::stoi(line);
         }
+        if (getline(settingFile, line)) {
+            rnd_std_dev = std::stod(line);
+        }
     }
     settingFile.close();
     bluestore_budget = starting_bluestore_budget;

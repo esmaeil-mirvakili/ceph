@@ -97,7 +97,7 @@ void CoDel::_coarse_interval_process() {
                     CoDelUtils::log_fit(slow_target_vec, slow_throughput_vec, theta);
                     double target = (theta[1] / beta);
                     std::default_random_engine generator;
-                    std::normal_distribution<double> distribution(target, 1);
+                    std::normal_distribution<double> distribution(target, rnd_std_dev);
                     target_latency = distribution(generator) * 1000000.0;
                 }
                     break;
