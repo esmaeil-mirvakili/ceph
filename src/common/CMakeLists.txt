@@ -57,7 +57,6 @@ set(common_srcs
   cmdparse.cc
   code_environment.cc
   CoDelAdaptiveTargetModel.cc
-  CoDelModel.cc
   CoDelUtils.cc
   common_init.cc
   compat.cc
