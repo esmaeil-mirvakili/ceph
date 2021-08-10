@@ -110,7 +110,7 @@ void CoDel::_coarse_interval_process() {
                         }
                     }
                     double theta[2];
-                    CoDelUtils::log_fit(targets, throughputs, theta);
+                    CoDelUtils::log_fit(targets, throughputs, theta, outlier_detection);
                     double target = (theta[1] / beta);
                     std::default_random_engine generator;
                     std::normal_distribution<double> distribution(target, rnd_std_dev);
