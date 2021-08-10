@@ -2,13 +2,6 @@
 #include "CoDelAdaptiveTargetModel.h"
 
 CoDel::CoDel(CephContext *_cct) : fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock) {
-    range_cnt = ((max_target_latency - min_target_latency) / range) + 1;
-    for (int i = 0; i < range_cnt; i++) {
-        std::vector<double> th_vec;
-        std::vector<double> target_vec;
-        slow_throughput_vec.push_back(th_vec);
-        slow_target_vec.push_back(target_vec);
-    }
     fast_timer.init();
     slow_timer.init();
 }
@@ -94,23 +87,14 @@ void CoDel::_coarse_interval_process() {
         slow_interval_throughput /= 1024.0 * 1024.0;
         slow_interval_lat = (sum_latency / (1000 * 1000.0)) / slow_interval_txc_cnt;
         if (activated && adaptive_target) {
-            int index = (target_latency - min_target_latency) / 1000000;
-            slow_target_vec[index].push_back(target_latency / 1000000.0);
-            slow_throughput_vec[index].push_back(slow_interval_throughput);
+            slow_target_vec.push_back(target_latency / 1000000.0);
+            slow_throughput_vec.push_back(slow_interval_throughput);
             switch (mode) {
                 case NORMAL_PHASE: {
-                    slow_target_vec[index].erase(slow_target_vec[index].begin());
-                    slow_throughput_vec[index].erase(slow_throughput_vec[index].begin());
-                    std::vector<double> targets;
-                    std::vector<double> throughputs;
-                    for (int i = 0; i < slow_target_vec.size(); i++) {
-                        for (int j = 0; j < slow_target_vec[i].size(); j++) {
-                            targets.push_back(slow_target_vec[i][j]);
-                            throughputs.push_back(slow_throughput_vec[i][j]);
-                        }
-                    }
+                    slow_target_vec.erase(slow_target_vec.begin());
+                    slow_throughput_vec.erase(slow_throughput_vec.begin());
                     double theta[2];
-                    CoDelUtils::log_fit(targets, throughputs, theta);
+                    CoDelUtils::log_fit(slow_target_vec, slow_throughput_vec, theta);
                     double target = (theta[1] / beta);
                     std::default_random_engine generator;
                     std::normal_distribution<double> distribution(target, rnd_std_dev);
@@ -125,7 +109,7 @@ void CoDel::_coarse_interval_process() {
                     }
                     if (target_latency > max_target_latency) {
                         mode = NORMAL_PHASE;
-//                        model_size = slow_target_vec.size();
+                        model_size = slow_target_vec.size();
                     }
                     break;
             }
@@ -184,8 +168,8 @@ void CoDel::reset() {
     lat_sum = 0;
     previous_target = 0;
     previous_throughput = 0;
-    for (int i = 0; i < slow_target_vec.size(); i++) {
-        slow_throughput_vec[i].clear();
-        slow_target_vec[i].clear();
-    }
+    slow_throughput_vec.clear();
+    slow_target_vec.clear();
+    std::cout << "slow freq:" << slow_interval_frequency << std::endl;
+    std::cout << "adaptive:" << adaptive_target << std::endl;
 }

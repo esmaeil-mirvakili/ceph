@@ -64,15 +64,14 @@ protected:
     double slow_interval_lat;
     double rnd_std_dev;
 
-    std::vector<std::vector<double>> slow_target_vec;
-    std::vector<std::vector<double>> slow_throughput_vec;
+    std::vector<double> slow_target_vec;
+    std::vector<double> slow_throughput_vec;
     bool adaptive_target = true;
     double *slope;
     double lat_sum = 0;
     double previous_throughput = 0;
     int64_t previous_target = 0;
     int64_t range;
-    int64_t range_cnt;
     int64_t config_latency_threshold;
     int size_threshold;
     int model_size;
