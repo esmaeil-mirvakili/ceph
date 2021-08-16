@@ -62,13 +62,16 @@ void CoDelUtils::reject_outlier(std::vector<double> &x, std::vector<double> &y) 
         if (std::abs(z_score) < 2)
             to_be_removed.push_back(i);
     }
-
+    auto shift = 0;
     for (std::vector<int>::iterator it = to_be_removed.begin() ; it < to_be_removed.end(); ++it) {
-        auto position = y.begin() + *it;
+        auto position = y.begin() + *it - shift;
+        shift--;
         y.erase(position);
     }
+    shift = 0;
     for (std::vector<int>::iterator it = to_be_removed.begin() ; it < to_be_removed.end(); ++it) {
-        auto position = x.begin() + *it;
+        auto position = x.begin() + *it - shift;
+        shift++;
         x.erase(position);
     }
 }
