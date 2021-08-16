@@ -96,33 +96,39 @@ void CoDel::_coarse_interval_process() {
         if (activated && adaptive_target) {
 //            logfile << "1.3" << std::endl;
 //            logfile.flush();
-//            int index = static_cast<int>(std::floor((target_latency - min_target_latency) / config_latency_threshold));
-//            if (index >= range_cnt)
-//                index = range_cnt - 1;
+            int index = static_cast<int>(std::floor((target_latency - min_target_latency) / config_latency_threshold));
+            if (index >= range_cnt)
+                index = range_cnt - 1;
 //            logfile << "1.3.1: index = " << index << std::endl;
 //            logfile << "1.3.1: target_latency = " << target_latency << std::endl;
 //            logfile << "1.3.1: range = " << config_latency_threshold << std::endl;
 //            logfile.flush();
-            slow_target_vec.push_back(target_latency / 1000000.0);
+            slow_target_vec[index].push_back(target_latency / 1000000.0);
 //            logfile << "1.3.2" << std::endl;
 //            logfile.flush();
-            slow_throughput_vec.push_back(slow_interval_throughput);
+            slow_throughput_vec[index].push_back(slow_interval_throughput);
 //            logfile << "1.4" << std::endl;
 //            logfile.flush();
             switch (mode) {
                 case NORMAL_PHASE: {
 //                    logfile << "1.5" << std::endl;
 //                    logfile.flush();
-                    slow_target_vec.erase(slow_target_vec.begin());
-                    slow_throughput_vec.erase(slow_throughput_vec.begin());
+                    slow_target_vec[index].erase(slow_target_vec[index].begin());
+                    slow_throughput_vec[index].erase(slow_throughput_vec[index].begin());
 //                    logfile << "1.6" << std::endl;
 //                    logfile.flush();
                     std::vector<double> targets;
                     std::vector<double> throughputs;
+                    for (int i = 0; i < slow_target_vec.size(); i++) {
+                        for (int j = 0; j < slow_target_vec[i].size(); j++) {
+                            targets.push_back(slow_target_vec[i][j]);
+                            throughputs.push_back(slow_throughput_vec[i][j]);
+                        }
+                    }
 //                    logfile << "1.7" << std::endl;
 //                    logfile.flush();
                     double theta[2];
-                    CoDelUtils::log_fit(slow_target_vec, slow_throughput_vec, theta, outlier_detection);
+                    CoDelUtils::log_fit(targets, throughputs, theta, outlier_detection);
 //                    logfile << "1.8" << std::endl;
 //                    logfile.flush();
                     double target = (theta[1] / beta);
@@ -216,17 +222,17 @@ void CoDel::reset() {
     previous_throughput = 0;
     slow_throughput_vec.clear();
     slow_target_vec.clear();
-//    range_cnt = static_cast<int>(std::floor((max_target_latency - min_target_latency) / (config_latency_threshold * 1.0))) + 1;
+    range_cnt = static_cast<int>(std::floor((max_target_latency - min_target_latency) / (config_latency_threshold * 1.0))) + 1;
 //    logfile << "range cnt: " << range_cnt << std::endl;
 //    logfile << "max_target_latency: " << max_target_latency << std::endl;
 //    logfile << "min_target_latency: " << min_target_latency << std::endl;
 //    logfile.flush();
-//    for (int i = 0; i < range_cnt; i++) {
-//        std::vector<double> th_vec;
-//        std::vector<double> target_vec;
-//        slow_throughput_vec.push_back(th_vec);
-//        slow_target_vec.push_back(target_vec);
-//    }
+    for (int i = 0; i < range_cnt; i++) {
+        std::vector<double> th_vec;
+        std::vector<double> target_vec;
+        slow_throughput_vec.push_back(th_vec);
+        slow_target_vec.push_back(target_vec);
+    }
 //    logfile << "target vec: " << slow_target_vec.size() << std::endl;
 //    logfile.flush();
 //    logfile << "th vec: " << slow_throughput_vec.size() << std::endl;

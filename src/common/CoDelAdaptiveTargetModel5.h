@@ -65,8 +65,8 @@ protected:
     double slow_interval_lat;
     double rnd_std_dev;
 
-    std::vector<double> slow_target_vec;
-    std::vector<double> slow_throughput_vec;
+    std::vector<std::vector<double>> slow_target_vec;
+    std::vector<std::vector<double>> slow_throughput_vec;
     bool adaptive_target = true;
     double *slope;
     double lat_sum = 0;
