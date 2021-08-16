@@ -215,3 +215,12 @@ void CoDelUtils::log_fit(std::vector<double> x_original, std::vector<double> y_o
     theta[0] = temp_1[0][0] * temp_2[0][0] + temp_1[0][1] * temp_2[1][0];
     theta[1] = temp_1[1][0] * temp_2[0][0] + temp_1[1][1] * temp_2[1][0];
 }
+
+void CoDelUtils::find_log_normal_dist_params(double mode, double min_x, double max_x, double params[2]) {
+    double max_x_normalized = max_x - min_x;
+    double mode_normalized = mode - min_x;
+    double std = (-Z_P + std::sqrt(Z_P * Z_P + 4 * std::log(max_x_normalized) - 4 * std::log(mode_normalized))) / 2;
+    double mu = std::log(max_x_normalized) - Z_P * std;
+    params[0] = mu;
+    params[1] = std;
+}
