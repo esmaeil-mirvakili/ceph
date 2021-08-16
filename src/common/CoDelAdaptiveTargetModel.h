@@ -41,12 +41,12 @@ private:
 
 protected:
     int64_t initial_interval;     // Initial interval to start the algorithm
-    int64_t initial_target_latency;     // Initial target latency to start the algorithm
+    int initial_target_latency;     // Initial target latency to start the algorithm
     int64_t interval = INT_NULL;       // current interval that algorithm is using
-    int64_t target_latency = INT_NULL;       // current target latency that algorithm is using
+    int target_latency = INT_NULL;       // current target latency that algorithm is using
     int64_t min_latency = INT_NULL;       // min latency in the current interval
-    int64_t min_target_latency = 1000000;  // in ns
-    int64_t max_target_latency = 200000000; // in ns
+    int min_target_latency = 1000000;  // in ns
+    int max_target_latency = 200000000; // in ns
     int64_t violation_count = 0;
     ceph::mutex fast_timer_lock = ceph::make_mutex("CoDel::fast_timer_lock");
     ceph::mutex slow_timer_lock = ceph::make_mutex("CoDel::slow_timer_lock");
@@ -71,10 +71,10 @@ protected:
     double *slope;
     double lat_sum = 0;
     double previous_throughput = 0;
-    int64_t previous_target = 0;
-    int64_t range;
-    int64_t range_cnt;
-    int64_t config_latency_threshold;
+    int previous_target = 0;
+    int range;
+    int range_cnt;
+    int config_latency_threshold;
     int size_threshold;
     int model_size;
     bool outlier_detection = false;
