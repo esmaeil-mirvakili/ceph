@@ -108,8 +108,12 @@ void CoDel::_coarse_interval_process() {
         if (activated && adaptive_target) {
             logfile << "1.3" << std::endl;
             logfile.flush();
-            int index = (target_latency - min_target_latency) / 1000000;
+            int index = static_cast<int>(std::floor((target_latency - min_target_latency) / range));
+            if(index >= range_cnt)
+                index = range_cnt - 1;
             logfile << "1.3.1: index = " << index << std::endl;
+            logfile << "1.3.1: target_latency = " << target_latency << std::endl;
+            logfile << "1.3.1: range = " << range << std::endl;
             logfile.flush();
             slow_target_vec[index].push_back(target_latency / 1000000.0);
             logfile << "1.3.2" << std::endl;
