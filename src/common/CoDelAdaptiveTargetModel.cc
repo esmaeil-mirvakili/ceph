@@ -142,7 +142,7 @@ void CoDel::_coarse_interval_process() {
 //                    logfile << "1.10" << std::endl;
 //                    logfile.flush();
                     std::lognormal_distribution<double> distribution(dist_params[0], dist_params[1]);
-                    target_latency = distribution(generator) * 1000000.0;
+                    target_latency = distribution(generator) * 1000000.0 + min_target_latency;
                 }
                     break;
                 case CONFIG_PHASE:
