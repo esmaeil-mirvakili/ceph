@@ -6,6 +6,8 @@
 #include <cmath>
 #include "ceph_time.h"
 
+#define Z_P 3
+
 using ceph::mono_clock;
 
 class CoDelUtils {
