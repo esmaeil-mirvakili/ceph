@@ -103,7 +103,11 @@ void CoDel::_coarse_interval_process() {
             logfile << "1.3" << std::endl;
             logfile.flush();
             int index = (target_latency - min_target_latency) / 1000000;
+            logfile << "1.3.1: index = " << index << std::endl;
+            logfile.flush();
             slow_target_vec[index].push_back(target_latency / 1000000.0);
+            logfile << "1.3.2" << std::endl;
+            logfile.flush();
             slow_throughput_vec[index].push_back(slow_interval_throughput);
             logfile << "1.4" << std::endl;
             logfile.flush();
