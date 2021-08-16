@@ -6,7 +6,7 @@
 #include <cmath>
 #include "ceph_time.h"
 
-#define Z_P 3
+#define Z_P 1.3
 
 using ceph::mono_clock;
 
