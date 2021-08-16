@@ -1,7 +1,7 @@
 
 #include "CoDelAdaptiveTargetModel.h"
 
-CoDel::CoDel(CephContext *_cct) : fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock), logfile("~/log.txt") {
+CoDel::CoDel(CephContext *_cct) : fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock), logfile("/users/esmaeil/log.txt") {
     range_cnt = static_cast<int>(std::floor((max_target_latency - min_target_latency) / (range*1.0))) + 1;
     for (int i = 0; i < range_cnt; i++) {
         std::vector<double> th_vec;
