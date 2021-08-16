@@ -3,12 +3,18 @@
 
 CoDel::CoDel(CephContext *_cct) : fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock), logfile("/users/esmaeil/log.txt") {
     range_cnt = static_cast<int>(std::floor((max_target_latency - min_target_latency) / (range*1.0))) + 1;
+    logfile << "range cnt: " << range_cnt << std::endl;
+    logfile.flush();
     for (int i = 0; i < range_cnt; i++) {
         std::vector<double> th_vec;
         std::vector<double> target_vec;
         slow_throughput_vec.push_back(th_vec);
         slow_target_vec.push_back(target_vec);
     }
+    logfile << "target vec: " << slow_target_vec.size() << std::endl;
+    logfile.flush();
+    logfile << "th vec: " << slow_throughput_vec.size() << std::endl;
+    logfile.flush();
     fast_timer.init();
     slow_timer.init();
 }
