@@ -25,7 +25,7 @@ public:
     static void adjoint(double A[2][2],double adj[2][2]);
     static bool inverse(double A[2][2], double inverse[2][2]);
     static void log_fit(std::vector<double> x, std::vector<double> y, double theta[2], bool outlier_detection);
-    void find_log_normal_dist_params(double mode, double min_x, double max_x, double params[2]);
+    static void find_log_normal_dist_params(double mode, double min_x, double max_x, double params[2]);
 };
 
 
