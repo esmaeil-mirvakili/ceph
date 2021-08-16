@@ -15922,7 +15922,7 @@ void BlueStore::BlueStoreCoDel::dump_log_data() {
     std::ofstream model_file(prefix + "model" + index + ".csv");
     model_file << "range, id, target, throughput\n";
     for (unsigned int i = 0; i < slow_target_vec.size(); i++){
-        for (unsigned int j = 0; j < slow_target_vec.size(); j++) {
+        for (unsigned int j = 0; j < slow_target_vec[i].size(); j++) {
             model_file << std::fixed << i;
             model_file << ",";
             model_file << std::fixed << j;
