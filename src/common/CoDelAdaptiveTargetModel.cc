@@ -1,22 +1,8 @@
 
 #include "CoDelAdaptiveTargetModel.h"
 
-CoDel::CoDel(CephContext *_cct) : fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock), logfile("/users/esmaeil/log.txt") {
-    range_cnt = static_cast<int>(std::floor((max_target_latency - min_target_latency) / (range*1.0))) + 1;
-    logfile << "range cnt: " << range_cnt << std::endl;
-    logfile << "max_target_latency: " << max_target_latency << std::endl;
-    logfile << "min_target_latency: " << min_target_latency << std::endl;
-    logfile.flush();
-    for (int i = 0; i < range_cnt; i++) {
-        std::vector<double> th_vec;
-        std::vector<double> target_vec;
-        slow_throughput_vec.push_back(th_vec);
-        slow_target_vec.push_back(target_vec);
-    }
-    logfile << "target vec: " << slow_target_vec.size() << std::endl;
-    logfile.flush();
-    logfile << "th vec: " << slow_throughput_vec.size() << std::endl;
-    logfile.flush();
+CoDel::CoDel(CephContext *_cct) : fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock),
+                                  logfile("/users/esmaeil/log.txt") {
     fast_timer.init();
     slow_timer.init();
 }
@@ -111,7 +97,7 @@ void CoDel::_coarse_interval_process() {
             logfile << "1.3" << std::endl;
             logfile.flush();
             int index = static_cast<int>(std::floor((target_latency - min_target_latency) / range));
-            if(index >= range_cnt)
+            if (index >= range_cnt)
                 index = range_cnt - 1;
             logfile << "1.3.1: index = " << index << std::endl;
             logfile << "1.3.1: target_latency = " << target_latency << std::endl;
@@ -149,12 +135,13 @@ void CoDel::_coarse_interval_process() {
                     logfile << "1.9" << std::endl;
                     logfile.flush();
                     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-                    std::default_random_engine generator (seed);
+                    std::default_random_engine generator(seed);
                     double dist_params[2];
-                    CoDelUtils::find_log_normal_dist_params(target, min_target_latency/1000000,max_target_latency/1000000, dist_params);
+                    CoDelUtils::find_log_normal_dist_params(target, min_target_latency / 1000000,
+                                                            max_target_latency / 1000000, dist_params);
                     logfile << "1.10" << std::endl;
                     logfile.flush();
-                    std::lognormal_distribution<double> distribution (dist_params[0],dist_params[1]);
+                    std::lognormal_distribution<double> distribution(dist_params[0], dist_params[1]);
                     target_latency = distribution(generator) * 1000000.0;
                 }
                     break;
@@ -233,8 +220,21 @@ void CoDel::reset() {
     lat_sum = 0;
     previous_target = 0;
     previous_throughput = 0;
-    for (int i = 0; i < slow_target_vec.size(); i++) {
-        slow_throughput_vec[i].clear();
-        slow_target_vec[i].clear();
+    slow_throughput_vec.clear();
+    slow_target_vec.clear();
+    range_cnt = static_cast<int>(std::floor((max_target_latency - min_target_latency) / (range * 1.0))) + 1;
+    logfile << "range cnt: " << range_cnt << std::endl;
+    logfile << "max_target_latency: " << max_target_latency << std::endl;
+    logfile << "min_target_latency: " << min_target_latency << std::endl;
+    logfile.flush();
+    for (int i = 0; i < range_cnt; i++) {
+        std::vector<double> th_vec;
+        std::vector<double> target_vec;
+        slow_throughput_vec.push_back(th_vec);
+        slow_target_vec.push_back(target_vec);
     }
+    logfile << "target vec: " << slow_target_vec.size() << std::endl;
+    logfile.flush();
+    logfile << "th vec: " << slow_throughput_vec.size() << std::endl;
+    logfile.flush();
 }
