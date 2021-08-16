@@ -1,7 +1,7 @@
 
 #include "CoDelAdaptiveTargetModel.h"
 
-CoDel::CoDel(CephContext *_cct) : fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock) {
+CoDel::CoDel(CephContext *_cct) : fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock), logfile("~/log.txt") {
     range_cnt = static_cast<int>(std::floor((max_target_latency - min_target_latency) / (range*1.0))) + 1;
     for (int i = 0; i < range_cnt; i++) {
         std::vector<double> th_vec;
@@ -87,20 +87,34 @@ void CoDel::_interval_process() {
 void CoDel::_coarse_interval_process() {
     std::lock_guard l(register_lock);
     mono_clock::time_point now = mono_clock::now();
+    logfile << "1" << std::endl;
+    logfile.flush();
     if (!mono_clock::is_zero(slow_interval_start) && slow_interval_txc_cnt > 0) {
+        logfile << "1.1" << std::endl;
+        logfile.flush();
         double time = std::chrono::nanoseconds(now - slow_interval_start).count();
         time = time / (1000 * 1000 * 1000.0);
         slow_interval_throughput = (coarse_interval_size * 1.0) / time;
         slow_interval_throughput /= 1024.0 * 1024.0;
         slow_interval_lat = (sum_latency / (1000 * 1000.0)) / slow_interval_txc_cnt;
+        logfile << "1.2" << std::endl;
+        logfile.flush();
         if (activated && adaptive_target) {
+            logfile << "1.3" << std::endl;
+            logfile.flush();
             int index = (target_latency - min_target_latency) / 1000000;
             slow_target_vec[index].push_back(target_latency / 1000000.0);
             slow_throughput_vec[index].push_back(slow_interval_throughput);
+            logfile << "1.4" << std::endl;
+            logfile.flush();
             switch (mode) {
                 case NORMAL_PHASE: {
+                    logfile << "1.5" << std::endl;
+                    logfile.flush();
                     slow_target_vec[index].erase(slow_target_vec[index].begin());
                     slow_throughput_vec[index].erase(slow_throughput_vec[index].begin());
+                    logfile << "1.6" << std::endl;
+                    logfile.flush();
                     std::vector<double> targets;
                     std::vector<double> throughputs;
                     for (int i = 0; i < slow_target_vec.size(); i++) {
@@ -109,18 +123,28 @@ void CoDel::_coarse_interval_process() {
                             throughputs.push_back(slow_throughput_vec[i][j]);
                         }
                     }
+                    logfile << "1.7" << std::endl;
+                    logfile.flush();
                     double theta[2];
                     CoDelUtils::log_fit(targets, throughputs, theta, outlier_detection);
+                    logfile << "1.8" << std::endl;
+                    logfile.flush();
                     double target = (theta[1] / beta);
+                    logfile << "1.9" << std::endl;
+                    logfile.flush();
                     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
                     std::default_random_engine generator (seed);
                     double dist_params[2];
                     CoDelUtils::find_log_normal_dist_params(target, min_target_latency/1000000,max_target_latency/1000000, dist_params);
+                    logfile << "1.10" << std::endl;
+                    logfile.flush();
                     std::lognormal_distribution<double> distribution (dist_params[0],dist_params[1]);
                     target_latency = distribution(generator) * 1000000.0;
                 }
                     break;
                 case CONFIG_PHASE:
+                    logfile << "1.11" << std::endl;
+                    logfile.flush();
                     cnt++;
                     if (cnt >= size_threshold) {
                         target_latency += range;
@@ -134,14 +158,20 @@ void CoDel::_coarse_interval_process() {
             }
         }
     }
+    logfile << "2" << std::endl;
+    logfile.flush();
     if (target_latency != INT_NULL) {
         target_latency = std::max(target_latency, min_target_latency);
         target_latency = std::min(target_latency, max_target_latency);
     }
+    logfile << "3" << std::endl;
+    logfile.flush();
     slow_interval_start = mono_clock::now();
     coarse_interval_size = 0;
     sum_latency = 0;
     slow_interval_txc_cnt = 0;
+    logfile << "4" << std::endl;
+    logfile.flush();
     auto codel_ctx = new LambdaContext(
             [this](int r) {
                 _coarse_interval_process();
