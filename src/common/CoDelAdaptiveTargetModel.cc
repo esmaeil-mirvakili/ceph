@@ -2,7 +2,7 @@
 #include "CoDelAdaptiveTargetModel.h"
 
 CoDel::CoDel(CephContext *_cct) : fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock) {
-    range_cnt = ((max_target_latency - min_target_latency) / range) + 1;
+    range_cnt = static_cast<int>(std::floor((max_target_latency - min_target_latency) / (range*1.0))) + 1;
     for (int i = 0; i < range_cnt; i++) {
         std::vector<double> th_vec;
         std::vector<double> target_vec;
@@ -112,8 +112,11 @@ void CoDel::_coarse_interval_process() {
                     double theta[2];
                     CoDelUtils::log_fit(targets, throughputs, theta, outlier_detection);
                     double target = (theta[1] / beta);
-                    std::default_random_engine generator;
-                    std::normal_distribution<double> distribution(target, rnd_std_dev);
+                    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+                    std::default_random_engine generator (seed);
+                    double dist_params[2];
+                    CoDelUtils::find_log_normal_dist_params(target, min_target_latency/1000000,max_target_latency/1000000, dist_params);
+                    std::lognormal_distribution<double> distribution (dist_params[0],dist_params[1]);
                     target_latency = distribution(generator) * 1000000.0;
                 }
                     break;
