@@ -81,7 +81,7 @@ protected:
     int mode = CONFIG_PHASE;
     int cnt = 0;
 
-    std::ofstream logfile;
+//    std::ofstream logfile;
 
     void register_queue_latency(int64_t queuing_latency, double throttle_usage, int64_t size);
     void initialize(int64_t init_interval, int64_t init_target, bool adaptive_target, bool active);
