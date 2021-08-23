@@ -114,8 +114,10 @@ void CoDel::_coarse_interval_process() {
                 case NORMAL_PHASE: {
 //                    logfile << "1.5" << std::endl;
 //                    logfile.flush();
-                    slow_target_vec.erase(slow_target_vec.begin());
-                    slow_throughput_vec.erase(slow_throughput_vec.begin());
+                    if (slow_target_vec.size() > size_threshold) {
+                        slow_target_vec.erase(slow_target_vec.begin());
+                        slow_throughput_vec.erase(slow_throughput_vec.begin());
+                    }
 //                    logfile << "1.6" << std::endl;
 //                    logfile.flush();
                     std::vector<double> targets;
