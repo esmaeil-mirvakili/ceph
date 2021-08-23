@@ -110,11 +110,14 @@ void CoDel::_coarse_interval_process() {
 //            logfile << "1.4" << std::endl;
 //            logfile.flush();
             switch (mode) {
+                case CONFIG_PHASE:
                 case NORMAL_PHASE: {
 //                    logfile << "1.5" << std::endl;
 //                    logfile.flush();
-                    slow_target_vec.erase(slow_target_vec.begin());
-                    slow_throughput_vec.erase(slow_throughput_vec.begin());
+                    if (slow_target_vec.size() >= size_threshold) {
+                        slow_target_vec.erase(slow_target_vec.begin());
+                        slow_throughput_vec.erase(slow_throughput_vec.begin());
+                    }
 //                    logfile << "1.6" << std::endl;
 //                    logfile.flush();
                     std::vector<double> targets;
@@ -138,24 +141,24 @@ void CoDel::_coarse_interval_process() {
                     std::lognormal_distribution<double> distribution(dist_params[0], dist_params[1]);
                     target_latency = distribution(generator) * 1000000.0 + min_target_latency;
                     if (target_latency < target) {
-                        std::uniform_real_distribution<> distr(0.2, 0.5);
+                        std::uniform_real_distribution<> distr(0, 0.5);
                         target_latency = target_latency + (target_latency - target) * distr(generator);
                     }
                 }
                     break;
-                case CONFIG_PHASE:
-//                    logfile << "1.11" << std::endl;
-//                    logfile.flush();
-                    cnt++;
-                    if (cnt >= size_threshold) {
-                        target_latency += range;
-                        cnt = 0;
-                    }
-                    if (target_latency > max_target_latency) {
-                        mode = NORMAL_PHASE;
-//                        model_size = slow_target_vec.size();
-                    }
-                    break;
+//                case CONFIG_PHASE:
+////                    logfile << "1.11" << std::endl;
+////                    logfile.flush();
+//                    cnt++;
+//                    if (cnt >= size_threshold) {
+//                        target_latency += range;
+//                        cnt = 0;
+//                    }
+//                    if (target_latency > max_target_latency) {
+//                        mode = NORMAL_PHASE;
+////                        model_size = slow_target_vec.size();
+//                    }
+//                    break;
             }
         }
     }
@@ -214,7 +217,7 @@ void CoDel::reset() {
     slow_interval_throughput = 0;
     slow_interval_lat = 0;
     cnt = 0;
-    mode = CONFIG_PHASE;
+    mode = NORMAL_PHASE;
     lat_sum = 0;
     previous_target = 0;
     previous_throughput = 0;
