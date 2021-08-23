@@ -1,8 +1,8 @@
 
 #include "CoDelAdaptiveTargetModel.h"
 
-CoDel::CoDel(CephContext *_cct) : fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock){//},
-                                  //logfile("/users/esmaeil/log.txt") {
+CoDel::CoDel(CephContext *_cct) : fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock) {//},
+    //logfile("/users/esmaeil/log.txt") {
     fast_timer.init();
     slow_timer.init();
 }
@@ -137,6 +137,10 @@ void CoDel::_coarse_interval_process() {
 //                    logfile.flush();
                     std::lognormal_distribution<double> distribution(dist_params[0], dist_params[1]);
                     target_latency = distribution(generator) * 1000000.0 + min_target_latency;
+                    if (target_latency < target) {
+                        std::uniform_real_distribution<> distr(0.0, 0.5);
+                        target_latency = target_latency + (target_latency - target) * distr(generator);
+                    }
                 }
                     break;
                 case CONFIG_PHASE:
