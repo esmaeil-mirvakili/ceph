@@ -138,7 +138,7 @@ void CoDel::_coarse_interval_process() {
                     std::lognormal_distribution<double> distribution(dist_params[0], dist_params[1]);
                     target_latency = distribution(generator) * 1000000.0 + min_target_latency;
                     if (target_latency < target) {
-                        std::uniform_real_distribution<> distr(0.0, 0.5);
+                        std::uniform_real_distribution<> distr(0.2, 0.5);
                         target_latency = target_latency + (target_latency - target) * distr(generator);
                     }
                 }
