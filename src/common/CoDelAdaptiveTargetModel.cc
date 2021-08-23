@@ -120,17 +120,21 @@ void CoDel::_coarse_interval_process() {
                     }
 //                    logfile << "1.6" << std::endl;
 //                    logfile.flush();
-                    std::vector<double> targets;
-                    std::vector<double> throughputs;
+//                    std::vector<double> targets;
+//                    std::vector<double> throughputs;
 //                    logfile << "1.7" << std::endl;
 //                    logfile.flush();
-                    double theta[2];
-                    CoDelUtils::log_fit(slow_target_vec, slow_throughput_vec, theta, outlier_detection);
+
 //                    logfile << "1.8" << std::endl;
 //                    logfile.flush();
-                    double target = (theta[1] / beta);
+                    double target = target_latency;
 //                    logfile << "1.9" << std::endl;
 //                    logfile.flush();
+                    if (slow_target_vec.size() >= size_threshold){
+                        double theta[2];
+                        CoDelUtils::log_fit(slow_target_vec, slow_throughput_vec, theta, outlier_detection);
+                        target = (theta[1] / beta);
+                    }
                     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
                     std::default_random_engine generator(seed);
                     double dist_params[2];
