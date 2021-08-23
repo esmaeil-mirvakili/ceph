@@ -110,6 +110,7 @@ void CoDel::_coarse_interval_process() {
 //            logfile << "1.4" << std::endl;
 //            logfile.flush();
             switch (mode) {
+                case CONFIG_PHASE:
                 case NORMAL_PHASE: {
 //                    logfile << "1.5" << std::endl;
 //                    logfile.flush();
@@ -139,19 +140,19 @@ void CoDel::_coarse_interval_process() {
                     target_latency = distribution(generator) * 1000000.0 + min_target_latency;
                 }
                     break;
-                case CONFIG_PHASE:
-//                    logfile << "1.11" << std::endl;
-//                    logfile.flush();
-                    cnt++;
-                    if (cnt >= size_threshold) {
-                        target_latency += range;
-                        cnt = 0;
-                    }
-                    if (target_latency > max_target_latency) {
-                        mode = NORMAL_PHASE;
-//                        model_size = slow_target_vec.size();
-                    }
-                    break;
+//                case CONFIG_PHASE:
+////                    logfile << "1.11" << std::endl;
+////                    logfile.flush();
+//                    cnt++;
+//                    if (cnt >= size_threshold) {
+//                        target_latency += range;
+//                        cnt = 0;
+//                    }
+//                    if (target_latency > max_target_latency) {
+//                        mode = NORMAL_PHASE;
+////                        model_size = slow_target_vec.size();
+//                    }
+//                    break;
             }
         }
     }
@@ -210,7 +211,7 @@ void CoDel::reset() {
     slow_interval_throughput = 0;
     slow_interval_lat = 0;
     cnt = 0;
-    mode = CONFIG_PHASE;
+    mode = NORMAL_PHASE;
     lat_sum = 0;
     previous_target = 0;
     previous_throughput = 0;
