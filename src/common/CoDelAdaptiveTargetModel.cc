@@ -140,7 +140,7 @@ void CoDel::_coarse_interval_process() {
                     std::default_random_engine generator(seed);
                     double dist_params[2];
                     CoDelUtils::find_log_normal_dist_params(target, min_target_latency / 1000000,
-                                                            max_target_latency / 1000000, dist_params);
+                                                            target * rnd_std_dev, dist_params);
 //                    logfile << "1.10" << std::endl;
 //                    logfile.flush();
                     std::lognormal_distribution<double> distribution(dist_params[0], dist_params[1]);
