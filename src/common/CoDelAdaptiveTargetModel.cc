@@ -127,7 +127,7 @@ void CoDel::_coarse_interval_process() {
 
 //                    logfile << "1.8" << std::endl;
 //                    logfile.flush();
-                    double target = initial_target_latency;
+                    double target = initial_target_latency / 1000000;
 //                    logfile << "1.9" << std::endl;
 //                    logfile.flush();
                     if(slow_target_vec.size() >= size_threshold){
