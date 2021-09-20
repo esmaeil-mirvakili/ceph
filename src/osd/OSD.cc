@@ -2471,58 +2471,7 @@ public:
 	   Formatter *f,
 	   std::ostream& ss,
 	   bufferlist& out) override {
-//    ceph_abort("should use async hook");
-      if (prefix == "dump op vector")
-      {
-          std::ofstream log_file("codel_log_osd_op.csv");
-          log_file << "dispatch, enqueued, dequeued, start, done, read, write, write_full\n";
-          list <bool> :: iterator it1 = OSD::read_vec.begin();
-          list <bool> :: iterator it2 = OSD::write_vec.begin();
-          list <bool> :: iterator it3 = OSD::write_full_vec.begin();
-          list <double> :: iterator it4 = OSD::op_dispatched_vec.begin();
-          list <double> :: iterator it5 = OSD::op_enqueued_vec.begin();
-          list <double> :: iterator it6 = OSD::op_dequeued_vec.begin();
-          list <double> :: iterator it7 = OSD::op_started_vec.begin();
-          list <double> :: iterator it8 = OSD::op_done_vec.begin();
-          for (; it1 != OSD::read_vec.end();){
-              log_file << std::fixed << *it4;
-              log_file << ",";
-              log_file << std::fixed << *it5;
-              log_file << ",";
-              log_file << std::fixed << *it6;
-              log_file << ",";
-              log_file << std::fixed << *it7;
-              log_file << ",";
-              log_file << std::fixed << *it8;
-              log_file << ",";
-              log_file << std::fixed << (*it1)? 1:0;
-              log_file << ",";
-              log_file << std::fixed << (*it2)? 1:0;
-              log_file << ",";
-              log_file << std::fixed << (*it3)? 1:0;
-              log_file << "\n";
-              ++it1;
-              ++it2;
-              ++it3;
-              ++it4;
-              ++it5;
-              ++it6;
-              ++it7;
-              ++it8;
-          }
-          log_file.close();
-      }
-      else if (prefix == "reset op vector")
-      {
-          OSD::read_vec.clear();
-          OSD::write_vec.clear();
-          OSD::write_full_vec.clear();
-          OSD::op_dispatched_vec.clear();
-          OSD::op_enqueued_vec.clear();
-          OSD::op_dequeued_vec.clear();
-          OSD::op_started_vec.clear();
-          OSD::op_done_vec.clear();
-      }
+    ceph_abort("should use async hook");
   }
   void call_async(
     std::string_view prefix,
@@ -3269,7 +3218,60 @@ will start to track new ops received afterwards.";
     }
     f->close_section(); // entries
     f->close_section(); // network_ping_times
-  } else {
+  }
+    else if (prefix == "dump op vector")
+    {
+        std::ofstream log_file("codel_log_osd_op.csv");
+        log_file << "dispatch, enqueued, dequeued, start, done, read, write, write_full\n";
+        list <bool> :: iterator it1 = OSD::read_vec.begin();
+        list <bool> :: iterator it2 = OSD::write_vec.begin();
+        list <bool> :: iterator it3 = OSD::write_full_vec.begin();
+        list <double> :: iterator it4 = OSD::op_dispatched_vec.begin();
+        list <double> :: iterator it5 = OSD::op_enqueued_vec.begin();
+        list <double> :: iterator it6 = OSD::op_dequeued_vec.begin();
+        list <double> :: iterator it7 = OSD::op_started_vec.begin();
+        list <double> :: iterator it8 = OSD::op_done_vec.begin();
+        for (; it1 != OSD::read_vec.end();){
+            log_file << std::fixed << *it4;
+            log_file << ",";
+            log_file << std::fixed << *it5;
+            log_file << ",";
+            log_file << std::fixed << *it6;
+            log_file << ",";
+            log_file << std::fixed << *it7;
+            log_file << ",";
+            log_file << std::fixed << *it8;
+            log_file << ",";
+            log_file << std::fixed << (*it1)? 1:0;
+            log_file << ",";
+            log_file << std::fixed << (*it2)? 1:0;
+            log_file << ",";
+            log_file << std::fixed << (*it3)? 1:0;
+            log_file << "\n";
+            ++it1;
+            ++it2;
+            ++it3;
+            ++it4;
+            ++it5;
+            ++it6;
+            ++it7;
+            ++it8;
+        }
+        log_file.close();
+    }
+    else if (prefix == "reset op vector")
+    {
+        OSD::read_vec.clear();
+        OSD::write_vec.clear();
+        OSD::write_full_vec.clear();
+        OSD::op_dispatched_vec.clear();
+        OSD::op_enqueued_vec.clear();
+        OSD::op_dequeued_vec.clear();
+        OSD::op_started_vec.clear();
+        OSD::op_done_vec.clear();
+    }
+
+  else {
     ceph_abort_msg("broken asok registration");
   }
 
