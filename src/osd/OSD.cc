@@ -219,14 +219,14 @@ static ostream& _prefix(std::ostream* _dout, int whoami, epoch_t epoch) {
   return *_dout << "osd." << whoami << " " << epoch << " ";
 }
 
-std::vector<bool> OSD::read_vec;
-std::vector<bool> OSD::write_vec;
-std::vector<bool> OSD::write_full_vec;
-std::vector<double> OSD::op_dispatched_vec;
-std::vector<double> OSD::op_enqueued_vec;
-std::vector<double> OSD::op_dequeued_vec;
-std::vector<double> OSD::op_started_vec;
-std::vector<double> OSD::op_done_vec;
+std::list<bool> OSD::read_vec;
+std::list<bool> OSD::write_vec;
+std::list<bool> OSD::write_full_vec;
+std::list<double> OSD::op_dispatched_vec;
+std::list<double> OSD::op_enqueued_vec;
+std::list<double> OSD::op_dequeued_vec;
+std::list<double> OSD::op_started_vec;
+std::list<double> OSD::op_done_vec;
 
 //Initial features in new superblock.
 //Features here are also automatically upgraded
