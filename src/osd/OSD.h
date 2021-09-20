@@ -99,6 +99,14 @@ class OSD;
 class OSDService {
   using OpSchedulerItem = ceph::osd::scheduler::OpSchedulerItem;
 public:
+    std::vector<bool> read_vec;
+    std::vector<bool> write_vec;
+    std::vector<bool> write_full_vec;
+    std::vector<int64_t> op_dispatched_vec;
+    std::vector<int64_t> op_enqueued_vec;
+    std::vector<int64_t> op_dequeued_vec;
+    std::vector<int64_t> op_started_vec;
+    std::vector<int64_t> op_done_vec;
   OSD *osd;
   CephContext *cct;
   ObjectStore::CollectionHandle meta_ch;
@@ -1165,14 +1173,6 @@ protected:
     std::function<void(int,const std::string&,ceph::buffer::list&)> on_finish);
 
 public:
-    std::vector<bool> read_vec;
-    std::vector<bool> write_vec;
-    std::vector<bool> write_full_vec;
-    std::vector<int64_t> op_dispatched_vec;
-    std::vector<int64_t> op_enqueued_vec;
-    std::vector<int64_t> op_dequeued_vec;
-    std::vector<int64_t> op_started_vec;
-    std::vector<int64_t> op_done_vec;
 
   int get_nodeid() { return whoami; }
 
