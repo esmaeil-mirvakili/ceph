@@ -2463,18 +2463,18 @@ public:
 	   std::ostream& ss,
 	   bufferlist& out) override {
 //    ceph_abort("should use async hook");
-      if (command == "dump op vector")
+      if (prefix == "dump op vector")
       {
           std::ofstream log_file("codel_log_osd_op.csv");
           log_file << "dispatch, enqueued, dequeued, done, read, write, write_full\n";
           for (unsigned int i = 0; i < osd->op_debug_log_vec.size(); i++){
-              log_file << std::fixed << osd->op_debug_log_vec[i].osd_dispatched;
+              log_file << std::fixed << osd->op_debug_log_vec[i].op_dispatched;
               log_file << ",";
-              log_file << std::fixed << osd->op_debug_log_vec[i].osd_enqueued;
+              log_file << std::fixed << osd->op_debug_log_vec[i].op_enqueued;
               log_file << ",";
-              log_file << std::fixed << osd->op_debug_log_vec[i].osd_dequeued;
+              log_file << std::fixed << osd->op_debug_log_vec[i].op_dequeued;
               log_file << ",";
-              log_file << std::fixed << osd->op_debug_log_vec[i].osd_done;
+              log_file << std::fixed << osd->op_debug_log_vec[i].op_done;
               log_file << ",";
               log_file << std::fixed << osd->op_debug_log_vec[i].read? 1:0;
               log_file << ",";
@@ -2485,7 +2485,7 @@ public:
           }
           log_file.close();
       }
-      else if (command == "reset op vector")
+      else if (prefix == "reset op vector")
       {
           osd->op_debug_log_vec.clear();
       }
