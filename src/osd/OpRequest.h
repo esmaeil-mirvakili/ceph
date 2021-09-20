@@ -35,7 +35,7 @@ private:
 public:
   ceph::mono_clock::time_point dispatched_time;
   ceph::mono_clock::time_point enqueued_time;
-  ceph::mono_clock::time_point dequeued_time;
+  ceph::mono_clock::time_point dequeued_time2;
   ceph::mono_clock::time_point started_time;
   ceph::mono_clock::time_point done_time;
   bool log_write;

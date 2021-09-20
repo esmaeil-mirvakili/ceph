@@ -9839,7 +9839,7 @@ void OSD::dequeue_op(
   ThreadPool::TPHandle &handle)
 {
   const Message *m = op->get_req();
-  op->dequeued_time = ceph::mono_clock::now();
+  op->dequeued_time2 = ceph::mono_clock::now();
   FUNCTRACE(cct);
   OID_EVENT_TRACE_WITH_MSG(m, "DEQUEUE_OP_BEGIN", false);
 

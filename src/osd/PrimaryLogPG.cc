@@ -2408,7 +2408,7 @@ void PrimaryLogPG::do_op(OpRequestRef& op) //my_log
     OSD::op_debug_log log;
     log.op_dispatched = std::chrono::nanoseconds(op->dispatched_time - mono_clock::zero()).count();
     log.op_enqueued = std::chrono::nanoseconds(op->enqueued_time - mono_clock::zero()).count();
-    log.op_dequeued = std::chrono::nanoseconds(op->dequeued_time - mono_clock::zero()).count();
+    log.op_dequeued = std::chrono::nanoseconds(op->dequeued_time2 - mono_clock::zero()).count();
     log.op_started = std::chrono::nanoseconds(op->started_time - mono_clock::zero()).count();
     log.op_done = std::chrono::nanoseconds(op->done_time - mono_clock::zero()).count();
     log.read = op->log_read;
