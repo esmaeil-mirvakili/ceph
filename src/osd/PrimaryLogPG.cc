@@ -2411,9 +2411,9 @@ void PrimaryLogPG::do_op(OpRequestRef& op) //my_log
     log.op_dequeued = std::chrono::nanoseconds(op->dequeued_time2 - mono_clock::zero()).count();
     log.op_started = std::chrono::nanoseconds(op->started_time - mono_clock::zero()).count();
     log.op_done = std::chrono::nanoseconds(op->done_time - mono_clock::zero()).count();
-    log.read = op->log_read;
-    log.write = op->log_write;
-    log.write_full = op->log_write_full;
+    log.read = ctx->log_read;
+    log.write = ctx->log_write;
+    log.write_full = ctx->log_write_full;
     osd->osd->op_debug_log_vec.push_back(log);
 
   utime_t prepare_latency = ceph_clock_now();
@@ -3943,15 +3943,7 @@ void PrimaryLogPG::promote_object(ObjectContextRef obc,
 
 void PrimaryLogPG::execute_ctx(OpContext *ctx)
 {
-  if(myfile == nullptr){
-      ofstream file;
-      file.open("ctx_log.log");
-      myfile = &file;
-  }
-  int ind_1 = 0;
   FUNCTRACE(cct);
-    myfile->write("1", 1);
-    myfile->flush();
   dout(10) << __func__ << " " << ctx << dendl;
   ctx->reset_obs(ctx->obc);
   ctx->update_log_only = false; // reset in case finish_copyfrom() is re-running execute_ctx
@@ -3959,15 +3951,11 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
   auto m = op->get_req<MOSDOp>();
   ObjectContextRef obc = ctx->obc;
   const hobject_t& soid = obc->obs.oi.soid;
-    (*myfile) << ind_1 << "\n";
-    ind_1++;
-    myfile->flush();
+
   // this method must be idempotent since we may call it several times
   // before we finally apply the resulting transaction.
   ctx->op_t.reset(new PGTransaction);
-    (*myfile) << ind_1 << "\n";
-    ind_1++;
-    myfile->flush();
+
   if (op->may_write() || op->may_cache()) {
     // snap
     if (!(m->has_flag(CEPH_OSD_FLAG_ENFORCE_SNAPC)) &&
@@ -4003,15 +3991,11 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
 	     << " ov " << obc->obs.oi.version
 	     << dendl;
   }
-    (*myfile) << ind_1 << "\n";
-    ind_1++;
-    myfile->flush();
+
   if (!ctx->user_at_version)
     ctx->user_at_version = obc->obs.oi.user_version;
   dout(30) << __func__ << " user_at_version " << ctx->user_at_version << dendl;
-    (*myfile) << ind_1 << "\n";
-    ind_1++;
-    myfile->flush();
+
   {
 #ifdef WITH_LTTNG
     osd_reqid_t reqid = ctx->op->get_reqid();
@@ -4019,21 +4003,14 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
     tracepoint(osd, prepare_tx_enter, reqid.name._type,
         reqid.name._num, reqid.tid, reqid.inc);
   }
-    (*myfile) << ind_1 << "\n";
-    ind_1++;
-    myfile->flush();
 #ifdef HAVE_JAEGER
   if (ctx->op->osd_parent_span) {
     auto execute_span = jaeger_tracing::child_span(__func__, ctx->op->osd_parent_span);
   }
 #endif
-    (*myfile) << ind_1 << "\n";
-    ind_1++;
-    myfile->flush();
+
   int result = prepare_transaction(ctx); // my_log
-    (*myfile) << ind_1 << "\n";
-    ind_1++;
-    myfile->flush();
+
   {
 #ifdef WITH_LTTNG
     osd_reqid_t reqid = ctx->op->get_reqid();
@@ -4041,9 +4018,7 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
     tracepoint(osd, prepare_tx_exit, reqid.name._type,
         reqid.name._num, reqid.tid, reqid.inc);
   }
-    (*myfile) << ind_1 << "\n";
-    ind_1++;
-    myfile->flush();
+
   bool pending_async_reads = !ctx->pending_async_reads.empty();
   if (result == -EINPROGRESS || pending_async_reads) {
     // come back later.
@@ -4054,17 +4029,13 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
     }
     return;
   }
-    (*myfile) << ind_1 << "\n";
-    ind_1++;
-    myfile->flush();
+
   if (result == -EAGAIN) {
     // clean up after the ctx
     close_op_ctx(ctx);
     return;
   }
-    (*myfile) << ind_1 << "\n";
-    ind_1++;
-    myfile->flush();
+
   bool ignore_out_data = false;
   if (!ctx->op_t->empty() &&
       op->may_write() &&
@@ -4086,9 +4057,7 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
       result = 0;
     }
   }
-    (*myfile) << ind_1 << "\n";
-    ind_1++;
-    myfile->flush();
+
   // prepare the reply
   ctx->reply = new MOSDOpReply(m, result, get_osdmap_epoch(), 0,
 			       ignore_out_data);
@@ -4104,9 +4073,7 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
     complete_read_ctx(result, ctx);
     return;
   }
-    (*myfile) << ind_1 << "\n";
-    ind_1++;
-    myfile->flush();
+
   ctx->reply->set_reply_versions(ctx->at_version, ctx->user_at_version);
 
   ceph_assert(op->may_write() || op->may_cache());
@@ -4193,9 +4160,6 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
   issue_repop(repop, ctx);
   eval_repop(repop);
   repop->put();
-    (*myfile) << "end\n";
-    ind_1++;
-    myfile->flush();
 }
 
 void PrimaryLogPG::close_op_ctx(OpContext *ctx) {
@@ -5920,7 +5884,7 @@ int PrimaryLogPG::do_osd_ops(OpContext *ctx, vector<OSDOp>& ops)  // my_log
 	if (!ctx->data_off) {
 	  ctx->data_off = op.extent.offset;
 	}
-	ctx->op->log_read = true;
+	ctx->log_read = true;
 	result = do_read(ctx, osd_op); // my_log read
       } else {
 	result = op_finisher->execute();
@@ -6512,7 +6476,7 @@ int PrimaryLogPG::do_osd_ops(OpContext *ctx, vector<OSDOp>& ops)  // my_log
       // -- object data --
 
     case CEPH_OSD_OP_WRITE: // my_log write
-        ctx->op->log_write = true;
+        ctx->log_write = true;
       ++ctx->num_write;
       result = 0;
       { // write
@@ -6623,7 +6587,7 @@ int PrimaryLogPG::do_osd_ops(OpContext *ctx, vector<OSDOp>& ops)  // my_log
       break;
 
     case CEPH_OSD_OP_WRITEFULL:  // my_log write full onj
-        ctx->op->log_write_full = true;
+        ctx->log_write_full = true;
       ++ctx->num_write;
       result = 0;
       { // write full object

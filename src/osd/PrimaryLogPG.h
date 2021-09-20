@@ -605,6 +605,9 @@ public:
    */
   struct OpContext {
     OpRequestRef op;
+      bool log_write;
+      bool log_write_full;
+      bool log_read;
     osd_reqid_t reqid;
     std::vector<OSDOp> *ops;
 
