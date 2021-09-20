@@ -2421,7 +2421,8 @@ void PrimaryLogPG::do_op(OpRequestRef& op) //my_log
 //    log.write = ctx->log_write;
 //    log.write_full = ctx->log_write_full;
 //    osd->osd->op_debug_log_vec.push_back(log);
-    osd->osd->op_debug_log_vec.push_back({true, true, true, 1,1,1,1,1});
+    if( osd != nullptr && osd->osd != nullptr)
+        osd->osd->op_debug_log_vec.push_back({true, true, true, 1,1,1,1,1});
 
   utime_t prepare_latency = ceph_clock_now();
   prepare_latency -= op->get_dequeued_time();
