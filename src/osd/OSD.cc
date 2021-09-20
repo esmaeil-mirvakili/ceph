@@ -2467,7 +2467,7 @@ public:
       {
           std::ofstream log_file("codel_log_osd_op.csv");
           log_file << "dispatch, enqueued, dequeued, done, read, write, write_full\n";
-          for (unsigned int i = 0; i < osd->op_debug_log_vec.size(); i++){
+          for (unsigned int i = 0; i < osd->op_dispatched_vec.size(); i++){
               log_file << std::fixed << osd->op_dispatched_vec[i];
               log_file << ",";
               log_file << std::fixed << osd->op_enqueued_vec[i];
