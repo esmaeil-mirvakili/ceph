@@ -2488,6 +2488,14 @@ public:
       else if (prefix == "reset op vector")
       {
           osd->op_debug_log_vec.clear();
+          read_vec.clear();
+          write_vec.clear();
+          write_full_vec.clear();
+          op_dispatched_vec.clear();
+          op_enqueued_vec.clear();
+          op_dequeued_vec.clear();
+          op_started_vec.clear();
+          op_done_vec.clear();
       }
   }
   void call_async(
