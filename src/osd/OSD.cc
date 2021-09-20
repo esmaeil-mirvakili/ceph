@@ -2468,19 +2468,19 @@ public:
           std::ofstream log_file("codel_log_osd_op.csv");
           log_file << "dispatch, enqueued, dequeued, done, read, write, write_full\n";
           for (unsigned int i = 0; i < osd->op_debug_log_vec.size(); i++){
-              log_file << std::fixed << osd->op_debug_log_vec[i].op_dispatched;
+              log_file << std::fixed << osd->op_dispatched_vec[i];
               log_file << ",";
-              log_file << std::fixed << osd->op_debug_log_vec[i].op_enqueued;
+              log_file << std::fixed << osd->op_enqueued_vec[i];
               log_file << ",";
-              log_file << std::fixed << osd->op_debug_log_vec[i].op_dequeued;
+              log_file << std::fixed << osd->op_dequeued_vec[i];
               log_file << ",";
-              log_file << std::fixed << osd->op_debug_log_vec[i].op_done;
+              log_file << std::fixed << osd->op_done_vec[i];
               log_file << ",";
-              log_file << std::fixed << osd->op_debug_log_vec[i].read? 1:0;
+              log_file << std::fixed << osd->read_vec[i]? 1:0;
               log_file << ",";
-              log_file << std::fixed << osd->op_debug_log_vec[i].write? 1:0;
+              log_file << std::fixed << osd->write_vec[i]? 1:0;
               log_file << ",";
-              log_file << std::fixed << osd->op_debug_log_vec[i].write_full? 1:0;
+              log_file << std::fixed << osd->write_full_vec[i]? 1:0;
               log_file << "\n";
           }
           log_file.close();
