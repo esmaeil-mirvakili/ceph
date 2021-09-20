@@ -3950,8 +3950,7 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
   }
   int ind_1 = 0;
   FUNCTRACE(cct);
-    (*myfile) << ind_1 << "\n";
-    ind_1++;
+    myfile->write("1", 1)
     myfile->flush();
   dout(10) << __func__ << " " << ctx << dendl;
   ctx->reset_obs(ctx->obc);
