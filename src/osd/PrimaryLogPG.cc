@@ -2402,9 +2402,9 @@ void PrimaryLogPG::do_op(OpRequestRef& op) //my_log
 
   op->mark_started();
 // my_log started
-//    op->set_started_time(ceph::mono_clock::now());\\new_change
+//    op->set_started_time(ceph::mono_clock::now());//new_change
   execute_ctx(ctx);
-//    op->set_done_time(ceph::mono_clock::now());\\new_change
+//    op->set_done_time(ceph::mono_clock::now());//new_change
 //    int64_t op_dispatched = std::chrono::nanoseconds(op->get_dispatched_time() - mono_clock::zero()).count();
 //    int64_t op_enqueued = std::chrono::nanoseconds(op->get_enqueued_time() - mono_clock::zero()).count();
 //    int64_t op_dequeued = std::chrono::nanoseconds(op->get_dequeued_time2() - mono_clock::zero()).count();
@@ -2421,14 +2421,14 @@ void PrimaryLogPG::do_op(OpRequestRef& op) //my_log
 //    OSD::op_dequeued_vec.push_back(op_dequeued);
 //    OSD::op_started_vec.push_back(op_started);
 //    OSD::op_done_vec.push_back(op_done);
-    OSD::read_vec.push_back(true);
-    OSD::write_vec.push_back(false);
-    OSD::write_full_vec.push_back(false);
-    OSD::op_dispatched_vec.push_back(1);
-    OSD::op_enqueued_vec.push_back(1);
-    OSD::op_dequeued_vec.push_back(1);
-    OSD::op_started_vec.push_back(1);
-    OSD::op_done_vec.push_back(1);
+//    OSD::read_vec.push_back(true);
+//    OSD::write_vec.push_back(false);
+//    OSD::write_full_vec.push_back(false);
+//    OSD::op_dispatched_vec.push_back(1);
+//    OSD::op_enqueued_vec.push_back(1);
+//    OSD::op_dequeued_vec.push_back(1);
+//    OSD::op_started_vec.push_back(1);
+//    OSD::op_done_vec.push_back(1);
 
   utime_t prepare_latency = ceph_clock_now();
   prepare_latency -= op->get_dequeued_time();
