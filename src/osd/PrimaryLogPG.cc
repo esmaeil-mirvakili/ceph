@@ -2405,16 +2405,16 @@ void PrimaryLogPG::do_op(OpRequestRef& op) //my_log
 //    op->set_started_time(ceph::mono_clock::now()); new_change
   execute_ctx(ctx);
 //    op->set_done_time(ceph::mono_clock::now());new_change
-    OSD::op_debug_log log;
-    log.op_dispatched = std::chrono::nanoseconds(op->get_dispatched_time() - mono_clock::zero()).count();
-    log.op_enqueued = std::chrono::nanoseconds(op->get_enqueued_time() - mono_clock::zero()).count();
-    log.op_dequeued = std::chrono::nanoseconds(op->get_dequeued_time2() - mono_clock::zero()).count();
-    log.op_started = std::chrono::nanoseconds(op->get_started_time() - mono_clock::zero()).count();
-    log.op_done = std::chrono::nanoseconds(op->get_done_time() - mono_clock::zero()).count();
-    log.read = ctx->log_read;
-    log.write = ctx->log_write;
-    log.write_full = ctx->log_write_full;
-    osd->osd->op_debug_log_vec.push_back(log);
+//    OSD::op_debug_log log;
+//    log.op_dispatched = std::chrono::nanoseconds(op->get_dispatched_time() - mono_clock::zero()).count();
+//    log.op_enqueued = std::chrono::nanoseconds(op->get_enqueued_time() - mono_clock::zero()).count();
+//    log.op_dequeued = std::chrono::nanoseconds(op->get_dequeued_time2() - mono_clock::zero()).count();
+//    log.op_started = std::chrono::nanoseconds(op->get_started_time() - mono_clock::zero()).count();
+//    log.op_done = std::chrono::nanoseconds(op->get_done_time() - mono_clock::zero()).count();
+//    log.read = ctx->log_read;
+//    log.write = ctx->log_write;
+//    log.write_full = ctx->log_write_full;
+//    osd->osd->op_debug_log_vec.push_back(log);
 
   utime_t prepare_latency = ceph_clock_now();
   prepare_latency -= op->get_dequeued_time();
