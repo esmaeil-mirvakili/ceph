@@ -1165,17 +1165,14 @@ protected:
     std::function<void(int,const std::string&,ceph::buffer::list&)> on_finish);
 
 public:
-  struct op_debug_log{
-      bool read;
-      bool write;
-      bool write_full;
-      int64_t op_dispatched;
-      int64_t op_enqueued;
-      int64_t op_dequeued;
-      int64_t op_started;
-      int64_t op_done;
-  };
-  std::vector<OSD::op_debug_log> op_debug_log_vec;
+    std::vector<bool> read_vec;
+    std::vector<bool> write_vec;
+    std::vector<bool> write_full_vec;
+    std::vector<int64_t> op_dispatched_vec;
+    std::vector<int64_t> op_enqueued_vec;
+    std::vector<int64_t> op_dequeued_vec;
+    std::vector<int64_t> op_started_vec;
+    std::vector<int64_t> op_done_vec;
 
   int get_nodeid() { return whoami; }
 

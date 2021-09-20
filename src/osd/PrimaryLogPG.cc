@@ -2402,26 +2402,25 @@ void PrimaryLogPG::do_op(OpRequestRef& op) //my_log
 
   op->mark_started();
 // my_log started
-//    op->set_started_time(ceph::mono_clock::now()); new_change
+    op->set_started_time(ceph::mono_clock::now());
   execute_ctx(ctx);
-//    op->set_done_time(ceph::mono_clock::now());new_change
-//    OSD::op_debug_log log;
-//    log.op_done = 1;
-//    log.op_started = 1;
-//    log.op_dequeued = 1;
-//    log.op_enqueued = 1;
-//    log.op_dispatched = 1;
-//    log.read = true;
-//    log.op_dispatched = std::chrono::nanoseconds(op->get_dispatched_time() - mono_clock::zero()).count();
-//    log.op_enqueued = std::chrono::nanoseconds(op->get_enqueued_time() - mono_clock::zero()).count();
-//    log.op_dequeued = std::chrono::nanoseconds(op->get_dequeued_time2() - mono_clock::zero()).count();
-//    log.op_started = std::chrono::nanoseconds(op->get_started_time() - mono_clock::zero()).count();
-//    log.op_done = std::chrono::nanoseconds(op->get_done_time() - mono_clock::zero()).count();
-//    log.read = ctx->log_read;
-//    log.write = ctx->log_write;
-//    log.write_full = ctx->log_write_full;
-//    osd->osd->op_debug_log_vec.push_back(log);
-    osd->osd->op_debug_log_vec.push_back({true, true, true, 1,1,1,1,1});
+    op->set_done_time(ceph::mono_clock::now());
+    int64_t op_dispatched = std::chrono::nanoseconds(op->get_dispatched_time() - mono_clock::zero()).count();
+    int64_t op_enqueued = std::chrono::nanoseconds(op->get_enqueued_time() - mono_clock::zero()).count();
+    int64_t op_dequeued = std::chrono::nanoseconds(op->get_dequeued_time2() - mono_clock::zero()).count();
+    int64_t op_started = std::chrono::nanoseconds(op->get_started_time() - mono_clock::zero()).count();
+    int64_t op_done = std::chrono::nanoseconds(op->get_done_time() - mono_clock::zero()).count();
+    int64_t op_read = ctx->log_read;
+    int64_t op_write = ctx->log_write;
+    int64_t op_write_full = ctx->log_write_full;
+    osd->osd->read_vec.push_back(op_read);
+    osd->osd->write_vec.push_back(op_write);
+    osd->osd->write_full_vec.push_back(op_write_full);
+    osd->osd->op_dispatched_vec.push_back(op_dispatched);
+    osd->osd->op_enqueued_vec.push_back(op_enqueued);
+    osd->osd->op_dequeued_vec.push_back(op_dequeued);
+    osd->osd->op_started_vec.push_back(op_started);
+    osd->osd->op_done_vec.push_back(op_done);
 
   utime_t prepare_latency = ceph_clock_now();
   prepare_latency -= op->get_dequeued_time();
@@ -6590,7 +6589,7 @@ int PrimaryLogPG::do_osd_ops(OpContext *ctx, vector<OSDOp>& ops)  // my_log
 	ctx->clean_regions.mark_data_region_dirty(op.extent.offset, op.extent.length);
 	dout(10) << "clean_regions modified" << ctx->clean_regions << dendl;
       }
-//      ctx->op->set_enqueued_time(ceph::mono_clock::now());new_change
+      ctx->op->set_enqueued_time(ceph::mono_clock::now());
       break;
 
     case CEPH_OSD_OP_WRITEFULL:  // my_log write full onj

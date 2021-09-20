@@ -7110,7 +7110,7 @@ void OSD::dispatch_session_waiting(const ceph::ref_t<Session>& session, OSDMapRe
   auto i = session->waiting_on_map.begin();
   while (i != session->waiting_on_map.end()) {
     OpRequestRef op = &(*i);
-//    op->set_dispatched_time(ceph::mono_clock::now()); new_change
+    op->set_dispatched_time(ceph::mono_clock::now());
     ceph_assert(ms_can_fast_dispatch(op->get_req()));
     auto m = op->get_req<MOSDFastDispatchOp>();
     if (m->get_min_epoch() > osdmap->get_epoch()) {
@@ -7200,7 +7200,7 @@ void OSD::ms_fast_dispatch(Message *m)
   }
 
   OpRequestRef op = op_tracker.create_request<OpRequest, Message*>(m);
-//  op->set_dispatched_time(ceph::mono_clock::now()); new_change
+  op->set_dispatched_time(ceph::mono_clock::now());
   {
 #ifdef WITH_LTTNG
     osd_reqid_t reqid = op->get_reqid();
@@ -9803,7 +9803,7 @@ void OSD::enqueue_op(spg_t pg, OpRequestRef&& op, epoch_t epoch)
 #endif
   op->mark_queued_for_pg();
   logger->tinc(l_osd_op_before_queue_op_lat, latency);
-//  op->set_enqueued_time(ceph::mono_clock::now());  new_change
+  op->set_enqueued_time(ceph::mono_clock::now());
   if (type == MSG_OSD_PG_PUSH ||
       type == MSG_OSD_PG_PUSH_REPLY) {
     op_shardedwq.queue(
@@ -9839,7 +9839,7 @@ void OSD::dequeue_op(
   ThreadPool::TPHandle &handle)
 {
   const Message *m = op->get_req();
-//  op->set_dequeued_time2(ceph::mono_clock::now());  new_change
+  op->set_dequeued_time2(ceph::mono_clock::now());
   FUNCTRACE(cct);
   OID_EVENT_TRACE_WITH_MSG(m, "DEQUEUE_OP_BEGIN", false);
 
