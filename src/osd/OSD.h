@@ -1113,14 +1113,14 @@ public:
   void update_log_config();
   void check_config();
 
-    static std::vector<bool> read_vec;
-    static std::vector<bool> write_vec;
-    static std::vector<bool> write_full_vec;
-    static std::vector<double> op_dispatched_vec;
-    static std::vector<double> op_enqueued_vec;
-    static std::vector<double> op_dequeued_vec;
-    static std::vector<double> op_started_vec;
-    static std::vector<double> op_done_vec;
+    static std::list<bool> read_vec;
+    static std::list<bool> write_vec;
+    static std::list<bool> write_full_vec;
+    static std::list<double> op_dispatched_vec;
+    static std::list<double> op_enqueued_vec;
+    static std::list<double> op_dequeued_vec;
+    static std::list<double> op_started_vec;
+    static std::list<double> op_done_vec;
 
 protected:
 
