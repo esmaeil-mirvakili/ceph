@@ -7200,7 +7200,7 @@ void OSD::ms_fast_dispatch(Message *m)
   }
 
   OpRequestRef op = op_tracker.create_request<OpRequest, Message*>(m);
-  op->dispatched_time = ceph::mono_clock::now();
+  op->set_dispatched_time(ceph::mono_clock::now());
   {
 #ifdef WITH_LTTNG
     osd_reqid_t reqid = op->get_reqid();
