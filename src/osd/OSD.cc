@@ -2487,15 +2487,14 @@ public:
       }
       else if (prefix == "reset op vector")
       {
-          osd->op_debug_log_vec.clear();
-          read_vec.clear();
-          write_vec.clear();
-          write_full_vec.clear();
-          op_dispatched_vec.clear();
-          op_enqueued_vec.clear();
-          op_dequeued_vec.clear();
-          op_started_vec.clear();
-          op_done_vec.clear();
+          osd->read_vec.clear();
+          osd->write_vec.clear();
+          osd->write_full_vec.clear();
+          osd->op_dispatched_vec.clear();
+          osd->op_enqueued_vec.clear();
+          osd->op_dequeued_vec.clear();
+          osd->op_started_vec.clear();
+          osd->op_done_vec.clear();
       }
   }
   void call_async(
