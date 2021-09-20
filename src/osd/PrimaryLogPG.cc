@@ -3943,7 +3943,15 @@ void PrimaryLogPG::promote_object(ObjectContextRef obc,
 
 void PrimaryLogPG::execute_ctx(OpContext *ctx)
 {
+  if(myfile == nullptr){
+      myfile = new fstream();
+      myfile->open('ctx_log.log')
+  }
+  int ind_1 = 0;
   FUNCTRACE(cct);
+    (*myfile) << ind_1 << "\n";
+    ind_1++;
+    myfile->flush();
   dout(10) << __func__ << " " << ctx << dendl;
   ctx->reset_obs(ctx->obc);
   ctx->update_log_only = false; // reset in case finish_copyfrom() is re-running execute_ctx
@@ -3951,11 +3959,15 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
   auto m = op->get_req<MOSDOp>();
   ObjectContextRef obc = ctx->obc;
   const hobject_t& soid = obc->obs.oi.soid;
-
+    (*myfile) << ind_1 << "\n";
+    ind_1++;
+    myfile->flush();
   // this method must be idempotent since we may call it several times
   // before we finally apply the resulting transaction.
   ctx->op_t.reset(new PGTransaction);
-
+    (*myfile) << ind_1 << "\n";
+    ind_1++;
+    myfile->flush();
   if (op->may_write() || op->may_cache()) {
     // snap
     if (!(m->has_flag(CEPH_OSD_FLAG_ENFORCE_SNAPC)) &&
@@ -3991,11 +4003,15 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
 	     << " ov " << obc->obs.oi.version
 	     << dendl;
   }
-
+    (*myfile) << ind_1 << "\n";
+    ind_1++;
+    myfile->flush();
   if (!ctx->user_at_version)
     ctx->user_at_version = obc->obs.oi.user_version;
   dout(30) << __func__ << " user_at_version " << ctx->user_at_version << dendl;
-
+    (*myfile) << ind_1 << "\n";
+    ind_1++;
+    myfile->flush();
   {
 #ifdef WITH_LTTNG
     osd_reqid_t reqid = ctx->op->get_reqid();
@@ -4003,14 +4019,21 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
     tracepoint(osd, prepare_tx_enter, reqid.name._type,
         reqid.name._num, reqid.tid, reqid.inc);
   }
+    (*myfile) << ind_1 << "\n";
+    ind_1++;
+    myfile->flush();
 #ifdef HAVE_JAEGER
   if (ctx->op->osd_parent_span) {
     auto execute_span = jaeger_tracing::child_span(__func__, ctx->op->osd_parent_span);
   }
 #endif
-
+    (*myfile) << ind_1 << "\n";
+    ind_1++;
+    myfile->flush();
   int result = prepare_transaction(ctx); // my_log
-
+    (*myfile) << ind_1 << "\n";
+    ind_1++;
+    myfile->flush();
   {
 #ifdef WITH_LTTNG
     osd_reqid_t reqid = ctx->op->get_reqid();
@@ -4018,7 +4041,9 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
     tracepoint(osd, prepare_tx_exit, reqid.name._type,
         reqid.name._num, reqid.tid, reqid.inc);
   }
-
+    (*myfile) << ind_1 << "\n";
+    ind_1++;
+    myfile->flush();
   bool pending_async_reads = !ctx->pending_async_reads.empty();
   if (result == -EINPROGRESS || pending_async_reads) {
     // come back later.
@@ -4029,13 +4054,17 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
     }
     return;
   }
-
+    (*myfile) << ind_1 << "\n";
+    ind_1++;
+    myfile->flush();
   if (result == -EAGAIN) {
     // clean up after the ctx
     close_op_ctx(ctx);
     return;
   }
-
+    (*myfile) << ind_1 << "\n";
+    ind_1++;
+    myfile->flush();
   bool ignore_out_data = false;
   if (!ctx->op_t->empty() &&
       op->may_write() &&
@@ -4057,7 +4086,9 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
       result = 0;
     }
   }
-
+    (*myfile) << ind_1 << "\n";
+    ind_1++;
+    myfile->flush();
   // prepare the reply
   ctx->reply = new MOSDOpReply(m, result, get_osdmap_epoch(), 0,
 			       ignore_out_data);
@@ -4073,7 +4104,9 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
     complete_read_ctx(result, ctx);
     return;
   }
-
+    (*myfile) << ind_1 << "\n";
+    ind_1++;
+    myfile->flush();
   ctx->reply->set_reply_versions(ctx->at_version, ctx->user_at_version);
 
   ceph_assert(op->may_write() || op->may_cache());
@@ -4160,6 +4193,9 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
   issue_repop(repop, ctx);
   eval_repop(repop);
   repop->put();
+    (*myfile) << "end\n";
+    ind_1++;
+    myfile->flush();
 }
 
 void PrimaryLogPG::close_op_ctx(OpContext *ctx) {
