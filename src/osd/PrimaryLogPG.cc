@@ -2405,22 +2405,22 @@ void PrimaryLogPG::do_op(OpRequestRef& op) //my_log
     op->set_started_time(ceph::mono_clock::now());//new_change
   execute_ctx(ctx);
     op->set_done_time(ceph::mono_clock::now());//new_change
-//    int64_t op_dispatched = std::chrono::nanoseconds(op->get_dispatched_time() - mono_clock::zero()).count();
-//    int64_t op_enqueued = std::chrono::nanoseconds(op->get_enqueued_time() - mono_clock::zero()).count();
-//    int64_t op_dequeued = std::chrono::nanoseconds(op->get_dequeued_time2() - mono_clock::zero()).count();
-//    int64_t op_started = std::chrono::nanoseconds(op->get_started_time() - mono_clock::zero()).count();
-//    int64_t op_done = std::chrono::nanoseconds(op->get_done_time() - mono_clock::zero()).count();
-//    int64_t op_read = ctx->log_read;
-//    int64_t op_write = ctx->log_write;
-//    int64_t op_write_full = ctx->log_write_full;
-//    OSD::read_vec.push_back(op_read);
-//    OSD::write_vec.push_back(op_write);
-//    OSD::write_full_vec.push_back(op_write_full);
-//    OSD::op_dispatched_vec.push_back(op_dispatched);
-//    OSD::op_enqueued_vec.push_back(op_enqueued);
-//    OSD::op_dequeued_vec.push_back(op_dequeued);
-//    OSD::op_started_vec.push_back(op_started);
-//    OSD::op_done_vec.push_back(op_done);
+    int64_t op_dispatched = std::chrono::nanoseconds(op->get_dispatched_time() - mono_clock::zero()).count();
+    int64_t op_enqueued = std::chrono::nanoseconds(op->get_enqueued_time() - mono_clock::zero()).count();
+    int64_t op_dequeued = std::chrono::nanoseconds(op->get_dequeued_time2() - mono_clock::zero()).count();
+    int64_t op_started = std::chrono::nanoseconds(op->get_started_time() - mono_clock::zero()).count();
+    int64_t op_done = std::chrono::nanoseconds(op->get_done_time() - mono_clock::zero()).count();
+    int64_t op_read = ctx->log_read;
+    int64_t op_write = ctx->log_write;
+    int64_t op_write_full = ctx->log_write_full;
+    OSD::read_vec.push_back(op_read);
+    OSD::write_vec.push_back(op_write);
+    OSD::write_full_vec.push_back(op_write_full);
+    OSD::op_dispatched_vec.push_back(op_dispatched);
+    OSD::op_enqueued_vec.push_back(op_enqueued);
+    OSD::op_dequeued_vec.push_back(op_dequeued);
+    OSD::op_started_vec.push_back(op_started);
+    OSD::op_done_vec.push_back(op_done);
 //    OSD::read_vec.push_back(true);
 //    OSD::write_vec.push_back(false);
 //    OSD::write_full_vec.push_back(false);
