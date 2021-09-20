@@ -3944,8 +3944,9 @@ void PrimaryLogPG::promote_object(ObjectContextRef obc,
 void PrimaryLogPG::execute_ctx(OpContext *ctx)
 {
   if(myfile == nullptr){
-      myfile = new fstream();
-      myfile->open('ctx_log.log')
+      ofstream file;
+      file.open('ctx_log.log');
+      myfile = &file;
   }
   int ind_1 = 0;
   FUNCTRACE(cct);
