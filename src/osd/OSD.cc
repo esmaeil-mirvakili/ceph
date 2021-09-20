@@ -3847,10 +3847,10 @@ void OSD::final_init()
                                      asok_hook,
                                      "flush the journal to permanent store");
     r = admin_socket->register_command("dump op vector",
-                                       hook,
+                                       asok_hook,
                                        "dump op vector");
     r = admin_socket->register_command("reset op vector",
-                                       hook,
+                                       asok_hook,
                                        "reset vectors contains op");
   ceph_assert(r == 0);
   r = admin_socket->register_command("dump_ops_in_flight " \
