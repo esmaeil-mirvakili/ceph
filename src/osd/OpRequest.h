@@ -33,14 +33,6 @@ private:
   OpInfo op_info;
 
 public:
-  ceph::mono_clock::time_point dispatched_time;
-  ceph::mono_clock::time_point enqueued_time;
-  ceph::mono_clock::time_point dequeued_time2;
-  ceph::mono_clock::time_point started_time;
-  ceph::mono_clock::time_point done_time;
-  bool log_write;
-  bool log_write_full;
-  bool log_read;
   int maybe_init_op_info(const OSDMap &osdmap);
 
   auto get_flags() const { return op_info.get_flags(); }
@@ -76,6 +68,14 @@ private:
   uint8_t hit_flag_points;
   uint8_t latest_flag_point;
   utime_t dequeued_time;
+    ceph::mono_clock::time_point dispatched_time;
+    ceph::mono_clock::time_point enqueued_time;
+    ceph::mono_clock::time_point dequeued_time2;
+    ceph::mono_clock::time_point started_time;
+    ceph::mono_clock::time_point done_time;
+    bool log_write;
+    bool log_write_full;
+    bool log_read;
   static const uint8_t flag_queued_for_pg=1 << 0;
   static const uint8_t flag_reached_pg =  1 << 1;
   static const uint8_t flag_delayed =     1 << 2;
@@ -163,6 +163,62 @@ public:
   void set_dequeued_time(utime_t deq_time) {
     dequeued_time = deq_time;
   }
+
+    ceph::mono_clock::time_point get_dispatched_time() const {
+        return dispatched_time;
+    }
+    void set_dispatched_time(ceph::mono_clock::time_point deq_time) {
+        dispatched_time = deq_time;
+    }
+
+    ceph::mono_clock::time_point get_enqueued_time() const {
+        return enqueued_time;
+    }
+    void set_enqueued_time(ceph::mono_clock::time_point deq_time) {
+        enqueued_time = deq_time;
+    }
+
+    ceph::mono_clock::time_point get_started_time() const {
+        return started_time;
+    }
+    void set_started_time(ceph::mono_clock::time_point deq_time) {
+        started_time = deq_time;
+    }
+
+    ceph::mono_clock::time_point get_done_time() const {
+        return done_time;
+    }
+    void set_done_time(ceph::mono_clock::time_point deq_time) {
+        done_time = deq_time;
+    }
+
+    ceph::mono_clock::time_point get_dequeued_time2() const {
+        return dequeued_time2;
+    }
+    void set_dequeued_time2(ceph::mono_clock::time_point deq_time) {
+        dequeued_time2 = deq_time;
+    }
+
+    bool get_read_log() const {
+        return log_read;
+    }
+    void set_read_log(bool deq_time) {
+        log_read = deq_time;
+    }
+
+    bool get_write_log() const {
+        return log_write;
+    }
+    void set_write_log(bool deq_time) {
+        log_write = deq_time;
+    }
+
+    bool get_w2_log() const {
+        return log_write_full;
+    }
+    void set_w2_log(bool deq_time) {
+        log_write_full = deq_time;
+    }
 
   osd_reqid_t get_reqid() const {
     return reqid;
