@@ -99,14 +99,6 @@ class OSD;
 class OSDService {
   using OpSchedulerItem = ceph::osd::scheduler::OpSchedulerItem;
 public:
-    std::vector<bool> read_vec;
-    std::vector<bool> write_vec;
-    std::vector<bool> write_full_vec;
-    std::vector<int64_t> op_dispatched_vec;
-    std::vector<int64_t> op_enqueued_vec;
-    std::vector<int64_t> op_dequeued_vec;
-    std::vector<int64_t> op_started_vec;
-    std::vector<int64_t> op_done_vec;
   OSD *osd;
   CephContext *cct;
   ObjectStore::CollectionHandle meta_ch;
@@ -1120,6 +1112,15 @@ public:
                           const std::set <std::string> &changed) override;
   void update_log_config();
   void check_config();
+
+    static std::vector<bool> read_vec;
+    static std::vector<bool> write_vec;
+    static std::vector<bool> write_full_vec;
+    static std::vector<int64_t> op_dispatched_vec;
+    static std::vector<int64_t> op_enqueued_vec;
+    static std::vector<int64_t> op_dequeued_vec;
+    static std::vector<int64_t> op_started_vec;
+    static std::vector<int64_t> op_done_vec;
 
 protected:
 

@@ -2413,14 +2413,14 @@ void PrimaryLogPG::do_op(OpRequestRef& op) //my_log
     int64_t op_read = ctx->log_read;
     int64_t op_write = ctx->log_write;
     int64_t op_write_full = ctx->log_write_full;
-    osd->read_vec.push_back(op_read);
-    osd->write_vec.push_back(op_write);
-    osd->write_full_vec.push_back(op_write_full);
-    osd->op_dispatched_vec.push_back(op_dispatched);
-    osd->op_enqueued_vec.push_back(op_enqueued);
-    osd->op_dequeued_vec.push_back(op_dequeued);
-    osd->op_started_vec.push_back(op_started);
-    osd->op_done_vec.push_back(op_done);
+    OSD::read_vec.push_back(op_read);
+    OSD::write_vec.push_back(op_write);
+    OSD::write_full_vec.push_back(op_write_full);
+    OSD::op_dispatched_vec.push_back(op_dispatched);
+    OSD::op_enqueued_vec.push_back(op_enqueued);
+    OSD::op_dequeued_vec.push_back(op_dequeued);
+    OSD::op_started_vec.push_back(op_started);
+    OSD::op_done_vec.push_back(op_done);
 
   utime_t prepare_latency = ceph_clock_now();
   prepare_latency -= op->get_dequeued_time();

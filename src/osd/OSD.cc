@@ -2467,34 +2467,34 @@ public:
       {
           std::ofstream log_file("codel_log_osd_op.csv");
           log_file << "dispatch, enqueued, dequeued, done, read, write, write_full\n";
-          for (unsigned int i = 0; i < osd->service.op_dispatched_vec.size(); i++){
-              log_file << std::fixed << osd->service.op_dispatched_vec[i];
+          for (unsigned int i = 0; i < OSD::op_dispatched_vec.size(); i++){
+              log_file << std::fixed << OSD::op_dispatched_vec[i];
               log_file << ",";
-              log_file << std::fixed << osd->service.op_enqueued_vec[i];
+              log_file << std::fixed << OSD::op_enqueued_vec[i];
               log_file << ",";
-              log_file << std::fixed << osd->service.op_dequeued_vec[i];
+              log_file << std::fixed << OSD::op_dequeued_vec[i];
               log_file << ",";
-              log_file << std::fixed << osd->service.op_done_vec[i];
+              log_file << std::fixed << OSD::op_done_vec[i];
               log_file << ",";
-              log_file << std::fixed << osd->service.read_vec[i]? 1:0;
+              log_file << std::fixed << OSD::read_vec[i]? 1:0;
               log_file << ",";
-              log_file << std::fixed << osd->service.write_vec[i]? 1:0;
+              log_file << std::fixed << OSD::write_vec[i]? 1:0;
               log_file << ",";
-              log_file << std::fixed << osd->service.write_full_vec[i]? 1:0;
+              log_file << std::fixed << OSD::write_full_vec[i]? 1:0;
               log_file << "\n";
           }
           log_file.close();
       }
       else if (prefix == "reset op vector")
       {
-          osd->service.read_vec.clear();
-          osd->service.write_vec.clear();
-          osd->service.write_full_vec.clear();
-          osd->service.op_dispatched_vec.clear();
-          osd->service.op_enqueued_vec.clear();
-          osd->service.op_dequeued_vec.clear();
-          osd->service.op_started_vec.clear();
-          osd->service.op_done_vec.clear();
+          OSD::read_vec.clear();
+          OSD::write_vec.clear();
+          OSD::write_full_vec.clear();
+          OSD::op_dispatched_vec.clear();
+          OSD::op_enqueued_vec.clear();
+          OSD::op_dequeued_vec.clear();
+          OSD::op_started_vec.clear();
+          OSD::op_done_vec.clear();
       }
   }
   void call_async(
