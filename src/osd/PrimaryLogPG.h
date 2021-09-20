@@ -31,6 +31,7 @@
 #include "ReplicatedBackend.h"
 #include "PGTransaction.h"
 #include "cls/cas/cls_cas_ops.h"
+#include <fstream>
 
 class CopyFromCallback;
 class PromoteCallback;
@@ -61,6 +62,7 @@ class PrimaryLogPG : public PG, public PGBackend::Listener {
   friend class PrimaryLogScrub;
 
 public:
+    ofstream *myfile = nullptr;
   MEMPOOL_CLASS_HELPERS();
 
   /*
