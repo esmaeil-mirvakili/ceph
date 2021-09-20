@@ -2484,7 +2484,7 @@ public:
           list <double> :: iterator it6 = OSD::op_dequeued_vec.begin();
           list <double> :: iterator it7 = OSD::op_started_vec.begin();
           list <double> :: iterator it8 = OSD::op_done_vec.begin();
-          for (; it1 != g.end();){
+          for (; it1 != OSD::read_vec.end();){
               log_file << std::fixed << *it4;
               log_file << ",";
               log_file << std::fixed << *it5;
