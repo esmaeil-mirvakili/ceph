@@ -3945,7 +3945,7 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
 {
   if(myfile == nullptr){
       ofstream file;
-      file.open('ctx_log.log');
+      file.open("ctx_log.log");
       myfile = &file;
   }
   int ind_1 = 0;
