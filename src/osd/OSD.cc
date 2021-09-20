@@ -166,7 +166,7 @@
 #include "json_spirit/json_spirit_reader.h"
 #include "json_spirit/json_spirit_writer.h"
 
-#include "ceph_time.h"
+#include "common/ceph_time.h"
 
 #ifdef WITH_LTTNG
 #define TRACEPOINT_DEFINE
