@@ -6583,7 +6583,7 @@ int PrimaryLogPG::do_osd_ops(OpContext *ctx, vector<OSDOp>& ops)  // my_log
 	ctx->clean_regions.mark_data_region_dirty(op.extent.offset, op.extent.length);
 	dout(10) << "clean_regions modified" << ctx->clean_regions << dendl;
       }
-      op->enqueued_time = ceph::mono_clock::now();
+      ctx->op->enqueued_time = ceph::mono_clock::now();
       break;
 
     case CEPH_OSD_OP_WRITEFULL:  // my_log write full onj
