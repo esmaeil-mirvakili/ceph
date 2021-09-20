@@ -17,7 +17,7 @@
 #include "osd/osd_op_util.h"
 #include "osd/osd_types.h"
 #include "common/TrackedOp.h"
-#include "ceph_time.h"
+#include "common/ceph_time.h"
 #ifdef HAVE_JAEGER
 #include "common/tracer.h"
 #endif
