@@ -166,6 +166,8 @@
 #include "json_spirit/json_spirit_reader.h"
 #include "json_spirit/json_spirit_writer.h"
 
+#include "ceph_time.h"
+
 #ifdef WITH_LTTNG
 #define TRACEPOINT_DEFINE
 #define TRACEPOINT_PROBE_DYNAMIC_LINKAGE
@@ -2460,7 +2462,33 @@ public:
 	   Formatter *f,
 	   std::ostream& ss,
 	   bufferlist& out) override {
-    ceph_abort("should use async hook");
+//    ceph_abort("should use async hook");
+      if (command == "dump op vector")
+      {
+          std::ofstream log_file("codel_log_osd_op.csv");
+          log_file << "dispatch, enqueued, dequeued, done, read, write, write_full\n";
+          for (unsigned int i = 0; i < osd->op_debug_log_vec.size(); i++){
+              log_file << std::fixed << osd->op_debug_log_vec[i].osd_dispatched;
+              log_file << ",";
+              log_file << std::fixed << osd->op_debug_log_vec[i].osd_enqueued;
+              log_file << ",";
+              log_file << std::fixed << osd->op_debug_log_vec[i].osd_dequeued;
+              log_file << ",";
+              log_file << std::fixed << osd->op_debug_log_vec[i].osd_done;
+              log_file << ",";
+              log_file << std::fixed << osd->op_debug_log_vec[i].read? 1:0;
+              log_file << ",";
+              log_file << std::fixed << osd->op_debug_log_vec[i].write? 1:0;
+              log_file << ",";
+              log_file << std::fixed << osd->op_debug_log_vec[i].write_full? 1:0;
+              log_file << "\n";
+          }
+          log_file.close();
+      }
+      else if (command == "reset op vector")
+      {
+          osd->op_debug_log_vec.clear();
+      }
   }
   void call_async(
     std::string_view prefix,
@@ -7082,6 +7110,7 @@ void OSD::dispatch_session_waiting(const ceph::ref_t<Session>& session, OSDMapRe
   auto i = session->waiting_on_map.begin();
   while (i != session->waiting_on_map.end()) {
     OpRequestRef op = &(*i);
+    op->dispatched_time = ceph::mono_clock::now();
     ceph_assert(ms_can_fast_dispatch(op->get_req()));
     auto m = op->get_req<MOSDFastDispatchOp>();
     if (m->get_min_epoch() > osdmap->get_epoch()) {
@@ -7171,6 +7200,7 @@ void OSD::ms_fast_dispatch(Message *m)
   }
 
   OpRequestRef op = op_tracker.create_request<OpRequest, Message*>(m);
+  op->dispatched_time = ceph::mono_clock::now();
   {
 #ifdef WITH_LTTNG
     osd_reqid_t reqid = op->get_reqid();
@@ -9773,6 +9803,7 @@ void OSD::enqueue_op(spg_t pg, OpRequestRef&& op, epoch_t epoch)
 #endif
   op->mark_queued_for_pg();
   logger->tinc(l_osd_op_before_queue_op_lat, latency);
+  op->enqueued_time = ceph::mono_clock::now();
   if (type == MSG_OSD_PG_PUSH ||
       type == MSG_OSD_PG_PUSH_REPLY) {
     op_shardedwq.queue(
@@ -9808,7 +9839,7 @@ void OSD::dequeue_op(
   ThreadPool::TPHandle &handle)
 {
   const Message *m = op->get_req();
-
+  op->dequeued_time = ceph::mono_clock::now();
   FUNCTRACE(cct);
   OID_EVENT_TRACE_WITH_MSG(m, "DEQUEUE_OP_BEGIN", false);
 

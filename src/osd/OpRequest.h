@@ -17,6 +17,7 @@
 #include "osd/osd_op_util.h"
 #include "osd/osd_types.h"
 #include "common/TrackedOp.h"
+#include "ceph_time.h"
 #ifdef HAVE_JAEGER
 #include "common/tracer.h"
 #endif
@@ -32,6 +33,14 @@ private:
   OpInfo op_info;
 
 public:
+  ceph::mono_clock::time_point dispatched_time;
+  ceph::mono_clock::time_point enqueued_time;
+  ceph::mono_clock::time_point dequeued_time;
+  ceph::mono_clock::time_point started_time;
+  ceph::mono_clock::time_point done_time;
+  bool log_write;
+  bool log_write_full;
+  bool log_read;
   int maybe_init_op_info(const OSDMap &osdmap);
 
   auto get_flags() const { return op_info.get_flags(); }

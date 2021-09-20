@@ -54,6 +54,8 @@
 #include "osd/osd_perf_counters.h"
 #include "common/Finisher.h"
 
+#include <fstream>
+
 #define CEPH_OSD_PROTOCOL    10 /* cluster internal */
 
 /*
@@ -1163,6 +1165,18 @@ protected:
     std::function<void(int,const std::string&,ceph::buffer::list&)> on_finish);
 
 public:
+  struct op_debug_log{
+      bool read;
+      bool write;
+      bool write_full;
+      int64_t op_dispatched;
+      int64_t op_enqueued;
+      int64_t op_dequeued;
+      int64_t op_started;
+      int64_t op_done;
+  };
+  std::vector<op_debug_log> op_debug_log_vec;
+
   int get_nodeid() { return whoami; }
 
   static ghobject_t get_osdmap_pobject_name(epoch_t epoch) {

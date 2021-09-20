@@ -1893,7 +1893,7 @@ void PrimaryLogPG::do_request(
  * pg lock will be held (if multithreaded)
  * osd_lock NOT held.
  */
-void PrimaryLogPG::do_op(OpRequestRef& op)
+void PrimaryLogPG::do_op(OpRequestRef& op) //my_log
 {
   FUNCTRACE(cct);
   // NOTE: take a non-const pointer here; we must be careful not to
@@ -2401,8 +2401,21 @@ void PrimaryLogPG::do_op(OpRequestRef& op)
   }
 
   op->mark_started();
-
+// my_log started
+    op->started_time = ceph::mono_clock::now();
   execute_ctx(ctx);
+    op->done_time = ceph::mono_clock::now();
+    OSD::op_debug_log log;
+    log.op_dispatched = std::chrono::nanoseconds(op->dispatched_time - mono_clock::zero()).count();
+    log.op_enqueued = std::chrono::nanoseconds(op->enqueued_time - mono_clock::zero()).count();
+    log.op_dequeued = std::chrono::nanoseconds(op->dequeued_time - mono_clock::zero()).count();
+    log.op_started = std::chrono::nanoseconds(op->started_time - mono_clock::zero()).count();
+    log.op_done = std::chrono::nanoseconds(op->done_time - mono_clock::zero()).count();
+    log.read = op->log_read;
+    log.write = op->log_write;
+    log.write_full = op->log_write_full;
+    osd->op_debug_log_vec.push_back(log);
+
   utime_t prepare_latency = ceph_clock_now();
   prepare_latency -= op->get_dequeued_time();
   osd->logger->tinc(l_osd_op_prepare_lat, prepare_latency);
@@ -3996,7 +4009,7 @@ void PrimaryLogPG::execute_ctx(OpContext *ctx)
   }
 #endif
 
-  int result = prepare_transaction(ctx);
+  int result = prepare_transaction(ctx); // my_log
 
   {
 #ifdef WITH_LTTNG
@@ -5748,7 +5761,7 @@ int PrimaryLogPG::do_sparse_read(OpContext *ctx, OSDOp& osd_op) {
   return 0;
 }
 
-int PrimaryLogPG::do_osd_ops(OpContext *ctx, vector<OSDOp>& ops)
+int PrimaryLogPG::do_osd_ops(OpContext *ctx, vector<OSDOp>& ops)  // my_log
 {
   int result = 0;
   SnapSetContext *ssc = ctx->obc->ssc;
@@ -5871,7 +5884,8 @@ int PrimaryLogPG::do_osd_ops(OpContext *ctx, vector<OSDOp>& ops)
 	if (!ctx->data_off) {
 	  ctx->data_off = op.extent.offset;
 	}
-	result = do_read(ctx, osd_op);
+	ctx->op->log_read = true;
+	result = do_read(ctx, osd_op); // my_log read
       } else {
 	result = op_finisher->execute();
       }
@@ -6461,7 +6475,8 @@ int PrimaryLogPG::do_osd_ops(OpContext *ctx, vector<OSDOp>& ops)
 
       // -- object data --
 
-    case CEPH_OSD_OP_WRITE:
+    case CEPH_OSD_OP_WRITE: // my_log write
+        ctx->op->log_write = true;
       ++ctx->num_write;
       result = 0;
       { // write
@@ -6568,9 +6583,11 @@ int PrimaryLogPG::do_osd_ops(OpContext *ctx, vector<OSDOp>& ops)
 	ctx->clean_regions.mark_data_region_dirty(op.extent.offset, op.extent.length);
 	dout(10) << "clean_regions modified" << ctx->clean_regions << dendl;
       }
+      op->enqueued_time = ceph::mono_clock::now();
       break;
 
-    case CEPH_OSD_OP_WRITEFULL:
+    case CEPH_OSD_OP_WRITEFULL:  // my_log write full onj
+        ctx->op->log_write_full = true;
       ++ctx->num_write;
       result = 0;
       { // write full object
@@ -8591,7 +8608,7 @@ int PrimaryLogPG::prepare_transaction(OpContext *ctx)
   }
 
   // prepare the actual mutation
-  int result = do_osd_ops(ctx, *ctx->ops);
+  int result = do_osd_ops(ctx, *ctx->ops);  // my_log
   if (result < 0) {
     if (ctx->op->may_write() &&
 	get_osdmap()->require_osd_release >= ceph_release_t::kraken) {
@@ -8641,7 +8658,7 @@ int PrimaryLogPG::prepare_transaction(OpContext *ctx)
   finish_ctx(ctx,
 	     ctx->new_obs.exists ? pg_log_entry_t::MODIFY :
 	     pg_log_entry_t::DELETE,
-	     result);
+	     result);  // my_log
 
   return result;
 }
