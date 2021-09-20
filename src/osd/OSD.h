@@ -1175,7 +1175,7 @@ public:
       int64_t op_started;
       int64_t op_done;
   };
-  std::vector<op_debug_log> op_debug_log_vec;
+  std::vector<OSD::op_debug_log> op_debug_log_vec;
 
   int get_nodeid() { return whoami; }
 
