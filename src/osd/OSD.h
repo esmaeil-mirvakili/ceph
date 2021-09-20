@@ -121,10 +121,6 @@ public:
   void enqueue_back(OpSchedulerItem&& qi);
   void enqueue_front(OpSchedulerItem&& qi);
 
-  void add_op_debug_log_vec(OSD::op_debug_log log){
-      return osd->op_debug_log_vec.push_back(log);
-  }
-
   void maybe_inject_dispatch_delay() {
     if (g_conf()->osd_debug_inject_dispatch_delay_probability > 0) {
       if (rand() % 10000 <
