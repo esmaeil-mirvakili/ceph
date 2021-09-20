@@ -222,11 +222,11 @@ static ostream& _prefix(std::ostream* _dout, int whoami, epoch_t epoch) {
 std::vector<bool> OSD::read_vec;
 std::vector<bool> OSD::write_vec;
 std::vector<bool> OSD::write_full_vec;
-std::vector<int64_t> OSD::op_dispatched_vec;
-std::vector<int64_t> OSD::op_enqueued_vec;
-std::vector<int64_t> OSD::op_dequeued_vec;
-std::vector<int64_t> OSD::op_started_vec;
-std::vector<int64_t> OSD::op_done_vec;
+std::vector<double> OSD::op_dispatched_vec;
+std::vector<double> OSD::op_enqueued_vec;
+std::vector<double> OSD::op_dequeued_vec;
+std::vector<double> OSD::op_started_vec;
+std::vector<double> OSD::op_done_vec;
 
 //Initial features in new superblock.
 //Features here are also automatically upgraded
