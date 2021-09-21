@@ -1816,15 +1816,16 @@ void PrimaryLogPG::do_request(
       return;
     }
     switch (msg_type) {
-    case CEPH_MSG_OSD_OP:
-      // verify client features
-      if ((pool.info.has_tiers() || pool.info.is_tier()) &&
-	  !op->has_feature(CEPH_FEATURE_OSD_CACHEPOOL)) {
-	osd->reply_op_error(op, -EOPNOTSUPP);
-	return;
-      }
-      op->set_started_time(ceph::mono_clock::now());//new_change
-      do_op(op);
+        case CEPH_MSG_OSD_OP:
+        {
+            // verify client features
+            if ((pool.info.has_tiers() || pool.info.is_tier()) &&
+                !op->has_feature(CEPH_FEATURE_OSD_CACHEPOOL)) {
+                osd->reply_op_error(op, -EOPNOTSUPP);
+                return;
+            }
+            op->set_started_time(ceph::mono_clock::now());//new_change
+            do_op(op);
             op->set_done_time(ceph::mono_clock::now());//new_change
             int64_t op_dispatched = std::chrono::nanoseconds(op->get_dispatched_time() - mono_clock::zero()).count();
             int64_t op_enqueued = std::chrono::nanoseconds(op->get_enqueued_time() - mono_clock::zero()).count();
@@ -1842,6 +1843,7 @@ void PrimaryLogPG::do_request(
             OSD::op_dequeued_vec.push_back(op_dequeued);
             OSD::op_started_vec.push_back(op_started);
             OSD::op_done_vec.push_back(op_done);
+    }
       break;
     case CEPH_MSG_OSD_BACKOFF:
       // object-level backoff acks handled in osdop context
