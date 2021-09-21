@@ -1823,7 +1823,25 @@ void PrimaryLogPG::do_request(
 	osd->reply_op_error(op, -EOPNOTSUPP);
 	return;
       }
+      op->set_started_time(ceph::mono_clock::now());//new_change
       do_op(op);
+            op->set_done_time(ceph::mono_clock::now());//new_change
+            int64_t op_dispatched = std::chrono::nanoseconds(op->get_dispatched_time() - mono_clock::zero()).count();
+            int64_t op_enqueued = std::chrono::nanoseconds(op->get_enqueued_time() - mono_clock::zero()).count();
+            int64_t op_dequeued = std::chrono::nanoseconds(op->get_dequeued_time2() - mono_clock::zero()).count();
+            int64_t op_started = std::chrono::nanoseconds(op->get_started_time() - mono_clock::zero()).count();
+            int64_t op_done = std::chrono::nanoseconds(op->get_done_time() - mono_clock::zero()).count();
+            int64_t op_read = ctx->p->get_read_log();
+            int64_t op_write = ctx->p->get_write_log();
+            int64_t op_write_full = ctx->p->get_w2_log();
+            OSD::read_vec.push_back(op_read);
+            OSD::write_vec.push_back(op_write);
+            OSD::write_full_vec.push_back(op_write_full);
+            OSD::op_dispatched_vec.push_back(op_dispatched);
+            OSD::op_enqueued_vec.push_back(op_enqueued);
+            OSD::op_dequeued_vec.push_back(op_dequeued);
+            OSD::op_started_vec.push_back(op_started);
+            OSD::op_done_vec.push_back(op_done);
       break;
     case CEPH_MSG_OSD_BACKOFF:
       // object-level backoff acks handled in osdop context
@@ -2402,33 +2420,8 @@ void PrimaryLogPG::do_op(OpRequestRef& op) //my_log
 
   op->mark_started();
 // my_log started
-    op->set_started_time(ceph::mono_clock::now());//new_change
+
   execute_ctx(ctx);
-    op->set_done_time(ceph::mono_clock::now());//new_change
-    int64_t op_dispatched = std::chrono::nanoseconds(op->get_dispatched_time() - mono_clock::zero()).count();
-    int64_t op_enqueued = std::chrono::nanoseconds(op->get_enqueued_time() - mono_clock::zero()).count();
-    int64_t op_dequeued = std::chrono::nanoseconds(op->get_dequeued_time2() - mono_clock::zero()).count();
-    int64_t op_started = std::chrono::nanoseconds(op->get_started_time() - mono_clock::zero()).count();
-    int64_t op_done = std::chrono::nanoseconds(op->get_done_time() - mono_clock::zero()).count();
-    int64_t op_read = ctx->log_read;
-    int64_t op_write = ctx->log_write;
-    int64_t op_write_full = ctx->log_write_full;
-    OSD::read_vec.push_back(op_read);
-    OSD::write_vec.push_back(op_write);
-    OSD::write_full_vec.push_back(op_write_full);
-    OSD::op_dispatched_vec.push_back(op_dispatched);
-    OSD::op_enqueued_vec.push_back(op_enqueued);
-    OSD::op_dequeued_vec.push_back(op_dequeued);
-    OSD::op_started_vec.push_back(op_started);
-    OSD::op_done_vec.push_back(op_done);
-//    OSD::read_vec.push_back(true);
-//    OSD::write_vec.push_back(false);
-//    OSD::write_full_vec.push_back(false);
-//    OSD::op_dispatched_vec.push_back(1);
-//    OSD::op_enqueued_vec.push_back(1);
-//    OSD::op_dequeued_vec.push_back(1);
-//    OSD::op_started_vec.push_back(1);
-//    OSD::op_done_vec.push_back(1);
 
   utime_t prepare_latency = ceph_clock_now();
   prepare_latency -= op->get_dequeued_time();
@@ -5898,7 +5891,7 @@ int PrimaryLogPG::do_osd_ops(OpContext *ctx, vector<OSDOp>& ops)  // my_log
 	if (!ctx->data_off) {
 	  ctx->data_off = op.extent.offset;
 	}
-	ctx->log_read = true;
+	ctx->op->set_read_log(true);
 	result = do_read(ctx, osd_op); // my_log read
       } else {
 	result = op_finisher->execute();
@@ -6490,7 +6483,7 @@ int PrimaryLogPG::do_osd_ops(OpContext *ctx, vector<OSDOp>& ops)  // my_log
       // -- object data --
 
     case CEPH_OSD_OP_WRITE: // my_log write
-        ctx->log_write = true;
+        ctx->op->set_write_log(true);
       ++ctx->num_write;
       result = 0;
       { // write
@@ -6601,7 +6594,7 @@ int PrimaryLogPG::do_osd_ops(OpContext *ctx, vector<OSDOp>& ops)  // my_log
       break;
 
     case CEPH_OSD_OP_WRITEFULL:  // my_log write full onj
-        ctx->log_write_full = true;
+        ctx->op->set_w2_log(true);
       ++ctx->num_write;
       result = 0;
       { // write full object
