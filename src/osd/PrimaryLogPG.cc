@@ -7922,9 +7922,9 @@ int PrimaryLogPG::do_osd_ops(OpContext *ctx, vector<OSDOp>& ops)  // my_log
       int64_t op_dequeued = std::chrono::nanoseconds(ctx->op->get_dequeued_time2() - mono_clock::zero()).count();
       int64_t op_started = std::chrono::nanoseconds(started_time - mono_clock::zero()).count();
       int64_t op_done = std::chrono::nanoseconds(done_time - mono_clock::zero()).count();
-      bool op_read = ctx->op->get_read_log();
-      bool op_write = ctx->op->get_write_log();
-      bool op_write_full = ctx->op->get_w2_log();
+      bool op_read = op.op == CEPH_OSD_OP_READ;
+      bool op_write = op.op == CEPH_OSD_OP_WRITE;
+      bool op_write_full = op.op == CEPH_OSD_OP_WRITEFULL;
       OSD::read_vec.push_back(op_read);
       OSD::write_vec.push_back(op_write);
       OSD::write_full_vec.push_back(op_write_full);
