@@ -1831,9 +1831,9 @@ void PrimaryLogPG::do_request(
             int64_t op_dequeued = std::chrono::nanoseconds(op->get_dequeued_time2() - mono_clock::zero()).count();
             int64_t op_started = std::chrono::nanoseconds(op->get_started_time() - mono_clock::zero()).count();
             int64_t op_done = std::chrono::nanoseconds(op->get_done_time() - mono_clock::zero()).count();
-            int64_t op_read = ctx->p->get_read_log();
-            int64_t op_write = ctx->p->get_write_log();
-            int64_t op_write_full = ctx->p->get_w2_log();
+            int64_t op_read = op->get_read_log();
+            int64_t op_write = op->get_write_log();
+            int64_t op_write_full = op->get_w2_log();
             OSD::read_vec.push_back(op_read);
             OSD::write_vec.push_back(op_write);
             OSD::write_full_vec.push_back(op_write_full);
