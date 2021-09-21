@@ -1824,25 +1824,9 @@ void PrimaryLogPG::do_request(
                 osd->reply_op_error(op, -EOPNOTSUPP);
                 return;
             }
-            op->set_started_time(ceph::mono_clock::now());//new_change
+
             do_op(op);
-            op->set_done_time(ceph::mono_clock::now());//new_change
-            int64_t op_dispatched = std::chrono::nanoseconds(op->get_dispatched_time() - mono_clock::zero()).count();
-            int64_t op_enqueued = std::chrono::nanoseconds(op->get_enqueued_time() - mono_clock::zero()).count();
-            int64_t op_dequeued = std::chrono::nanoseconds(op->get_dequeued_time2() - mono_clock::zero()).count();
-            int64_t op_started = std::chrono::nanoseconds(op->get_started_time() - mono_clock::zero()).count();
-            int64_t op_done = std::chrono::nanoseconds(op->get_done_time() - mono_clock::zero()).count();
-            int64_t op_read = op->get_read_log();
-            int64_t op_write = op->get_write_log();
-            int64_t op_write_full = op->get_w2_log();
-            OSD::read_vec.push_back(op_read);
-            OSD::write_vec.push_back(op_write);
-            OSD::write_full_vec.push_back(op_write_full);
-            OSD::op_dispatched_vec.push_back(op_dispatched);
-            OSD::op_enqueued_vec.push_back(op_enqueued);
-            OSD::op_dequeued_vec.push_back(op_dequeued);
-            OSD::op_started_vec.push_back(op_started);
-            OSD::op_done_vec.push_back(op_done);
+
     }
       break;
     case CEPH_MSG_OSD_BACKOFF:
@@ -5793,7 +5777,7 @@ int PrimaryLogPG::do_osd_ops(OpContext *ctx, vector<OSDOp>& ops)  // my_log
   for (auto p = ops.begin(); p != ops.end(); ++p, ctx->current_osd_subop_num++, ctx->processed_subop_count++) {
     OSDOp& osd_op = *p;
     ceph_osd_op& op = osd_op.op;
-
+    auto started_time = ceph::mono_clock::now();//new_change
     OpFinisher* op_finisher = nullptr;
     {
       auto op_finisher_it = ctx->op_finishers.find(ctx->current_osd_subop_num);
@@ -7932,7 +7916,23 @@ int PrimaryLogPG::do_osd_ops(OpContext *ctx, vector<OSDOp>& ops)  // my_log
     if (result < 0 && (op.flags & CEPH_OSD_OP_FLAG_FAILOK) &&
         result != -EAGAIN && result != -EINPROGRESS)
       result = 0;
-
+      auto done_time = ceph::mono_clock::now();//new_change
+      int64_t op_dispatched = std::chrono::nanoseconds(ctx->op->get_dispatched_time() - mono_clock::zero()).count();
+      int64_t op_enqueued = std::chrono::nanoseconds(ctx->op->get_enqueued_time() - mono_clock::zero()).count();
+      int64_t op_dequeued = std::chrono::nanoseconds(ctx->op->get_dequeued_time2() - mono_clock::zero()).count();
+      int64_t op_started = std::chrono::nanoseconds(started_time - mono_clock::zero()).count();
+      int64_t op_done = std::chrono::nanoseconds(done_time - mono_clock::zero()).count();
+      bool op_read = ctx->op->get_read_log();
+      bool op_write = ctx->op->get_write_log();
+      bool op_write_full = ctx->op->get_w2_log();
+      OSD::read_vec.push_back(op_read);
+      OSD::write_vec.push_back(op_write);
+      OSD::write_full_vec.push_back(op_write_full);
+      OSD::op_dispatched_vec.push_back(op_dispatched);
+      OSD::op_enqueued_vec.push_back(op_enqueued);
+      OSD::op_dequeued_vec.push_back(op_dequeued);
+      OSD::op_started_vec.push_back(op_started);
+      OSD::op_done_vec.push_back(op_done);
     if (result < 0)
       break;
   }
