@@ -4507,6 +4507,7 @@ BlueStore::BlueStore(CephContext *cct,
   uint64_t _min_alloc_size)
   : ObjectStore(cct, path),
     throttle(cct),
+    codel(cct),
     finisher(cct, "commit_finisher", "cfin"),
     kv_sync_thread(this),
     kv_finalize_thread(this),
@@ -4520,6 +4521,9 @@ BlueStore::BlueStore(CephContext *cct,
   _init_logger();
   cct->_conf.add_observer(this);
   set_cache_shards(1);
+  codel.reset(cct);
+  codel.set_throttle(&throttle);
+  asok_hook = SocketHook::create(this);
 }
 
 BlueStore::~BlueStore()
@@ -4580,6 +4584,17 @@ const char **BlueStore::get_tracked_conf_keys() const
     "bluestore_warn_on_no_per_pool_omap",
     "bluestore_warn_on_no_per_pg_omap",
     "bluestore_max_defer_interval",
+    "bluestore_codel",
+    "bluestore_codel_slow_interval",
+    "bluestore_codel_fast_interval",
+    "bluestore_codel_initial_target_latency",
+    "bluestore_codel_min_target_latency",
+    "bluestore_codel_max_target_latency",
+    "bluestore_codel_throughput_latency_tradeoff",
+    "bluestore_codel_initial_budget_bytes",
+    "bluestore_codel_min_budget_bytes",
+    "bluestore_codel_budget_increment_bytes",
+    "bluestore_codel_regression_history_size",
     NULL
   };
   return KEYS;
@@ -4637,7 +4652,8 @@ void BlueStore::handle_conf_change(const ConfigProxy& conf,
   if (changed.count("bluestore_throttle_bytes") ||
       changed.count("bluestore_throttle_deferred_bytes") ||
       changed.count("bluestore_throttle_trace_rate")) {
-    throttle.reset_throttle(conf);
+      throttle.reset_throttle(conf);
+      codel.set_throttle(&throttle);
   }
   if (changed.count("bluestore_max_defer_interval")) {
     if (bdev) {
@@ -4649,6 +4665,19 @@ void BlueStore::handle_conf_change(const ConfigProxy& conf,
       changed.count("osd_memory_cache_min") ||
       changed.count("osd_memory_expected_fragmentation")) {
     _update_osd_memory_options();
+  }
+  if (changed.count("bluestore_codel") ||
+      changed.count("bluestore_codel_slow_interval") ||
+      changed.count("bluestore_codel_fast_interval") ||
+      changed.count("bluestore_codel_initial_target_latency") ||
+      changed.count("bluestore_codel_min_target_latency") ||
+      changed.count("bluestore_codel_max_target_latency") ||
+      changed.count("bluestore_codel_throughput_latency_tradeoff") ||
+      changed.count("bluestore_codel_initial_budget_bytes") ||
+      changed.count("bluestore_codel_min_budget_bytes") ||
+      changed.count("bluestore_codel_budget_increment_bytes") ||
+      changed.count("bluestore_codel_regression_history_size")){
+    codel.reset(cct);
   }
 }
 
@@ -11510,6 +11539,8 @@ void BlueStore::_txc_calc_cost(TransContext *txc)
   auto cost = throttle_cost_per_io.load();
   txc->cost = ios * cost + txc->bytes;
   txc->ios = ios;
+  // if the SlowFastCoDel is activated, the cost of transactions will be adjusted accordingly
+  codel.modify_transaction_cost(txc);
   dout(10) << __func__ << " " << txc << " cost " << txc->cost << " ("
 	   << ios << " ios * " << cost << " + " << txc->bytes
 	   << " bytes)" << dendl;
@@ -11637,6 +11668,7 @@ void BlueStore::_txc_state_proc(TransContext *txc)
 
     case TransContext::STATE_KV_DONE:
       throttle.log_state_latency(*txc, logger, l_bluestore_state_kv_done_lat);
+      codel.register_txc(txc);  // submits the transaction information to SlowFastCodel
       if (txc->deferred_txn) {
 	txc->set_state(TransContext::STATE_DEFERRED_QUEUED);
 	_deferred_queue(txc);
@@ -13043,6 +13075,7 @@ int BlueStore::queue_transactions(
 
   logger->inc(l_bluestore_txc);
 
+  txc->codel_txc_entered = mono_clock::now();
   // execute (start)
   _txc_state_proc(txc);
 
@@ -16120,6 +16153,415 @@ void BlueStore::BlueStoreThrottle::complete(TransContext &txc)
   }
 }
 #endif
+
+class BlueStore::SocketHook : public AdminSocketHook
+{
+    BlueStore *store;
+
+public:
+    static BlueStore::SocketHook *create(BlueStore *store)
+    {
+      BlueStore::SocketHook *hook = nullptr;
+      AdminSocket *admin_socket = store->cct->get_admin_socket();
+      if (admin_socket)
+      {
+        hook = new BlueStore::SocketHook(store);
+        int r = admin_socket->register_command("dump kvq vector",
+                                               hook,
+                                               "dump vectors contains kvq_lat");
+        r = admin_socket->register_command("reset kvq vector",
+                                           hook,
+                                           "reset vectors contains kvq_lat");
+        r = admin_socket->register_command("disable codel",
+                                           hook,
+                                           "disable codel module");
+        r = admin_socket->register_command("enable codel",
+                                           hook,
+                                           "enable codel module");
+        if (r != 0)
+        {
+          delete hook;
+          hook = nullptr;
+        }
+      }
+      return hook;
+    }
+    ~SocketHook()
+    {
+      AdminSocket *admin_socket = store->cct->get_admin_socket();
+      admin_socket->unregister_commands(this);
+    }
+
+private:
+    SocketHook(BlueStore *store) : store(store) {}
+    int call(std::string_view command, const cmdmap_t &cmdmap,
+             Formatter *f,
+             std::ostream &ss,
+             bufferlist &out) override
+    {
+      if (command == "dump kvq vector")
+      {
+        store->codel.dump_log_data();
+      }
+      else if (command == "reset kvq vector")
+      {
+
+        store->codel.clear_log_data();
+        if (store->codel.activated) {
+          store->codel.set_throttle(&store->throttle);
+          store->codel.reset(store->cct);
+        }
+      }
+      else if (command == "disable codel")
+      {
+        store->codel.activated = false;
+      }
+      else if (command == "enable codel")
+      {
+        store->codel.activated = true;
+      }
+      return 0;
+    }
+};
+
+BlueStore::BlueStoreSlowFastCoDel::BlueStoreSlowFastCoDel(CephContext *_cct) :
+        cct(_cct), fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock) {}
+
+BlueStore::BlueStoreSlowFastCoDel::~BlueStoreSlowFastCoDel() {
+  std::lock_guard l1{fast_timer_lock};
+  fast_timer.cancel_all_events();
+  fast_timer.shutdown();
+
+  std::lock_guard l2{slow_timer_lock};
+  slow_timer.cancel_all_events();
+  slow_timer.shutdown();
+
+  regression_throughput_history.clear();
+  regression_target_latency_history.clear();
+
+  bs_throttle = nullptr;
+}
+
+void BlueStore::BlueStoreSlowFastCoDel::register_txc(TransContext * txc) {
+  std::lock_guard l(register_lock);
+  ceph::mono_clock::time_point now = ceph::mono_clock::now();
+  int64_t latency = std::chrono::nanoseconds(now - txc->codel_txc_entered).count();
+  if (activated && bs_throttle && max_queue_length < bs_throttle->get_kv_throttle_current())
+    max_queue_length = bs_throttle->get_kv_throttle_current();
+  std::lock_guard l(register_lock);
+  if (min_latency == INITIAL_LATENCY_VALUE || latency < min_latency) {
+    min_latency = latency;
+  }
+  slow_interval_txc_cnt++;
+  slow_interval_registered_bytes += txc->bytes;
+  txc_start_vec.push_back(std::chrono::nanoseconds(txc->codel_txc_entered - ceph::mono_clock::zero()).count());
+  txc_lat_vec.push_back(latency);
+  delta_vec.push_back(0);
+  slope_vec.push_back(*slope);
+  txc_avg_lat_vec.push_back(0);
+  txc_bytes.push_back(txc->bytes);
+  throttle_max_vec.push_back(0);
+  throttle_current_vec.push_back(0);
+  throughput_vec.push_back(0);
+  target_vec.push_back(target_latency);
+}
+
+void BlueStore::BlueStoreSlowFastCoDel::on_min_latency_violation() {
+  if (target_latency > 0) {
+    double diff = (double) (target_latency - min_latency);
+    auto error_ratio = std::abs(diff) / min_latency;
+    if (error_ratio > 0.5) {
+      error_ratio = 0.5;
+    }
+    bluestore_budget = std::max(bluestore_budget * (1 - error_ratio), min_bluestore_budget);
+  }
+}
+
+void BlueStore::BlueStoreSlowFastCoDel::on_no_violation() {
+  if (bluestore_budget < max_queue_length * 1.5) {
+    bluestore_budget = bluestore_budget + bluestore_budget_increment;
+  }
+}
+
+void BlueStore::BlueStoreSlowFastCoDel::on_interval_finished() {
+  if (activated) {
+    bs_throttle->reset_kv_throttle_max(bluestore_budget);
+  }
+}
+
+void BlueStore::BlueStoreSlowFastCoDel::reset(CephContext *cct) {
+  std::lock_guard l(register_lock);
+
+  // load the configs
+  activated = cct->_conf.get_val<bool>("bluestore_codel");
+  target_slope = cct->_conf.get_val<double>("bluestore_codel_throughput_latency_tradeoff");
+  slow_interval = cct->_conf.get_val<int64_t>("bluestore_codel_slow_interval");
+  initial_fast_interval = cct->_conf.get_val<int64_t>("bluestore_codel_fast_interval");
+  initial_target_latency = cct->_conf.get_val<int64_t>("bluestore_codel_initial_target_latency");
+  min_target_latency = cct->_conf.get_val<int64_t>("bluestore_codel_min_target_latency");
+  max_target_latency = cct->_conf.get_val<int64_t>("bluestore_codel_max_target_latency");
+  initial_bluestore_budget = cct->_conf.get_val<int64_t>("bluestore_codel_initial_budget_bytes");
+  min_bluestore_budget = cct->_conf.get_val<int64_t>("bluestore_codel_min_budget_bytes");
+  bluestore_budget_increment = cct->_conf.get_val<int64_t>("bluestore_codel_budget_increment_bytes");
+  regression_history_size = cct->_conf.get_val<int>("bluestore_codel_regression_history_size");
+
+  bluestore_budget = initial_bluestore_budget;
+  min_bluestore_budget = initial_bluestore_budget;
+  max_queue_length = min_bluestore_budget;
+  fast_interval = initial_fast_interval;
+  target_latency = initial_target_latency;
+  min_latency = INITIAL_LATENCY_VALUE;
+  slow_interval_registered_bytes = 0;
+  regression_throughput_history.clear();
+  regression_target_latency_history.clear();
+  slow_interval_start = ceph::mono_clock::zero();
+
+  double tmp = 0;
+  slope = &tmp;
+  {
+    std::lock_guard l1{fast_timer_lock};
+    fast_timer.cancel_all_events();
+    fast_timer.init();
+  }
+  _fast_interval_process();
+  {
+    std::lock_guard l2{slow_timer_lock};
+    slow_timer.cancel_all_events();
+    slow_timer.init();
+  }
+  _slow_interval_process();
+}
+
+void BlueStore::BlueStoreSlowFastCoDel::_fast_interval_process() {
+  std::lock_guard l(register_lock);
+  double time = 0;
+  ceph::mono_clock::time_point now = ceph::mono_clock::now();
+  if (target_latency != INITIAL_LATENCY_VALUE && min_latency != INITIAL_LATENCY_VALUE) {
+    if (activated) {
+      if (_check_latency_violation()) {
+        // min latency violation
+        violation_count++;
+        _update_interval();
+        on_min_latency_violation(); // handle the violation
+      } else {
+        // no latency violation
+        violation_count = 0;
+        fast_interval = initial_fast_interval;
+        on_no_violation();
+      }
+    }
+
+    // reset interval
+    min_latency = INITIAL_LATENCY_VALUE;
+    on_interval_finished();
+  }
+
+  auto codel_ctx = new LambdaContext(
+          [this](int r) {
+              _fast_interval_process();
+          });
+  auto interval_duration = std::chrono::nanoseconds(fast_interval);
+  fast_timer.add_event_after(interval_duration, codel_ctx);
+}
+
+template<typename T>
+static T BlueStore::millisec_to_nanosec(T ms) {
+  return ms * 1000 * 1000;
+}
+
+template<typename T>
+static T BlueStore::nanosec_to_millisec(T ns) {
+  return ms / (1000 * 1000);
+}
+
+void BlueStore::BlueStoreSlowFastCoDel::_slow_interval_process() {
+  std::lock_guard l(register_lock);
+  ceph::mono_clock::time_point now = ceph::mono_clock::now();
+  if (activated && !ceph::mono_clock::is_zero(slow_interval_start) && slow_interval_txc_cnt > 0) {
+    double time_sec = std::chrono::seconds(now - slow_interval_start).count();
+    double slow_interval_throughput = (slow_interval_registered_bytes * 1.0) / time_sec;    // bytes/s
+    slow_interval_throughput /= 1024.0 * 1024.0;    // MB/s
+    regression_target_latency_history.push_back(nanosec_to_millisec(target_latency));
+    regression_throughput_history.push_back(slow_interval_throughput);
+    if (regression_target_latency_history.size() > regression_history_size) {
+      regression_target_latency_history.erase(regression_target_latency_history.begin());
+      regression_throughput_history.erase(regression_throughput_history.begin());
+    }
+    std::vector<double> targets;
+    std::vector<double> throughputs;
+    double target_ms = nanosec_to_millisec(initial_target_latency);
+    if (regression_target_latency_history.size() >= regression_history_size) {
+      target_ms = RegressionUtils::find_slope_on_logarithmic_curve(
+              regression_target_latency_history,
+              regression_throughput_history,
+              target_slope);
+    }
+
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    std::default_random_engine generator(seed);
+    double dist_params[2];
+    double rnd_std_dev = 5;
+    RegressionUtils::find_log_normal_dist_params(
+            target_ms,
+            nanosec_to_millisec(min_target_latency),
+            target_ms * rnd_std_dev,
+            dist_params);
+    std::lognormal_distribution<double> distribution(dist_params[0], dist_params[1]);
+    target_latency = millisec_to_nanosec(distribution(generator));
+    target_latency += min_target_latency;
+    if (target_latency < millisec_to_nanosec(target_ms)) {
+      std::uniform_real_distribution<> distr(0, 0.5);
+      target_latency = target_latency + (target_latency - millisec_to_nanosec(target_ms)) * distr(generator);
+    }
+  }
+  if (target_latency != INITIAL_LATENCY_VALUE) {
+    target_latency = std::max(target_latency, min_target_latency);
+    target_latency = std::min(target_latency, max_target_latency);
+  }
+  slow_interval_start = ceph::mono_clock::now();
+  slow_interval_registered_bytes = 0;
+  slow_interval_txc_cnt = 0;
+  max_queue_length = min_bluestore_budget;
+  auto codel_ctx = new LambdaContext(
+          [this](int r) {
+              _slow_interval_process();
+          });
+  auto interval_duration = std::chrono::nanoseconds(slow_interval);
+  slow_timer.add_event_after(interval_duration, codel_ctx);
+}
+
+
+/**
+* check if the min latency violate the target
+* @return true if min latency violate the target, false otherwise
+*/
+bool BlueStore::BlueStoreSlowFastCoDel::_check_latency_violation() {
+  if (target_latency != INITIAL_LATENCY_VALUE && min_latency != INITIAL_LATENCY_VALUE) {
+    if (min_latency > target_latency)
+      return true;
+  }
+  return false;
+}
+
+void BlueStore::BlueStoreSlowFastCoDel::_update_interval() {
+  auto sqrt = (int) std::round(std::sqrt(violation_count));
+  fast_interval = initial_fast_interval / sqrt;
+  if (fast_interval <= 0) {
+    fast_interval = 1000;
+  }
+}
+
+void BlueStore::BlueStoreSlowFastCoDel::set_throttle(BlueStoreThrottle *_throttle) {
+  bs_throttle = _throttle;
+  if (activated) {
+    bluestore_budget = initial_bluestore_budget;
+    bs_throttle->reset_kv_throttle_max(bluestore_budget);
+  }
+}
+
+void BlueStore::BlueStoreSlowFastCoDel::modify_transaction_cost(TransContext * txc) {
+  if (activated)
+    txc->cost = txc->bytes;
+}
+
+int64_t BlueStore::BlueStoreSlowFastCoDel::get_bluestore_budget() {
+  return bluestore_budget;
+}
+
+void BlueStore::BlueStoreSlowFastCoDel::clear_log_data() {
+  txc_start_vec.clear();
+  txc_lat_vec.clear();
+  txc_bytes.clear();
+  delta_vec.clear();
+  slope_vec.clear();
+  txc_avg_lat_vec.clear();
+  throttle_max_vec.clear();
+  throttle_current_vec.clear();
+  target_vec.clear();
+  throughput_vec.clear();
+}
+
+void BlueStore::BlueStoreSlowFastCoDel::dump_log_data() {
+  // create an filestream object
+  std::string prefix = "codel_log_";
+  std::string index = "";
+
+  std::ofstream model_file(prefix + "model" + index + ".csv");
+  model_file << "target, throughput\n";
+  for (unsigned int i = 0; i < regression_target_latency_history.size(); i++) {
+    model_file << std::fixed << regression_target_latency_history[i];
+    model_file << ",";
+    model_file << std::fixed << regression_throughput_history[i];
+    model_file << "\n";
+  }
+  model_file.close();
+
+  std::ofstream txc_file(prefix + "txc" + index + ".csv");
+  // add column names
+  txc_file << "start, lat, size, budget, throttle, throughput, target, avg_lat, slope, delta" << "\n";
+
+  for (unsigned int i = 0; i < txc_start_vec.size(); i++) {
+    txc_file << std::fixed << txc_start_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << txc_lat_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << txc_bytes[i];
+    txc_file << ",";
+    txc_file << std::fixed << throttle_max_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << throttle_current_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << throughput_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << target_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << txc_avg_lat_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << slope_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << delta_vec[i];
+    txc_file << "\n";
+  }
+  txc_file.close();
+
+  std::ofstream params_file(prefix + "params" + index + ".csv");
+
+  params_file << "activated: ";
+  params_file << std::fixed << activated;
+  params_file << "\n";
+
+  params_file << "init_target: ";
+  params_file << std::fixed << initial_target_latency;
+  params_file << "\n";
+
+  params_file << "init_interval: ";
+  params_file << std::fixed << initial_fast_interval;
+  params_file << "\n";
+
+  params_file << "starting_bluestore_budget: ";
+  params_file << std::fixed << initial_bluestore_budget;
+  params_file << "\n";
+
+  params_file << "min_bluestore_budget: ";
+  params_file << std::fixed << min_bluestore_budget;
+  params_file << "\n";
+
+  params_file << "target_slope: ";
+  params_file << std::fixed << target_slope;
+  params_file << "\n";
+
+  params_file << "slow_interval_frequency: ";
+  params_file << std::fixed << slow_interval_frequency;
+  params_file << "\n";
+
+  params_file << "max_target_latency: ";
+  params_file << std::fixed << max_target_latency;
+  params_file << "\n";
+
+  params_file << "min_target_latency: ";
+  params_file << std::fixed << min_target_latency;
+  params_file << "\n";
+}
 
 const string prefix_onode = "o";
 const string prefix_onode_shard = "x";

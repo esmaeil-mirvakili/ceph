@@ -87,6 +87,7 @@ set(common_srcs
   perf_histogram.cc
   pick_address.cc
   random_string.cc
+  regression_utils.cc
   reverse.c
   run_cmd.cc
   scrub_types.cc
