@@ -47,7 +47,7 @@ void RegressionUtils::logarithmic_regression(
     }
     boost::numeric::ublas::matrix<double> x_new_trans_m = boost::numeric::ublas::trans(x_new_m);
     boost::numeric::ublas::matrix<double> x_new_trans_dot_x_new_m = boost::numeric::ublas::prod(x_new_trans_m, x_new_m);
-    boost::numeric::ublas::matrix<double> temp_1_m = boost::numeric::ublas::matrix_inverse(x_new_trans_dot_x_new_m);
+    boost::numeric::ublas::matrix<double> temp_1_m = matrix_inverse(x_new_trans_dot_x_new_m);
     boost::numeric::ublas::matrix<double> temp_2_m = boost::numeric::ublas::prod(x_new_trans_m, y_m);
     boost::numeric::ublas::matrix<double> theta_m = boost::numeric::ublas::prod(temp_1_m, temp_2_m);
     theta[0] = theta_m(0,0);
