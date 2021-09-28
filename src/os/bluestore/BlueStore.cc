@@ -46,6 +46,7 @@
 #include "common/numa.h"
 #include "common/pretty_binary.h"
 #include "kv/KeyValueHistogram.h"
+#include "common/admin_socket.h"
 
 #ifdef HAVE_LIBZBD
 #include "ZonedAllocator.h"
