@@ -1870,6 +1870,11 @@ public:
         return ns / (1000 * 1000);
       }
 
+      template<typename T>
+      T nanosec_to_sec(T ns) {
+        return ns / (1000 * 1000 * 1000);
+      }
+
      void reset(CephContext *cct);
      void set_throttle(BlueStoreThrottle *_throttle);
      void modify_transaction_cost(TransContext *txc);

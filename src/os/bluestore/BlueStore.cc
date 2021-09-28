@@ -16368,7 +16368,7 @@ void BlueStore::BlueStoreSlowFastCoDel::_slow_interval_process() {
   std::lock_guard l(register_lock);
   ceph::mono_clock::time_point now = ceph::mono_clock::now();
   if (activated && !ceph::mono_clock::is_zero(slow_interval_start) && slow_interval_txc_cnt > 0) {
-    double time_sec = std::chrono::seconds(now - slow_interval_start).count();
+    double time_sec = nanosec_to_sec(std::chrono::nanoseconds(now - slow_interval_start).count());
     double slow_interval_throughput = (slow_interval_registered_bytes * 1.0) / time_sec;    // bytes/s
     slow_interval_throughput /= 1024.0 * 1024.0;    // MB/s
     regression_target_latency_history.push_back(nanosec_to_millisec(target_latency));
