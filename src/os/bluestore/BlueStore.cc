@@ -46,7 +46,6 @@
 #include "common/numa.h"
 #include "common/pretty_binary.h"
 #include "kv/KeyValueHistogram.h"
-#include "common/admin_socket.h"
 
 #ifdef HAVE_LIBZBD
 #include "ZonedAllocator.h"
@@ -4652,8 +4651,8 @@ void BlueStore::handle_conf_change(const ConfigProxy& conf,
   if (changed.count("bluestore_throttle_bytes") ||
       changed.count("bluestore_throttle_deferred_bytes") ||
       changed.count("bluestore_throttle_trace_rate")) {
-      throttle.reset_throttle(conf);
-      codel.set_throttle(&throttle);
+    throttle.reset_throttle(conf);
+    codel.set_throttle(&throttle);
   }
   if (changed.count("bluestore_max_defer_interval")) {
     if (bdev) {
