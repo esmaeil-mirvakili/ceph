@@ -5,7 +5,7 @@
  * @param matrix<double>& m, an square 2x2 matrix
  * @return the inverse of the m (m^-1)
  */
-matrix<double> RegressionUtils::matrix_inverse(matrix<double>& m)
+boost::numeric::ublas::matrix<double> RegressionUtils::matrix_inverse(boost::numeric::ublas::matrix<double>& m)
 {
     assert(m.size1() == m.size2() && "Can only calculate the inverse of square matrices");
     assert(m.size1() == 2 && m.size2() == 2 && "Only for 2x2 matrices");
@@ -35,21 +35,21 @@ void RegressionUtils::logarithmic_regression(
     assert(x_values.size() == y_values.size() && "x and y values vectors should have a same size.");
     const int n = x_values.size();
 
-    matrix<double> y_m (n,1);
+    boost::numeric::ublas::matrix<double> y_m (n,1);
     for (int i = 0; i < n; i++)
         y_m(i,0) = y_values[i];
 
-    scalar_matrix<double> sm (n, 2, 1);
-    matrix<double> x_new_m (sm);
+    boost::numeric::ublas::scalar_matrix<double> sm (n, 2, 1);
+    boost::numeric::ublas::matrix<double> x_new_m (sm);
     for (int i = 0; i < n; i++) {
         x_new_m(i,0) = 1;
         x_new_m(i,1) = std::log(x_values[i]);
     }
-    matrix<double> x_new_trans_m = trans(x_new_m);
-    matrix<double> x_new_trans_dot_x_new_m = prod(x_new_trans_m, x_new_m);
-    matrix<double> temp_1_m = matrix_inverse(x_new_trans_dot_x_new_m);
-    matrix<double> temp_2_m = prod(x_new_trans_m, y_m);
-    matrix<double> theta_m = prod(temp_1_m, temp_2_m);
+    boost::numeric::ublas::matrix<double> x_new_trans_m = boost::numeric::ublas::trans(x_new_m);
+    boost::numeric::ublas::matrix<double> x_new_trans_dot_x_new_m = boost::numeric::ublas::prod(x_new_trans_m, x_new_m);
+    boost::numeric::ublas::matrix<double> temp_1_m = boost::numeric::ublas::matrix_inverse(x_new_trans_dot_x_new_m);
+    boost::numeric::ublas::matrix<double> temp_2_m = boost::numeric::ublas::prod(x_new_trans_m, y_m);
+    boost::numeric::ublas::matrix<double> theta_m = boost::numeric::ublas::prod(temp_1_m, temp_2_m);
     theta[0] = theta_m(0,0);
     theta[1] = theta_m(1,0);
 }
