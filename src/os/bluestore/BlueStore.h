@@ -1849,18 +1849,6 @@ public:
      BlueStoreSlowFastCoDel(CephContext *_cct);
      ~BlueStoreSlowFastCoDel();
 
-     // log data
-     std::vector<double> txc_start_vec;
-     std::vector<double> txc_lat_vec;
-     std::vector<double> txc_avg_lat_vec;
-     std::vector<double> txc_bytes;
-     std::vector<double> delta_vec;
-     std::vector<double> slope_vec;
-     std::vector<int64_t> throttle_max_vec;
-     std::vector<int64_t> throttle_current_vec;
-     std::vector<int64_t> target_vec;
-     std::vector<double> throughput_vec;
-
       template<typename T>
       T millisec_to_nanosec(T ms) {
         return ms * 1000 * 1000;
@@ -1882,8 +1870,6 @@ public:
      void register_txc(TransContext *txc);
      int64_t get_bluestore_budget();
      bool is_activated();
-     void dump_log_data();
-     void clear_log_data();
      bool activated = false;    // true if SlowFastCodel is activated
  protected:
 
@@ -2169,8 +2155,6 @@ private:
   int path_fd = -1;  ///< open handle to $path
   int fsid_fd = -1;  ///< open handle (locked) to $path/fsid
   bool mounted = false;
-  class SocketHook;
-  SocketHook *asok_hook = nullptr;
 
   ceph::shared_mutex coll_lock = ceph::make_shared_mutex("BlueStore::coll_lock");  ///< rwlock to protect coll_map
   mempool::bluestore_cache_other::unordered_map<coll_t, CollectionRef> coll_map;

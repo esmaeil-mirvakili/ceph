@@ -4500,76 +4500,6 @@ void BlueStore::handle_discard(interval_set<uint64_t>& to_release)
   shared_alloc.a->release(to_release);
 }
 
-class BlueStore::SocketHook : public AdminSocketHook
-{
-    BlueStore *store;
-
-public:
-    static BlueStore::SocketHook *create(BlueStore *store)
-    {
-      BlueStore::SocketHook *hook = nullptr;
-      AdminSocket *admin_socket = store->cct->get_admin_socket();
-      if (admin_socket)
-      {
-        hook = new BlueStore::SocketHook(store);
-        int r = admin_socket->register_command("dump kvq vector",
-                                               hook,
-                                               "dump vectors contains kvq_lat");
-        r = admin_socket->register_command("reset kvq vector",
-                                           hook,
-                                           "reset vectors contains kvq_lat");
-        r = admin_socket->register_command("disable codel",
-                                           hook,
-                                           "disable codel module");
-        r = admin_socket->register_command("enable codel",
-                                           hook,
-                                           "enable codel module");
-        if (r != 0)
-        {
-          delete hook;
-          hook = nullptr;
-        }
-      }
-      return hook;
-    }
-    ~SocketHook()
-    {
-      AdminSocket *admin_socket = store->cct->get_admin_socket();
-      admin_socket->unregister_commands(this);
-    }
-
-private:
-    SocketHook(BlueStore *store) : store(store) {}
-    int call(std::string_view command, const cmdmap_t &cmdmap,
-             Formatter *f,
-             std::ostream &ss,
-             bufferlist &out) override
-    {
-      if (command == "dump kvq vector")
-      {
-        store->codel.dump_log_data();
-      }
-      else if (command == "reset kvq vector")
-      {
-
-        store->codel.clear_log_data();
-        if (store->codel.activated) {
-          store->codel.set_throttle(&store->throttle);
-          store->codel.reset(store->cct);
-        }
-      }
-      else if (command == "disable codel")
-      {
-        store->codel.activated = false;
-      }
-      else if (command == "enable codel")
-      {
-        store->codel.activated = true;
-      }
-      return 0;
-    }
-};
-
 BlueStore::BlueStore(CephContext *cct, const string& path)
   : BlueStore(cct, path, 0) {}
 
@@ -4594,7 +4524,6 @@ BlueStore::BlueStore(CephContext *cct,
   set_cache_shards(1);
   codel.reset(cct);
   codel.set_throttle(&throttle);
-  asok_hook = SocketHook::create(this);
 }
 
 BlueStore::~BlueStore()
@@ -16445,101 +16374,6 @@ void BlueStore::BlueStoreSlowFastCoDel::modify_transaction_cost(TransContext * t
 
 int64_t BlueStore::BlueStoreSlowFastCoDel::get_bluestore_budget() {
   return bluestore_budget;
-}
-
-void BlueStore::BlueStoreSlowFastCoDel::clear_log_data() {
-  txc_start_vec.clear();
-  txc_lat_vec.clear();
-  txc_bytes.clear();
-  delta_vec.clear();
-  slope_vec.clear();
-  txc_avg_lat_vec.clear();
-  throttle_max_vec.clear();
-  throttle_current_vec.clear();
-  target_vec.clear();
-  throughput_vec.clear();
-}
-
-void BlueStore::BlueStoreSlowFastCoDel::dump_log_data() {
-  // create an filestream object
-  std::string prefix = "codel_log_";
-  std::string index = "";
-
-  std::ofstream model_file(prefix + "model" + index + ".csv");
-  model_file << "target, throughput\n";
-  for (unsigned int i = 0; i < regression_target_latency_history.size(); i++) {
-    model_file << std::fixed << regression_target_latency_history[i];
-    model_file << ",";
-    model_file << std::fixed << regression_throughput_history[i];
-    model_file << "\n";
-  }
-  model_file.close();
-
-  std::ofstream txc_file(prefix + "txc" + index + ".csv");
-  // add column names
-  txc_file << "start, lat, size, budget, throttle, throughput, target, avg_lat, slope, delta" << "\n";
-
-  for (unsigned int i = 0; i < txc_start_vec.size(); i++) {
-    txc_file << std::fixed << txc_start_vec[i];
-    txc_file << ",";
-    txc_file << std::fixed << txc_lat_vec[i];
-    txc_file << ",";
-    txc_file << std::fixed << txc_bytes[i];
-    txc_file << ",";
-    txc_file << std::fixed << throttle_max_vec[i];
-    txc_file << ",";
-    txc_file << std::fixed << throttle_current_vec[i];
-    txc_file << ",";
-    txc_file << std::fixed << throughput_vec[i];
-    txc_file << ",";
-    txc_file << std::fixed << target_vec[i];
-    txc_file << ",";
-    txc_file << std::fixed << txc_avg_lat_vec[i];
-    txc_file << ",";
-    txc_file << std::fixed << slope_vec[i];
-    txc_file << ",";
-    txc_file << std::fixed << delta_vec[i];
-    txc_file << "\n";
-  }
-  txc_file.close();
-
-//  std::ofstream params_file(prefix + "params" + index + ".csv");
-//
-//  params_file << "activated: ";
-//  params_file << std::fixed << activated;
-//  params_file << "\n";
-//
-//  params_file << "init_target: ";
-//  params_file << std::fixed << initial_target_latency;
-//  params_file << "\n";
-//
-//  params_file << "init_interval: ";
-//  params_file << std::fixed << initial_fast_interval;
-//  params_file << "\n";
-//
-//  params_file << "starting_bluestore_budget: ";
-//  params_file << std::fixed << initial_bluestore_budget;
-//  params_file << "\n";
-//
-//  params_file << "min_bluestore_budget: ";
-//  params_file << std::fixed << min_bluestore_budget;
-//  params_file << "\n";
-//
-//  params_file << "target_slope: ";
-//  params_file << std::fixed << target_slope;
-//  params_file << "\n";
-//
-//  params_file << "slow_interval_frequency: ";
-//  params_file << std::fixed << slow_interval_frequency;
-//  params_file << "\n";
-//
-//  params_file << "max_target_latency: ";
-//  params_file << std::fixed << max_target_latency;
-//  params_file << "\n";
-//
-//  params_file << "min_target_latency: ";
-//  params_file << std::fixed << min_target_latency;
-//  params_file << "\n";
 }
 
 const string prefix_onode = "o";
