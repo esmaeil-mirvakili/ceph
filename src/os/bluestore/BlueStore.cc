@@ -16249,7 +16249,6 @@ void BlueStore::BlueStoreSlowFastCoDel::register_txc(TransContext * txc) {
   int64_t latency = std::chrono::nanoseconds(now - txc->codel_txc_entered).count();
   if (activated && bs_throttle && max_queue_length < bs_throttle->get_kv_throttle_current())
     max_queue_length = bs_throttle->get_kv_throttle_current();
-  std::lock_guard l(register_lock);
   if (min_latency == INITIAL_LATENCY_VALUE || latency < min_latency) {
     min_latency = latency;
   }
