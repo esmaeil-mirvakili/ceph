@@ -16273,7 +16273,7 @@ void BlueStore::BlueStoreSlowFastCoDel::on_min_latency_violation() {
     if (error_ratio > 0.5) {
       error_ratio = 0.5;
     }
-    bluestore_budget = std::max(bluestore_budget * (1 - error_ratio), min_bluestore_budget);
+    bluestore_budget = std::max(bluestore_budget * (1 - error_ratio), min_bluestore_budget*1.0);
   }
 }
 
