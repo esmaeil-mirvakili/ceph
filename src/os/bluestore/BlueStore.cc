@@ -16514,43 +16514,43 @@ void BlueStore::BlueStoreSlowFastCoDel::dump_log_data() {
   }
   txc_file.close();
 
-  std::ofstream params_file(prefix + "params" + index + ".csv");
-
-  params_file << "activated: ";
-  params_file << std::fixed << activated;
-  params_file << "\n";
-
-  params_file << "init_target: ";
-  params_file << std::fixed << initial_target_latency;
-  params_file << "\n";
-
-  params_file << "init_interval: ";
-  params_file << std::fixed << initial_fast_interval;
-  params_file << "\n";
-
-  params_file << "starting_bluestore_budget: ";
-  params_file << std::fixed << initial_bluestore_budget;
-  params_file << "\n";
-
-  params_file << "min_bluestore_budget: ";
-  params_file << std::fixed << min_bluestore_budget;
-  params_file << "\n";
-
-  params_file << "target_slope: ";
-  params_file << std::fixed << target_slope;
-  params_file << "\n";
-
-  params_file << "slow_interval_frequency: ";
-  params_file << std::fixed << slow_interval_frequency;
-  params_file << "\n";
-
-  params_file << "max_target_latency: ";
-  params_file << std::fixed << max_target_latency;
-  params_file << "\n";
-
-  params_file << "min_target_latency: ";
-  params_file << std::fixed << min_target_latency;
-  params_file << "\n";
+//  std::ofstream params_file(prefix + "params" + index + ".csv");
+//
+//  params_file << "activated: ";
+//  params_file << std::fixed << activated;
+//  params_file << "\n";
+//
+//  params_file << "init_target: ";
+//  params_file << std::fixed << initial_target_latency;
+//  params_file << "\n";
+//
+//  params_file << "init_interval: ";
+//  params_file << std::fixed << initial_fast_interval;
+//  params_file << "\n";
+//
+//  params_file << "starting_bluestore_budget: ";
+//  params_file << std::fixed << initial_bluestore_budget;
+//  params_file << "\n";
+//
+//  params_file << "min_bluestore_budget: ";
+//  params_file << std::fixed << min_bluestore_budget;
+//  params_file << "\n";
+//
+//  params_file << "target_slope: ";
+//  params_file << std::fixed << target_slope;
+//  params_file << "\n";
+//
+//  params_file << "slow_interval_frequency: ";
+//  params_file << std::fixed << slow_interval_frequency;
+//  params_file << "\n";
+//
+//  params_file << "max_target_latency: ";
+//  params_file << std::fixed << max_target_latency;
+//  params_file << "\n";
+//
+//  params_file << "min_target_latency: ";
+//  params_file << std::fixed << min_target_latency;
+//  params_file << "\n";
 }
 
 const string prefix_onode = "o";
