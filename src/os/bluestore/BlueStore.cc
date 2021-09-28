@@ -16304,7 +16304,7 @@ void BlueStore::BlueStoreSlowFastCoDel::reset(CephContext *cct) {
     initial_bluestore_budget = cct->_conf.get_val<int64_t>("bluestore_codel_initial_budget_bytes");
     min_bluestore_budget = cct->_conf.get_val<int64_t>("bluestore_codel_min_budget_bytes");
     bluestore_budget_increment = cct->_conf.get_val<int64_t>("bluestore_codel_budget_increment_bytes");
-    regression_history_size = cct->_conf.get_val<int>("bluestore_codel_regression_history_size");
+    regression_history_size = cct->_conf.get_val<int64_t>("bluestore_codel_regression_history_size");
 
     bluestore_budget = initial_bluestore_budget;
     min_bluestore_budget = initial_bluestore_budget;

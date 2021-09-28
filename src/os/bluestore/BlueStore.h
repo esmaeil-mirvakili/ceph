@@ -1909,7 +1909,7 @@ public:
      std::vector<double> regression_target_latency_history;   // target latency history for regression
      std::vector<double> regression_throughput_history;   // throughput history for regression
      double *slope;
-     int regression_history_size;   // regression history size
+     int64_t regression_history_size;   // regression history size
      int64_t min_bluestore_budget;  // the minimum bluestore throttle budget
      int64_t initial_bluestore_budget; // the initial bluestore throttle budget
      int64_t bluestore_budget_increment;    // the increment size for opening the bluestore throttle
