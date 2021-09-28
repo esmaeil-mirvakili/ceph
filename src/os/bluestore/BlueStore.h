@@ -1860,6 +1860,11 @@ public:
      std::vector<int64_t> target_vec;
      std::vector<double> throughput_vec;
 
+      template<typename T>
+      static T millisec_to_nanosec(T ms);
+      template<typename T>
+      static T nanosec_to_millisec(T ms);
+
      void reset(CephContext *cct);
      void set_throttle(BlueStoreThrottle *_throttle);
      void modify_transaction_cost(TransContext *txc);
@@ -1907,10 +1912,6 @@ public:
      void on_interval_finished();
  private:
      static const int64_t INITIAL_LATENCY_VALUE = -1;
-     template<typename T>
-     static T millisec_to_nanosec(T ms);
-     template<typename T>
-     static T nanosec_to_millisec(T ms);
 
      bool _check_latency_violation();
      void _update_interval();
