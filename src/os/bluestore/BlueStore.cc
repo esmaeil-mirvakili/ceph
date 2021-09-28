@@ -16226,7 +16226,7 @@ void BlueStore::BlueStoreThrottle::complete(TransContext &txc)
 #endif
 
 BlueStore::BlueStoreSlowFastCoDel::BlueStoreSlowFastCoDel(CephContext *_cct) :
-        cct(_cct), fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock) {}
+        fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock) {}
 
 BlueStore::BlueStoreSlowFastCoDel::~BlueStoreSlowFastCoDel() {
   std::lock_guard l1{fast_timer_lock};
@@ -16335,8 +16335,6 @@ void BlueStore::BlueStoreSlowFastCoDel::reset(CephContext *cct) {
 
 void BlueStore::BlueStoreSlowFastCoDel::_fast_interval_process() {
   std::lock_guard l(register_lock);
-  double time = 0;
-  ceph::mono_clock::time_point now = ceph::mono_clock::now();
   if (target_latency != INITIAL_LATENCY_VALUE && min_latency != INITIAL_LATENCY_VALUE) {
     if (activated) {
       if (_check_latency_violation()) {

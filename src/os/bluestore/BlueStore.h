@@ -1916,7 +1916,6 @@ public:
      int64_t bluestore_budget;  // current bluestore throttle budget
      int64_t max_queue_length;  // maximum amount of inflight data in current slow interval
      BlueStoreThrottle *bs_throttle { nullptr };    // a pointer to bluestore throttle
-     CephContext* cct;
 
      void on_min_latency_violation();
      void on_no_violation();
