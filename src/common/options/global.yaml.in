@@ -6107,19 +6107,19 @@ options:
   type: int
   level: advanced
   desc: the initial bluestore throttle budget in SlowFastCodel
-  default: 100_K
+  default: 102400
   with_legacy: true
 - name: bluestore_codel_min_budget_bytes
   type: int
   level: advanced
   desc: the minimum bluestore throttle budget in SlowFastCodel
-  default: 100_K
+  default: 102400
   with_legacy: true
 - name: bluestore_codel_budget_increment_bytes
   type: int
   level: advanced
   desc: the increment size for opening the bluestore throttle in SlowFastCodel
-  default: 10_K
+  default: 10240
   with_legacy: true
 - name: bluestore_codel_regression_history_size
   type: int
