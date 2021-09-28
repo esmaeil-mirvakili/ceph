@@ -4499,6 +4499,76 @@ void BlueStore::handle_discard(interval_set<uint64_t>& to_release)
   shared_alloc.a->release(to_release);
 }
 
+class BlueStore::SocketHook : public AdminSocketHook
+{
+    BlueStore *store;
+
+public:
+    static BlueStore::SocketHook *create(BlueStore *store)
+    {
+      BlueStore::SocketHook *hook = nullptr;
+      AdminSocket *admin_socket = store->cct->get_admin_socket();
+      if (admin_socket)
+      {
+        hook = new BlueStore::SocketHook(store);
+        int r = admin_socket->register_command("dump kvq vector",
+                                               hook,
+                                               "dump vectors contains kvq_lat");
+        r = admin_socket->register_command("reset kvq vector",
+                                           hook,
+                                           "reset vectors contains kvq_lat");
+        r = admin_socket->register_command("disable codel",
+                                           hook,
+                                           "disable codel module");
+        r = admin_socket->register_command("enable codel",
+                                           hook,
+                                           "enable codel module");
+        if (r != 0)
+        {
+          delete hook;
+          hook = nullptr;
+        }
+      }
+      return hook;
+    }
+    ~SocketHook()
+    {
+      AdminSocket *admin_socket = store->cct->get_admin_socket();
+      admin_socket->unregister_commands(this);
+    }
+
+private:
+    SocketHook(BlueStore *store) : store(store) {}
+    int call(std::string_view command, const cmdmap_t &cmdmap,
+             Formatter *f,
+             std::ostream &ss,
+             bufferlist &out) override
+    {
+      if (command == "dump kvq vector")
+      {
+        store->codel.dump_log_data();
+      }
+      else if (command == "reset kvq vector")
+      {
+
+        store->codel.clear_log_data();
+        if (store->codel.activated) {
+          store->codel.set_throttle(&store->throttle);
+          store->codel.reset(store->cct);
+        }
+      }
+      else if (command == "disable codel")
+      {
+        store->codel.activated = false;
+      }
+      else if (command == "enable codel")
+      {
+        store->codel.activated = true;
+      }
+      return 0;
+    }
+};
+
 BlueStore::BlueStore(CephContext *cct, const string& path)
   : BlueStore(cct, path, 0) {}
 
@@ -16153,76 +16223,6 @@ void BlueStore::BlueStoreThrottle::complete(TransContext &txc)
   }
 }
 #endif
-
-class BlueStore::SocketHook : public AdminSocketHook
-{
-    BlueStore *store;
-
-public:
-    static BlueStore::SocketHook *create(BlueStore *store)
-    {
-      BlueStore::SocketHook *hook = nullptr;
-      AdminSocket *admin_socket = store->cct->get_admin_socket();
-      if (admin_socket)
-      {
-        hook = new BlueStore::SocketHook(store);
-        int r = admin_socket->register_command("dump kvq vector",
-                                               hook,
-                                               "dump vectors contains kvq_lat");
-        r = admin_socket->register_command("reset kvq vector",
-                                           hook,
-                                           "reset vectors contains kvq_lat");
-        r = admin_socket->register_command("disable codel",
-                                           hook,
-                                           "disable codel module");
-        r = admin_socket->register_command("enable codel",
-                                           hook,
-                                           "enable codel module");
-        if (r != 0)
-        {
-          delete hook;
-          hook = nullptr;
-        }
-      }
-      return hook;
-    }
-    ~SocketHook()
-    {
-      AdminSocket *admin_socket = store->cct->get_admin_socket();
-      admin_socket->unregister_commands(this);
-    }
-
-private:
-    SocketHook(BlueStore *store) : store(store) {}
-    int call(std::string_view command, const cmdmap_t &cmdmap,
-             Formatter *f,
-             std::ostream &ss,
-             bufferlist &out) override
-    {
-      if (command == "dump kvq vector")
-      {
-        store->codel.dump_log_data();
-      }
-      else if (command == "reset kvq vector")
-      {
-
-        store->codel.clear_log_data();
-        if (store->codel.activated) {
-          store->codel.set_throttle(&store->throttle);
-          store->codel.reset(store->cct);
-        }
-      }
-      else if (command == "disable codel")
-      {
-        store->codel.activated = false;
-      }
-      else if (command == "enable codel")
-      {
-        store->codel.activated = true;
-      }
-      return 0;
-    }
-};
 
 BlueStore::BlueStoreSlowFastCoDel::BlueStoreSlowFastCoDel(CephContext *_cct) :
         cct(_cct), fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock) {}
