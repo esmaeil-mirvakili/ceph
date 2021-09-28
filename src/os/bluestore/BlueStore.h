@@ -1861,12 +1861,12 @@ public:
      std::vector<double> throughput_vec;
 
       template<typename T>
-      T BlueStore::millisec_to_nanosec(T ms) {
+      T millisec_to_nanosec(T ms) {
         return ms * 1000 * 1000;
       }
 
       template<typename T>
-      T BlueStore::nanosec_to_millisec(T ns) {
+      T nanosec_to_millisec(T ns) {
         return ms / (1000 * 1000);
       }
 
