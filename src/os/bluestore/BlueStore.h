@@ -1867,7 +1867,7 @@ public:
 
       template<typename T>
       T nanosec_to_millisec(T ns) {
-        return ms / (1000 * 1000);
+        return ns / (1000 * 1000);
       }
 
      void reset(CephContext *cct);
