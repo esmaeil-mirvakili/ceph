@@ -16254,16 +16254,6 @@ void BlueStore::BlueStoreSlowFastCoDel::register_txc(TransContext * txc) {
   }
   slow_interval_txc_cnt++;
   slow_interval_registered_bytes += txc->bytes;
-  txc_start_vec.push_back(std::chrono::nanoseconds(txc->codel_txc_entered - ceph::mono_clock::zero()).count());
-  txc_lat_vec.push_back(latency);
-  delta_vec.push_back(0);
-  slope_vec.push_back(*slope);
-  txc_avg_lat_vec.push_back(0);
-  txc_bytes.push_back(txc->bytes);
-  throttle_max_vec.push_back(0);
-  throttle_current_vec.push_back(0);
-  throughput_vec.push_back(0);
-  target_vec.push_back(target_latency);
 }
 
 void BlueStore::BlueStoreSlowFastCoDel::on_min_latency_violation() {
