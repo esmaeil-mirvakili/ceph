@@ -55,6 +55,7 @@
 #include "bluestore_types.h"
 #include "BlueFS.h"
 #include "common/EventTrace.h"
+#include <fstream>
 
 #ifdef WITH_BLKIN
 #include "common/zipkin_trace.h"
