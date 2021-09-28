@@ -9,7 +9,7 @@ boost::numeric::ublas::matrix<double> RegressionUtils::matrix_inverse(boost::num
 {
     assert(m.size1() == m.size2() && "Can only calculate the inverse of square matrices");
     assert(m.size1() == 2 && m.size2() == 2 && "Only for 2x2 matrices");
-    matrix<double> m_inverse(2,2);
+    boost::numeric::ublas::matrix<double> m_inverse(2,2);
     const double a = m(0,0);
     const double b = m(0,1);
     const double c = m(1,0);
