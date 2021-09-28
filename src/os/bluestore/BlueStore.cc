@@ -16364,16 +16364,6 @@ void BlueStore::BlueStoreSlowFastCoDel::_fast_interval_process() {
   fast_timer.add_event_after(interval_duration, codel_ctx);
 }
 
-template<typename T>
-T BlueStore::millisec_to_nanosec(T ms) {
-  return ms * 1000 * 1000;
-}
-
-template<typename T>
-T BlueStore::nanosec_to_millisec(T ns) {
-  return ms / (1000 * 1000);
-}
-
 void BlueStore::BlueStoreSlowFastCoDel::_slow_interval_process() {
   std::lock_guard l(register_lock);
   ceph::mono_clock::time_point now = ceph::mono_clock::now();

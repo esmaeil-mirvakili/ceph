@@ -1861,9 +1861,14 @@ public:
      std::vector<double> throughput_vec;
 
       template<typename T>
-      static T millisec_to_nanosec(T ms);
+      T BlueStore::millisec_to_nanosec(T ms) {
+        return ms * 1000 * 1000;
+      }
+
       template<typename T>
-      static T nanosec_to_millisec(T ms);
+      T BlueStore::nanosec_to_millisec(T ns) {
+        return ms / (1000 * 1000);
+      }
 
      void reset(CephContext *cct);
      void set_throttle(BlueStoreThrottle *_throttle);
