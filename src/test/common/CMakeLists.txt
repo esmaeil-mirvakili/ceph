@@ -157,12 +157,9 @@ add_ceph_unittest(unittest_random)
 target_link_libraries(unittest_random Boost::random)
 
 # unittest_regression_utils
-add_executable(unittest_regression_utils
-        test_regression_utils.cc
-        ${CMAKE_SOURCE_DIR}/src/common/regression_utils.cc
-        )
+add_executable(unittest_regression_utils test_regression_utils.cc)
 add_ceph_unittest(unittest_regression_utils)
-target_link_libraries(unittest_regression_utils ceph-common)
+target_link_libraries(unittest_regression_utils ceph-common global)
 
 # unittest_throttle
 add_executable(unittest_throttle
