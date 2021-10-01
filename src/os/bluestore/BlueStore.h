@@ -1639,7 +1639,7 @@ public:
     uint64_t seq = 0;
     ceph::mono_clock::time_point start;
     ceph::mono_clock::time_point last_stamp;
-    ceph::mono_clock::time_point codel_txc_entered;
+    ceph::mono_clock::time_point txc_state_proc_start;
 
     uint64_t last_nid = 0;     ///< if non-zero, highest new nid we allocated
     uint64_t last_blobid = 0;  ///< if non-zero, highest new blobid we allocated
@@ -1840,79 +1840,99 @@ public:
     }
   } throttle;
 
- /**
-  * CoDel algorithm to calculate the incoming batch size to kv by using Throttle mechanism
-  */
+  class SocketHook;
+  SocketHook *asok_hook = nullptr;
+
+  /**
+   * CoDel algorithm to calculate the incoming batch size to kv by using Throttle mechanism
+   */
   class BlueStoreSlowFastCoDel {
- public:
-     BlueStoreSlowFastCoDel(CephContext *_cct);
-     ~BlueStoreSlowFastCoDel();
+  public:
+    BlueStoreSlowFastCoDel(CephContext *_cct);
 
-      template<typename T>
-      T millisec_to_nanosec(T ms) {
-        return ms * 1000 * 1000;
-      }
+    ~BlueStoreSlowFastCoDel();
 
-      template<typename T>
-      T nanosec_to_millisec(T ns) {
-        return ns / (1000 * 1000);
-      }
+    void reset(CephContext *cct);
 
-      template<typename T>
-      T nanosec_to_sec(T ns) {
-        return ns / (1000 * 1000 * 1000);
-      }
+    void set_throttle(BlueStoreThrottle *_throttle);
 
-     void reset(CephContext *cct);
-     void set_throttle(BlueStoreThrottle *_throttle);
-     void modify_transaction_cost(TransContext *txc);
-     void register_txc(TransContext *txc);
-     int64_t get_bluestore_budget();
-     bool is_activated();
-     bool activated = false;    // true if SlowFastCodel is activated
- protected:
+    void submit_txc_info(TransContext *txc);
 
-     int64_t initial_fast_interval;     // Initial interval for fast loop (original codel)
-     int64_t initial_target_latency;     // Initial target latency to start the algorithm
-     int64_t slow_interval = INITIAL_LATENCY_VALUE;       // the interval for the slow loop
-     int64_t fast_interval = INITIAL_LATENCY_VALUE;       // current interval for the fast loop
-     int64_t target_latency = INITIAL_LATENCY_VALUE;       // current target latency that fast loop is using
-     int64_t min_latency = INITIAL_LATENCY_VALUE;       // min latency in the current fast interval
-     int64_t min_target_latency;  // in ns
-     int64_t max_target_latency; // in ns
-     int64_t violation_count = 0;
-     ceph::mutex fast_timer_lock = ceph::make_mutex("CoDel::fast_timer_lock");
-     ceph::mutex slow_timer_lock = ceph::make_mutex("CoDel::slow_timer_lock");
-     ceph::mutex register_lock = ceph::make_mutex("CoDel::register_lock");
-     SafeTimer fast_timer;  // fast loop timer
-     SafeTimer slow_timer;  // slow loop timer
-     ceph::mono_clock::time_point slow_interval_start;   // marks the start of the current slow interval
-     double target_slope = 5;    // define the tradeoff between throughput and latency (MB/s loss for every 1ms decrease
-                                // in latency)
-     int64_t slow_interval_registered_bytes;    // amount of bytes that has been processed in current slow interval
-     int64_t slow_interval_txc_cnt = 0;    // number of transactions that has been processed in current slow interval
-     std::vector<double> regression_target_latency_history;   // target latency history for regression
-     std::vector<double> regression_throughput_history;   // throughput history for regression
-     double *slope;
-     int64_t regression_history_size;   // regression history size
-     int64_t min_bluestore_budget;  // the minimum bluestore throttle budget
-     int64_t initial_bluestore_budget; // the initial bluestore throttle budget
-     int64_t bluestore_budget_increment;    // the increment size for opening the bluestore throttle
-     int64_t bluestore_budget;  // current bluestore throttle budget
-     int64_t max_queue_length;  // maximum amount of inflight data in current slow interval
-     BlueStoreThrottle *bs_throttle { nullptr };    // a pointer to bluestore throttle
+    int64_t get_bluestore_budget();
 
-     void on_min_latency_violation();
-     void on_no_violation();
-     void on_interval_finished();
- private:
-     static const int64_t INITIAL_LATENCY_VALUE = -1;
+    bool is_activated();
 
-     bool _check_latency_violation();
-     void _update_interval();
-     void _fast_interval_process();
-     void _slow_interval_process();
- } codel;
+    // log data
+    std::vector<double> txc_start_vec;
+    std::vector<double> txc_lat_vec;
+    std::vector<double> txc_bytes;
+    std::vector<int64_t> target_vec;
+
+    bool activated = false;    // true if SlowFastCodel is activated
+  protected:
+
+    int64_t initial_fast_interval;     // Initial interval for fast loop (original codel)
+    int64_t initial_target_latency;     // Initial target latency to start the algorithm
+    int64_t slow_interval = INITIAL_LATENCY_VALUE;       // the interval for the slow loop
+    int64_t fast_interval = INITIAL_LATENCY_VALUE;       // current interval for the fast loop
+    int64_t target_latency = INITIAL_LATENCY_VALUE;       // current target latency that fast loop is using
+    int64_t min_latency = INITIAL_LATENCY_VALUE;       // min latency in the current fast interval
+    int64_t min_target_latency;  // in ns
+    int64_t max_target_latency; // in ns
+    int64_t violation_count = 0;
+    ceph::mutex fast_timer_lock = ceph::make_mutex("CoDel::fast_timer_lock");
+    ceph::mutex slow_timer_lock = ceph::make_mutex("CoDel::slow_timer_lock");
+    ceph::mutex register_lock = ceph::make_mutex("CoDel::register_lock");
+    SafeTimer fast_timer;  // fast loop timer
+    SafeTimer slow_timer;  // slow loop timer
+    ceph::mono_clock::time_point slow_interval_start;   // marks the start of the current slow interval
+    double target_slope = 5;    // define the tradeoff between throughput and latency (MB/s loss for every 1ms decrease
+    // in latency)
+    int64_t slow_interval_registered_bytes;    // amount of bytes that has been processed in current slow interval
+    int64_t slow_interval_txc_cnt = 0;    // number of transactions that has been processed in current slow interval
+    std::vector<double> regression_target_latency_history;   // target latency history for regression
+    std::vector<double> regression_throughput_history;   // throughput history for regression
+    double *slope;
+    int64_t regression_history_size;   // regression history size
+    int64_t min_bluestore_budget;  // the minimum bluestore throttle budget
+    int64_t initial_bluestore_budget; // the initial bluestore throttle budget
+    int64_t bluestore_budget_increment;    // the increment size for opening the bluestore throttle
+    int64_t bluestore_budget;  // current bluestore throttle budget
+    int64_t max_queue_length;  // maximum amount of inflight data in current slow interval
+    BlueStoreThrottle *bs_throttle{nullptr};    // a pointer to bluestore throttle
+
+    void on_min_latency_violation();
+
+    void on_no_violation();
+
+    void on_interval_finished();
+
+  private:
+    static const int64_t INITIAL_LATENCY_VALUE = -1;
+
+    bool _check_latency_violation();
+
+    void _update_interval();
+
+    void _fast_interval_process();
+
+    void _slow_interval_process();
+
+    template<typename T>
+    T millisec_to_nanosec(T ms) {
+      return ms * 1000 * 1000;
+    }
+
+    template<typename T>
+    T nanosec_to_millisec(T ns) {
+      return ns / (1000 * 1000);
+    }
+
+    template<typename T>
+    T nanosec_to_sec(T ns) {
+      return ns / (1000 * 1000 * 1000);
+    }
+  } codel;
 
   typedef boost::intrusive::list<
     TransContext,

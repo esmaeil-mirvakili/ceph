@@ -1,3 +1,6 @@
+// -*- mode:C++; tab-width:8; c-basic-offset:2; indent-tabs-mode:t -*-
+// vim: ts=8 sw=2 smarttab
+
 #include "regression_utils.h"
 
 /***
@@ -5,21 +8,20 @@
  * @param matrix<double>& m, an square 2x2 matrix
  * @return the inverse of the m (m^-1)
  */
-boost::numeric::ublas::matrix<double> RegressionUtils::matrix_inverse(boost::numeric::ublas::matrix<double>& m)
-{
-    assert(m.size1() == m.size2() && "Can only calculate the inverse of square matrices");
-    assert(m.size1() == 2 && m.size2() == 2 && "Only for 2x2 matrices");
-    boost::numeric::ublas::matrix<double> m_inverse(2,2);
-    const double a = m(0,0);
-    const double b = m(0,1);
-    const double c = m(1,0);
-    const double d = m(1,1);
-    const double determinant = 1.0 / ((a * d) - (b * c));
-    m_inverse(0,0) =  d * determinant;
-    m_inverse(0,1) = -b * determinant;
-    m_inverse(1,0) = -c * determinant;
-    m_inverse(1,1) =  a * determinant;
-    return m_inverse;
+boost::numeric::ublas::matrix<double> RegressionUtils::matrix_inverse(boost::numeric::ublas::matrix<double> &m) {
+  assert(m.size1() == m.size2() && "Can only calculate the inverse of square matrices");
+  assert(m.size1() == 2 && m.size2() == 2 && "Only for 2x2 matrices");
+  boost::numeric::ublas::matrix<double> m_inverse(2, 2);
+  const double a = m(0, 0);
+  const double b = m(0, 1);
+  const double c = m(1, 0);
+  const double d = m(1, 1);
+  const double determinant = 1.0 / ((a * d) - (b * c));
+  m_inverse(0, 0) = d * determinant;
+  m_inverse(0, 1) = -b * determinant;
+  m_inverse(1, 0) = -c * determinant;
+  m_inverse(1, 1) = a * determinant;
+  return m_inverse;
 }
 
 /***
@@ -32,26 +34,26 @@ void RegressionUtils::logarithmic_regression(
         std::vector<double> x_values,
         std::vector<double> y_values,
         double theta[2]) {
-    assert(x_values.size() == y_values.size() && "x and y values vectors should have a same size.");
-    const int n = x_values.size();
+  assert(x_values.size() == y_values.size() && "x and y values vectors should have a same size.");
+  const int n = x_values.size();
 
-    boost::numeric::ublas::matrix<double> y_m (n,1);
-    for (int i = 0; i < n; i++)
-        y_m(i,0) = y_values[i];
+  boost::numeric::ublas::matrix<double> y_m(n, 1);
+  for (int i = 0; i < n; i++)
+    y_m(i, 0) = y_values[i];
 
-    boost::numeric::ublas::scalar_matrix<double> sm (n, 2, 1);
-    boost::numeric::ublas::matrix<double> x_new_m (sm);
-    for (int i = 0; i < n; i++) {
-        x_new_m(i,0) = 1;
-        x_new_m(i,1) = std::log(x_values[i]);
-    }
-    boost::numeric::ublas::matrix<double> x_new_trans_m = boost::numeric::ublas::trans(x_new_m);
-    boost::numeric::ublas::matrix<double> x_new_trans_dot_x_new_m = boost::numeric::ublas::prod(x_new_trans_m, x_new_m);
-    boost::numeric::ublas::matrix<double> temp_1_m = matrix_inverse(x_new_trans_dot_x_new_m);
-    boost::numeric::ublas::matrix<double> temp_2_m = boost::numeric::ublas::prod(x_new_trans_m, y_m);
-    boost::numeric::ublas::matrix<double> theta_m = boost::numeric::ublas::prod(temp_1_m, temp_2_m);
-    theta[0] = theta_m(0,0);
-    theta[1] = theta_m(1,0);
+  boost::numeric::ublas::scalar_matrix<double> sm(n, 2, 1);
+  boost::numeric::ublas::matrix<double> x_new_m(sm);
+  for (int i = 0; i < n; i++) {
+    x_new_m(i, 0) = 1;
+    x_new_m(i, 1) = std::log(x_values[i]);
+  }
+  boost::numeric::ublas::matrix<double> x_new_trans_m = boost::numeric::ublas::trans(x_new_m);
+  boost::numeric::ublas::matrix<double> x_new_trans_dot_x_new_m = boost::numeric::ublas::prod(x_new_trans_m, x_new_m);
+  boost::numeric::ublas::matrix<double> temp_1_m = matrix_inverse(x_new_trans_dot_x_new_m);
+  boost::numeric::ublas::matrix<double> temp_2_m = boost::numeric::ublas::prod(x_new_trans_m, y_m);
+  boost::numeric::ublas::matrix<double> theta_m = boost::numeric::ublas::prod(temp_1_m, temp_2_m);
+  theta[0] = theta_m(0, 0);
+  theta[1] = theta_m(1, 0);
 }
 
 /***
@@ -65,13 +67,13 @@ double RegressionUtils::find_slope_on_logarithmic_curve(
         std::vector<double> x_values,
         std::vector<double> y_values,
         double target_slope) {
-    assert(x_values.size() == y_values.size() && "x and y values vectors should have a same size.");
-    assert(target_slope != 0 && "The target slope of zero will result to a inf x, try a nonzero value.");
-    assert(target_slope >= 0 && "The target slope for a logarithmic function should be positive.");
-    double theta[2];    // theta[0] + theta[1] * ln(x)
-    logarithmic_regression(x_values,y_values, theta);     // find the logarithmic function using regression
-    double target_x = theta[1] / target_slope;  // find the x where the slope is close to target_slope
-    return target_x;
+  assert(x_values.size() == y_values.size() && "x and y values vectors should have a same size.");
+  assert(target_slope != 0 && "The target slope of zero will result to a inf x, try a nonzero value.");
+  assert(target_slope >= 0 && "The target slope for a logarithmic function should be positive.");
+  double theta[2];    // theta[0] + theta[1] * ln(x)
+  logarithmic_regression(x_values, y_values, theta);     // find the logarithmic function using regression
+  double target_x = theta[1] / target_slope;  // find the x where the slope is close to target_slope
+  return target_x;
 }
 
 /***
@@ -82,12 +84,12 @@ double RegressionUtils::find_slope_on_logarithmic_curve(
  * @param params, holds the calculated distribution parameters (mu and std) as output (params[0] = mu and params[1] = std)
  */
 void RegressionUtils::find_log_normal_dist_params(double mode, double min_x, double max_x, double params[2]) {
-    assert(min_x < max_x && "The min_x should be smaller than max_x");
-    assert(mode > min_x && mode < max_x && "The mode should be between min_x and max_x");
-    double max_x_normalized = max_x - min_x;
-    double mode_normalized = mode - min_x;
-    double std = (-Z_P + std::sqrt(Z_P * Z_P + 4 * std::log(max_x_normalized) - 4 * std::log(mode_normalized))) / 2;
-    double mu = std::log(max_x_normalized) - Z_P * std;
-    params[0] = mu;
-    params[1] = std;
+  assert(min_x < max_x && "The min_x should be smaller than max_x");
+  assert(mode > min_x && mode < max_x && "The mode should be between min_x and max_x");
+  double max_x_normalized = max_x - min_x;
+  double mode_normalized = mode - min_x;
+  double std_dev = (-Z_P + std::sqrt(Z_P * Z_P + 4 * std::log(max_x_normalized) - 4 * std::log(mode_normalized))) / 2;
+  double mu = std::log(max_x_normalized) - Z_P * std_dev;
+  params[0] = mu;
+  params[1] = std_dev;
 }
