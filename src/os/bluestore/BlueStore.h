@@ -56,6 +56,7 @@
 #include "BlueFS.h"
 #include "common/EventTrace.h"
 #include "common/admin_socket.h"
+#include <fstream>
 
 #ifdef WITH_BLKIN
 #include "common/zipkin_trace.h"
