@@ -55,6 +55,7 @@
 #include "bluestore_types.h"
 #include "BlueFS.h"
 #include "common/EventTrace.h"
+#include "common/admin_socket.h"
 
 #ifdef WITH_BLKIN
 #include "common/zipkin_trace.h"
@@ -1840,11 +1841,9 @@ public:
     }
   } throttle;
 
-  class SocketHook : public AdminSocketHook
-  {
-    BlueStore *store;
-
+  class SocketHook : public AdminSocketHook{
   public:
+    BlueStore *store;
     static SocketHook *create(BlueStore *store);
     ~SocketHook();
 
