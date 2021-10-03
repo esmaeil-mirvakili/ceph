@@ -1840,6 +1840,23 @@ public:
     }
   } throttle;
 
+  class SocketHook : public AdminSocketHook
+  {
+    BlueStore *store;
+
+  public:
+    static SocketHook *create(BlueStore *store);
+    ~SocketHook();
+
+  private:
+    SocketHook(BlueStore *store);
+    int call(std::string_view command, const cmdmap_t &cmdmap,
+             Formatter *f,
+             std::ostream &ss,
+             bufferlist &out) override;
+  };
+  SocketHook *asok_hook = nullptr;
+
   /**
    * CoDel algorithm to calculate the incoming batch size to kv by using Throttle mechanism
    */
@@ -2171,9 +2188,6 @@ private:
   int path_fd = -1;  ///< open handle to $path
   int fsid_fd = -1;  ///< open handle (locked) to $path/fsid
   bool mounted = false;
-
-  class SocketHook;
-  SocketHook *asok_hook = nullptr;
 
   ceph::shared_mutex coll_lock = ceph::make_shared_mutex("BlueStore::coll_lock");  ///< rwlock to protect coll_map
   mempool::bluestore_cache_other::unordered_map<coll_t, CollectionRef> coll_map;

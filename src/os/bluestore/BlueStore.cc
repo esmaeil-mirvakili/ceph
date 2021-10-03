@@ -16153,75 +16153,64 @@ void BlueStore::BlueStoreThrottle::complete(TransContext &txc)
 }
 #endif
 
-class BlueStore::SocketHook : public AdminSocketHook
-{
-  BlueStore *store;
+BlueStore::SocketHook::SocketHook(BlueStore *store) : store(store) {}
 
-public:
-  static BlueStore::SocketHook *create(BlueStore *store)
-  {
-    BlueStore::SocketHook *hook = nullptr;
-    AdminSocket *admin_socket = store->cct->get_admin_socket();
-    if (admin_socket)
-    {
-      hook = new BlueStore::SocketHook(store);
-      int r = admin_socket->register_command("dump kvq vector",
-                                             hook,
-                                             "dump vectors contains kvq_lat");
-      r = admin_socket->register_command("reset kvq vector",
-                                         hook,
-                                         "reset vectors contains kvq_lat");
-      r = admin_socket->register_command("disable codel",
-                                         hook,
-                                         "disable codel module");
-      r = admin_socket->register_command("enable codel",
-                                         hook,
-                                         "enable codel module");
-      if (r != 0)
-      {
-        delete hook;
-        hook = nullptr;
-      }
-    }
-    return hook;
-  }
-  ~SocketHook()
-  {
-    AdminSocket *admin_socket = store->cct->get_admin_socket();
-    admin_socket->unregister_commands(this);
-  }
+BlueStore::SocketHook::~SocketHook() {
+  AdminSocket *admin_socket = store->cct->get_admin_socket();
+  admin_socket->unregister_commands(this);
+}
 
-private:
-  SocketHook(BlueStore *store) : store(store) {}
-  int call(std::string_view command, const cmdmap_t &cmdmap,
-           Formatter *f,
-           std::ostream &ss,
-           bufferlist &out) override
+SocketHook * BlueStore::SocketHook::create(BlueStore *store) {
+  BlueStore::SocketHook *hook = nullptr;
+  AdminSocket *admin_socket = store->cct->get_admin_socket();
+  if (admin_socket)
   {
-    if (command == "dump kvq vector")
+    hook = new BlueStore::SocketHook(store);
+    int r = admin_socket->register_command("dump kvq vector",
+                                           hook,
+                                           "dump vectors contains kvq_lat");
+    r = admin_socket->register_command("reset kvq vector",
+                                       hook,
+                                       "reset vectors contains kvq_lat");
+    r = admin_socket->register_command("disable codel",
+                                       hook,
+                                       "disable codel module");
+    r = admin_socket->register_command("enable codel",
+                                       hook,
+                                       "enable codel module");
+    if (r != 0)
     {
-      store->codel.dump_log_data();
+      delete hook;
+      hook = nullptr;
     }
-    else if (command == "reset kvq vector")
-    {
-
-      store->codel.clear_log_data();
-      if (store->codel.activated) {
-        store->codel.set_throttle(&store->throttle);
-        store->codel.reset(store->cct);
-      }
-    }
-    else if (command == "disable codel")
-    {
-      store->codel.activated = false;
-    }
-    else if (command == "enable codel")
-    {
-      store->codel.activated = true;
-    }
-    return 0;
   }
-};
+  return hook;
+}
+
+int BlueStore::SocketHook::call(std::string_view command, const int &cmdmap, int *f, std::ostream &ss, int &out) {
+  if (command == "dump kvq vector")
+  {
+    store->codel.dump_log_data();
+  }
+  else if (command == "reset kvq vector")
+  {
+
+    store->codel.clear_log_data();
+    if (store->codel.activated) {
+      store->codel.set_throttle(&store->throttle);
+      store->codel.reset(store->cct);
+    }
+  }
+  else if (command == "disable codel")
+  {
+    store->codel.activated = false;
+  }
+  else if (command == "enable codel")
+  {
+    store->codel.activated = true;
+  }
+  return 0;
+}
 
 BlueStore::BlueStoreSlowFastCoDel::BlueStoreSlowFastCoDel(CephContext *_cct) :
   fast_timer(_cct, fast_timer_lock), slow_timer(_cct, slow_timer_lock) {}
