@@ -2172,7 +2172,7 @@ private:
   int fsid_fd = -1;  ///< open handle (locked) to $path/fsid
   bool mounted = false;
 
-  class BlueStore::SocketHook : public AdminSocketHook
+  class SocketHook : public AdminSocketHook
   {
     BlueStore *store;
 
