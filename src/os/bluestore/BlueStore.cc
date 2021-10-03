@@ -16186,7 +16186,10 @@ SocketHook * BlueStore::SocketHook::create(BlueStore *store) {
   return hook;
 }
 
-int BlueStore::SocketHook::call(std::string_view command, const int &cmdmap, int *f, std::ostream &ss, int &out) {
+int BlueStore::SocketHook::call(std::string_view command, const cmdmap_t &cmdmap,
+  Formatter *f,
+std::ostream &ss,
+  bufferlist &out) override{
   if (command == "dump kvq vector")
   {
     store->codel.dump_log_data();
