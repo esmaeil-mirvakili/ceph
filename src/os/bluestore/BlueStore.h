@@ -2172,7 +2172,75 @@ private:
   int fsid_fd = -1;  ///< open handle (locked) to $path/fsid
   bool mounted = false;
 
-  class SocketHook;
+  class BlueStore::SocketHook : public AdminSocketHook
+  {
+    BlueStore *store;
+
+  public:
+    static SocketHook *create(BlueStore *store)
+    {
+      SocketHook *hook = nullptr;
+      AdminSocket *admin_socket = store->cct->get_admin_socket();
+      if (admin_socket)
+      {
+        hook = new SocketHook(store);
+        int r = admin_socket->register_command("dump kvq vector",
+                                               hook,
+                                               "dump vectors contains kvq_lat");
+        r = admin_socket->register_command("reset kvq vector",
+                                           hook,
+                                           "reset vectors contains kvq_lat");
+        r = admin_socket->register_command("disable codel",
+                                           hook,
+                                           "disable codel module");
+        r = admin_socket->register_command("enable codel",
+                                           hook,
+                                           "enable codel module");
+        if (r != 0)
+        {
+          delete hook;
+          hook = nullptr;
+        }
+      }
+      return hook;
+    }
+    ~SocketHook()
+    {
+      AdminSocket *admin_socket = store->cct->get_admin_socket();
+      admin_socket->unregister_commands(this);
+    }
+
+  private:
+    SocketHook(BlueStore *store) : store(store) {}
+    int call(std::string_view command, const cmdmap_t &cmdmap,
+             Formatter *f,
+             std::ostream &ss,
+             bufferlist &out) override
+    {
+      if (command == "dump kvq vector")
+      {
+        store->codel.dump_log_data();
+      }
+      else if (command == "reset kvq vector")
+      {
+
+        store->codel.clear_log_data();
+        if (store->codel.activated) {
+          store->codel.set_throttle(&store->throttle);
+          store->codel.reset(store->cct);
+        }
+      }
+      else if (command == "disable codel")
+      {
+        store->codel.activated = false;
+      }
+      else if (command == "enable codel")
+      {
+        store->codel.activated = true;
+      }
+      return 0;
+    }
+  };
   SocketHook *asok_hook = nullptr;
 
   ceph::shared_mutex coll_lock = ceph::make_shared_mutex("BlueStore::coll_lock");  ///< rwlock to protect coll_map
