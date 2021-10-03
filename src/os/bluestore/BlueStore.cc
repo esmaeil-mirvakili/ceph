@@ -16159,7 +16159,7 @@ BlueStore::SocketHook::~SocketHook() {
   admin_socket->unregister_commands(this);
 }
 
-SocketHook * BlueStore::SocketHook::create(BlueStore *store) {
+BlueStore::SocketHook * BlueStore::SocketHook::create(BlueStore *store) {
   BlueStore::SocketHook *hook = nullptr;
   AdminSocket *admin_socket = store->cct->get_admin_socket();
   if (admin_socket)
@@ -16189,7 +16189,7 @@ SocketHook * BlueStore::SocketHook::create(BlueStore *store) {
 int BlueStore::SocketHook::call(std::string_view command, const cmdmap_t &cmdmap,
   Formatter *f,
 std::ostream &ss,
-  bufferlist &out) override{
+  bufferlist &out){
   if (command == "dump kvq vector")
   {
     store->codel.dump_log_data();

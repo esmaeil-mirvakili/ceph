@@ -1880,6 +1880,8 @@ public:
     std::vector<double> txc_lat_vec;
     std::vector<double> txc_bytes;
     std::vector<int64_t> target_vec;
+    void dump_log_data();
+    void clear_log_data();
 
     bool activated = false;    // true if SlowFastCodel is activated
   protected:
