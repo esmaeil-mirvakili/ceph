@@ -16236,29 +16236,13 @@ void BlueStore::BlueStoreSlowFastCoDel::clear_log_data() {
   txc_start_vec.clear();
   txc_lat_vec.clear();
   txc_bytes.clear();
-  delta_vec.clear();
-  slope_vec.clear();
-  txc_avg_lat_vec.clear();
-  throttle_max_vec.clear();
-  throttle_current_vec.clear();
   target_vec.clear();
-  throughput_vec.clear();
 }
 
 void BlueStore::BlueStoreSlowFastCoDel::dump_log_data() {
   // create an filestream object
   std::string prefix = "codel_log_";
   std::string index = "";
-
-  std::ofstream model_file(prefix + "model" + index + ".csv");
-  model_file << "target, throughput\n";
-  for (unsigned int i = 0; i < regression_target_latency_history.size(); i++) {
-    model_file << std::fixed << regression_target_latency_history[i];
-    model_file << ",";
-    model_file << std::fixed << regression_throughput_history[i];
-    model_file << "\n";
-  }
-  model_file.close();
 
   std::ofstream txc_file(prefix + "txc" + index + ".csv");
   // add column names
@@ -16271,60 +16255,10 @@ void BlueStore::BlueStoreSlowFastCoDel::dump_log_data() {
     txc_file << ",";
     txc_file << std::fixed << txc_bytes[i];
     txc_file << ",";
-    txc_file << std::fixed << throttle_max_vec[i];
-    txc_file << ",";
-    txc_file << std::fixed << throttle_current_vec[i];
-    txc_file << ",";
-    txc_file << std::fixed << throughput_vec[i];
-    txc_file << ",";
     txc_file << std::fixed << target_vec[i];
-    txc_file << ",";
-    txc_file << std::fixed << txc_avg_lat_vec[i];
-    txc_file << ",";
-    txc_file << std::fixed << slope_vec[i];
-    txc_file << ",";
-    txc_file << std::fixed << delta_vec[i];
     txc_file << "\n";
   }
   txc_file.close();
-
-  std::ofstream params_file(prefix + "params" + index + ".csv");
-
-  params_file << "activated: ";
-  params_file << std::fixed << activated;
-  params_file << "\n";
-
-  params_file << "init_target: ";
-  params_file << std::fixed << initial_target_latency;
-  params_file << "\n";
-
-  params_file << "init_interval: ";
-  params_file << std::fixed << initial_fast_interval;
-  params_file << "\n";
-
-  params_file << "starting_bluestore_budget: ";
-  params_file << std::fixed << initial_bluestore_budget;
-  params_file << "\n";
-
-  params_file << "min_bluestore_budget: ";
-  params_file << std::fixed << min_bluestore_budget;
-  params_file << "\n";
-
-  params_file << "target_slope: ";
-  params_file << std::fixed << target_slope;
-  params_file << "\n";
-
-  params_file << "slow_interval_frequency: ";
-  params_file << std::fixed << slow_interval_frequency;
-  params_file << "\n";
-
-  params_file << "max_target_latency: ";
-  params_file << std::fixed << max_target_latency;
-  params_file << "\n";
-
-  params_file << "min_target_latency: ";
-  params_file << std::fixed << min_target_latency;
-  params_file << "\n";
 }
 
 void BlueStore::BlueStoreSlowFastCoDel::submit_txc_info(TransContext * txc) {
