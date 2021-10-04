@@ -16246,7 +16246,7 @@ void BlueStore::BlueStoreSlowFastCoDel::dump_log_data() {
 
   std::ofstream txc_file(prefix + "txc" + index + ".csv");
   // add column names
-  txc_file << "start, lat, size, budget, throttle, throughput, target, avg_lat, slope, delta" << "\n";
+  txc_file << "start, lat, size, target" << "\n";
 
   for (unsigned int i = 0; i < txc_start_vec.size(); i++) {
     txc_file << std::fixed << txc_start_vec[i];
@@ -16301,17 +16301,29 @@ void BlueStore::BlueStoreSlowFastCoDel::reset(CephContext *cct) {
     std::lock_guard l(register_lock);
 
     // load the configs
-    activated = cct->_conf.get_val<bool>("bluestore_codel");
-    target_slope = cct->_conf.get_val<double>("bluestore_codel_throughput_latency_tradeoff");
-    slow_interval = cct->_conf.get_val<int64_t>("bluestore_codel_slow_interval");
-    initial_fast_interval = cct->_conf.get_val<int64_t>("bluestore_codel_fast_interval");
-    initial_target_latency = cct->_conf.get_val<int64_t>("bluestore_codel_initial_target_latency");
-    min_target_latency = cct->_conf.get_val<int64_t>("bluestore_codel_min_target_latency");
-    max_target_latency = cct->_conf.get_val<int64_t>("bluestore_codel_max_target_latency");
-    initial_bluestore_budget = cct->_conf.get_val<uint64_t>("bluestore_codel_initial_budget_bytes");
-    min_bluestore_budget = cct->_conf.get_val<uint64_t>("bluestore_codel_min_budget_bytes");
-    bluestore_budget_increment = cct->_conf.get_val<uint64_t>("bluestore_codel_budget_increment_bytes");
-    regression_history_size = cct->_conf.get_val<int64_t>("bluestore_codel_regression_history_size");
+//    activated = cct->_conf.get_val<bool>("bluestore_codel");
+//    target_slope = cct->_conf.get_val<double>("bluestore_codel_throughput_latency_tradeoff");
+//    slow_interval = cct->_conf.get_val<int64_t>("bluestore_codel_slow_interval");
+//    initial_fast_interval = cct->_conf.get_val<int64_t>("bluestore_codel_fast_interval");
+//    initial_target_latency = cct->_conf.get_val<int64_t>("bluestore_codel_initial_target_latency");
+//    min_target_latency = cct->_conf.get_val<int64_t>("bluestore_codel_min_target_latency");
+//    max_target_latency = cct->_conf.get_val<int64_t>("bluestore_codel_max_target_latency");
+//    initial_bluestore_budget = cct->_conf.get_val<uint64_t>("bluestore_codel_initial_budget_bytes");
+//    min_bluestore_budget = cct->_conf.get_val<uint64_t>("bluestore_codel_min_budget_bytes");
+//    bluestore_budget_increment = cct->_conf.get_val<uint64_t>("bluestore_codel_budget_increment_bytes");
+//    regression_history_size = cct->_conf.get_val<int64_t>("bluestore_codel_regression_history_size");
+
+    activated = cct->_conf->bluestore_codel;
+    target_slope = cct->_conf->bluestore_codel_throughput_latency_tradeoff;
+    slow_interval = cct->_conf->bluestore_codel_slow_interval;
+    initial_fast_interval = cct->_conf->bluestore_codel_fast_interval;
+    initial_target_latency = cct->_conf->bluestore_codel_initial_target_latency;
+    min_target_latency = cct->_conf->bluestore_codel_min_target_latency;
+    max_target_latency = cct->_conf->bluestore_codel_max_target_latency;
+    initial_bluestore_budget = cct->_conf->bluestore_codel_initial_budget_bytes;
+    min_bluestore_budget = cct->_conf->bluestore_codel_min_budget_bytes;
+    bluestore_budget_increment = cct->_conf->bluestore_codel_budget_increment_bytes;
+    regression_history_size = cct->_conf->bluestore_codel_regression_history_size;
 
     bluestore_budget = initial_bluestore_budget;
     min_bluestore_budget = initial_bluestore_budget;
