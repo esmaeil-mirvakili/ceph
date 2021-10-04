@@ -1872,7 +1872,7 @@ public:
 
     void submit_txc_info(TransContext *txc);
 
-    int64_t get_bluestore_budget();
+    uint64_t get_bluestore_budget();
 
     bool is_activated();
 
@@ -1910,18 +1910,18 @@ public:
     std::vector<double> regression_throughput_history;   // throughput history for regression
     double *slope;
     int64_t regression_history_size;   // regression history size
-    int64_t min_bluestore_budget;  // the minimum bluestore throttle budget
-    int64_t initial_bluestore_budget; // the initial bluestore throttle budget
-    int64_t bluestore_budget_increment;    // the increment size for opening the bluestore throttle
-    int64_t bluestore_budget;  // current bluestore throttle budget
-    int64_t max_queue_length;  // maximum amount of inflight data in current slow interval
+    uint64_t min_bluestore_budget;  // the minimum bluestore throttle budget
+    uint64_t initial_bluestore_budget; // the initial bluestore throttle budget
+    uint64_t bluestore_budget_increment;    // the increment size for opening the bluestore throttle
+    uint64_t bluestore_budget;  // current bluestore throttle budget
+    uint64_t max_queue_length;  // maximum amount of inflight data in current slow interval
     BlueStoreThrottle *bs_throttle{nullptr};    // a pointer to bluestore throttle
 
     void on_min_latency_violation();
 
     void on_no_violation();
 
-    void on_interval_finished();
+    void reset_throttle();
 
   private:
     static const int64_t INITIAL_LATENCY_VALUE = -1;

@@ -16295,12 +16295,6 @@ void BlueStore::BlueStoreSlowFastCoDel::on_no_violation() {
   }
 }
 
-void BlueStore::BlueStoreSlowFastCoDel::on_interval_finished() {
-  if (activated) {
-    bs_throttle->reset_kv_throttle_max(bluestore_budget);
-  }
-}
-
 void BlueStore::BlueStoreSlowFastCoDel::reset(CephContext *cct) {
   {
     std::lock_guard l(register_lock);
@@ -16313,12 +16307,9 @@ void BlueStore::BlueStoreSlowFastCoDel::reset(CephContext *cct) {
     initial_target_latency = cct->_conf.get_val<int64_t>("bluestore_codel_initial_target_latency");
     min_target_latency = cct->_conf.get_val<int64_t>("bluestore_codel_min_target_latency");
     max_target_latency = cct->_conf.get_val<int64_t>("bluestore_codel_max_target_latency");
-    uint32_t init_bluestore_budget = cct->_conf.get_val<uint32_t>("bluestore_codel_initial_budget_bytes");
-    initial_bluestore_budget = (int64_t) init_bluestore_budget;
-    uint32_t min_budget = cct->_conf.get_val<uint32_t>("bluestore_codel_min_budget_bytes");
-    min_bluestore_budget = (int64_t) min_budget;
-    uint32_t bluestore_budget_inc = cct->_conf.get_val<uint32_t>("bluestore_codel_budget_increment_bytes");
-    bluestore_budget_increment = (int64_t) bluestore_budget_inc;
+    initial_bluestore_budget = cct->_conf.get_val<uint64_t>("bluestore_codel_initial_budget_bytes");
+    min_bluestore_budget = cct->_conf.get_val<uint64_t>("bluestore_codel_min_budget_bytes");
+    bluestore_budget_increment = cct->_conf.get_val<uint64_t>("bluestore_codel_budget_increment_bytes");
     regression_history_size = cct->_conf.get_val<int64_t>("bluestore_codel_regression_history_size");
 
     bluestore_budget = initial_bluestore_budget;
@@ -16367,7 +16358,7 @@ void BlueStore::BlueStoreSlowFastCoDel::_fast_interval_process() {
 
     // reset interval
     min_latency = INITIAL_LATENCY_VALUE;
-    on_interval_finished();
+    reset_throttle();
   }
 
   auto codel_ctx = new LambdaContext(
@@ -16462,13 +16453,17 @@ void BlueStore::BlueStoreSlowFastCoDel::_update_interval() {
 
 void BlueStore::BlueStoreSlowFastCoDel::set_throttle(BlueStoreThrottle *_throttle) {
   bs_throttle = _throttle;
+  reset_throttle();
+}
+
+void BlueStore::BlueStoreSlowFastCoDel::reset_throttle() {
   if (activated) {
-    bluestore_budget = initial_bluestore_budget;
-    bs_throttle->reset_kv_throttle_max(bluestore_budget);
+    bluestore_budget = std::max(min_bluestore_budget, bluestore_budget);
+    bs_throttle->reset_kv_throttle_max((int64_t) bluestore_budget);
   }
 }
 
-int64_t BlueStore::BlueStoreSlowFastCoDel::get_bluestore_budget() {
+uint64_t BlueStore::BlueStoreSlowFastCoDel::get_bluestore_budget() {
   return bluestore_budget;
 }
 
