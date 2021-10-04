@@ -1882,6 +1882,7 @@ public:
     std::vector<double> txc_bytes;
     std::vector<int64_t> target_vec;
     std::vector<int64_t> cost_vec;
+    std::vector<int64_t> ios_vec;
     std::vector<double> th_vec;
     std::vector<double> tr_vec;
     void dump_log_data();

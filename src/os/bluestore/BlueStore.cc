@@ -11537,8 +11537,7 @@ void BlueStore::_txc_calc_cost(TransContext *txc)
   // one "io" for the kv commit
   auto ios = 1 + txc->ioc.get_num_ios();
   auto cost = throttle_cost_per_io.load();
-//  txc->cost = ios * cost + txc->bytes;
-  txc->cost = txc->bytes;
+  txc->cost = ios * cost + txc->bytes;
   txc->ios = ios;
   dout(10) << __func__ << " " << txc << " cost " << txc->cost << " ("
 	   << ios << " ios * " << cost << " + " << txc->bytes
@@ -16307,6 +16306,7 @@ void BlueStore::BlueStoreSlowFastCoDel::submit_txc_info(TransContext * txc) {
   txc_bytes.push_back(txc->bytes);
   target_vec.push_back(target_latency);
   cost_vec.push_back(txc->cost);
+  ios_vec.push_back(txc->ios);
 }
 
 void BlueStore::BlueStoreSlowFastCoDel::on_min_latency_violation() {
