@@ -16239,6 +16239,8 @@ void BlueStore::BlueStoreSlowFastCoDel::clear_log_data() {
   txc_bytes.clear();
   target_vec.clear();
   cost_vec.clear();
+  th_vec.clear();
+  tr_vec.clear();
 }
 
 void BlueStore::BlueStoreSlowFastCoDel::dump_log_data() {
@@ -16274,6 +16276,17 @@ void BlueStore::BlueStoreSlowFastCoDel::dump_log_data() {
   p_file << "initial_bluestore_budget: ";
   p_file << std::fixed << initial_bluestore_budget << "\n";
   p_file.close();
+
+  std::ofstream th_file(prefix + "model" + index + ".csv");
+  th_file << "th, tr" << "\n";
+
+  for (unsigned int i = 0; i < th_vec.size(); i++) {
+    th_file << std::fixed << th_vec[i];
+    th_file << ",";
+    th_file << std::fixed << tr_vec[i];
+    th_file << "\n";
+  }
+  th_file.close();
 
 }
 
@@ -16395,6 +16408,8 @@ void BlueStore::BlueStoreSlowFastCoDel::_slow_interval_process() {
     slow_interval_throughput /= 1024.0 * 1024.0;    // MB/s
     regression_target_latency_history.push_back(nanosec_to_millisec(target_latency));
     regression_throughput_history.push_back(slow_interval_throughput);
+    th_vec.push_back(slow_interval_throughput);
+    tr_vec.push_back(nanosec_to_millisec(target_latency));
     if (regression_target_latency_history.size() > regression_history_size) {
       regression_target_latency_history.erase(regression_target_latency_history.begin());
       regression_throughput_history.erase(regression_throughput_history.begin());
