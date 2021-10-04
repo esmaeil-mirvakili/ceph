@@ -4521,9 +4521,9 @@ BlueStore::BlueStore(CephContext *cct,
   _init_logger();
   cct->_conf.add_observer(this);
   set_cache_shards(1);
-  codel.reset(cct);
-  codel.set_throttle(&throttle);
-//  asok_hook = BlueStore::SocketHook::create(this);
+//  codel.reset(cct);
+//  codel.set_throttle(&throttle);
+  asok_hook = BlueStore::SocketHook::create(this);
 }
 
 BlueStore::~BlueStore()
