@@ -1938,18 +1938,18 @@ public:
     void _slow_interval_process();
 
     template<typename T>
-    T millisec_to_nanosec(T ms) {
-      return ms * 1000 * 1000;
+    double millisec_to_nanosec(T ms) {
+      return ms * 1000.0 * 1000.0;
     }
 
     template<typename T>
-    T nanosec_to_millisec(T ns) {
-      return ns / (1000 * 1000);
+    double nanosec_to_millisec(T ns) {
+      return ns / (1000.0 * 1000.0);
     }
 
     template<typename T>
-    T nanosec_to_sec(T ns) {
-      return ns / (1000 * 1000 * 1000);
+    double nanosec_to_sec(T ns) {
+      return ns / (1000.0 * 1000.0 * 1000.0);
     }
   } codel;
 
