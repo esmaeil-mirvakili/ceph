@@ -16265,7 +16265,8 @@ void BlueStore::BlueStoreSlowFastCoDel::submit_txc_info(TransContext * txc) {
   std::lock_guard l(register_lock);
   ceph::mono_clock::time_point now = ceph::mono_clock::now();
   int64_t latency = std::chrono::nanoseconds(now - txc->txc_state_proc_start).count();
-  if (activated && bs_throttle && max_queue_length < bs_throttle->get_kv_throttle_current())
+
+  if (activated && bs_throttle && bs_throttle->get_kv_throttle_current() >= 0 && max_queue_length < bs_throttle->get_kv_throttle_current())
     max_queue_length = bs_throttle->get_kv_throttle_current();
   if (min_latency == INITIAL_LATENCY_VALUE || latency < min_latency) {
     min_latency = latency;
