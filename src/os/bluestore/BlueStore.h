@@ -1881,6 +1881,7 @@ public:
     std::vector<double> txc_lat_vec;
     std::vector<double> txc_bytes;
     std::vector<int64_t> target_vec;
+    std::vector<int64_t> cost_vec;
     void dump_log_data();
     void clear_log_data();
 
