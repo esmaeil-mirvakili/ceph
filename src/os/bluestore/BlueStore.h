@@ -1873,10 +1873,12 @@ public:
     void submit_txc_info(TransContext *txc);
 
     uint64_t get_bluestore_budget();
+    void dump_log_data();
+    void clear_log_data();
 
     bool is_activated();
-  protected:
     bool activated = false;    // true if SlowFastCodel is activated
+  protected:
     int64_t initial_fast_interval;     // Initial interval for fast loop (original codel)
     int64_t initial_target_latency;     // Initial target latency to start the algorithm
     int64_t slow_interval = INITIAL_LATENCY_VALUE;       // the interval for the slow loop
