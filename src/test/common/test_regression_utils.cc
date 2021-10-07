@@ -45,83 +45,41 @@ bool is_almost_equal(double x1, double x2, double precision) {
   return false;
 }
 
-TEST(matrix_op, matrix_inverse
-)
-{
-int matrix_size = 2;    // has to be 2x2
-matrix<double> random_square_m = generate_rand_matrix(matrix_size, matrix_size, 1000);
-matrix<double> random_square_m_inv = RegressionUtils::matrix_inverse(random_square_m);
-// the inverse matrix should have the same size
-ASSERT_EQ(random_square_m_inv
-.
-
-size1(), random_square_m
-
-.
-
-size1()
-
-);
-ASSERT_EQ(random_square_m_inv
-.
-
-size2(), random_square_m
-
-.
-
-size2()
-
-);
-matrix<double> matrix_prod = prod(random_square_m, random_square_m_inv);
-// the product should be an identity matrix
-for (
-int i = 0;
-i<matrix_prod.
-
-size1();
-
-i++)
-for (
-int j = 0;
-j<matrix_prod.
-
-size2();
-
-j++)
-if(i == j) {
-ASSERT_TRUE(is_almost_equal(matrix_prod(i, j), 1, 1e-9)
-);    // i == j -> 1
-}else {
-ASSERT_TRUE(is_almost_equal(matrix_prod(i, j), 0, 1e-9)
-);    // i <> j -> 0
-}
+TEST(matrix_op, matrix_inverse) {
+  int matrix_size = 2;    // has to be 2x2
+  matrix<double> random_square_m = generate_rand_matrix(matrix_size, matrix_size, 1000);
+  matrix<double> random_square_m_inv = ceph::matrix_inverse(random_square_m);
+  // the inverse matrix should have the same size
+  ASSERT_EQ(random_square_m_inv.size1(), random_square_m.size1());
+  ASSERT_EQ(random_square_m_inv.size2(), random_square_m.size2());
+  matrix<double> matrix_prod = prod(random_square_m, random_square_m_inv);
+  // the product should be an identity matrix
+  for ( int i = 0; i < matrix_prod.size1(); i++)
+    for (int j = 0; j < matrix_prod.size2(); j++)
+      if(i == j) {
+        ASSERT_TRUE(is_almost_equal(matrix_prod(i, j), 1, 1e-9));    // i == j -> 1
+      }else {
+        ASSERT_TRUE(is_almost_equal(matrix_prod(i, j), 0, 1e-9));    // i <> j -> 0
+      }
 }
 
-TEST(regression, log_regression
-)
-{
-// y = ln(x)
-std::vector<double> y = generate_rand_vector(200, 100);
-std::vector<double> x = exp_vector(y);
+TEST(regression, log_regression) {
+  // y = ln(x)
+  std::vector<double> y = generate_rand_vector(200, 100);
+  std::vector<double> x = exp_vector(y);
 
-double theta[2];    // y = theta[0] + theta[1] * ln(x)
-RegressionUtils::logarithmic_regression(x, y, theta
-);
-ASSERT_TRUE(is_almost_equal(theta[0], 0, 1e-9)
-); // theta[0] = 0
-ASSERT_TRUE(is_almost_equal(theta[1], 1, 1e-9)
-); // theta[1] = 1
+  double theta[2];    // y = theta[0] + theta[1] * ln(x)
+  ceph::logarithmic_regression(x, y, theta);
+  ASSERT_TRUE(is_almost_equal(theta[0], 0, 1e-9)); // theta[0] = 0
+  ASSERT_TRUE(is_almost_equal(theta[1], 1, 1e-9)); // theta[1] = 1
 }
 
-TEST(regression, find_slope_location
-)
-{
-// y = ln(x)
-std::vector<double> y = generate_rand_vector(200, 100);
-std::vector<double> x = exp_vector(y);
+TEST(regression, find_slope_location) {
+  // y = ln(x)
+  std::vector<double> y = generate_rand_vector(200, 100);
+  std::vector<double> x = exp_vector(y);
 
-double target_slope = 5;
-double x_target = RegressionUtils::find_slope_on_logarithmic_curve(x, y, target_slope);
-ASSERT_TRUE(is_almost_equal(x_target, 0.2, 1e-9)
-);  // y'(0.2) = 5
+  double target_slope = 5;
+  double x_target = ceph::find_slope_on_logarithmic_curve(x, y, target_slope);
+  ASSERT_TRUE(is_almost_equal(x_target, 0.2, 1e-9));  // y'(0.2) = 5
 }

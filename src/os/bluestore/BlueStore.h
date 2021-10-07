@@ -1875,22 +1875,8 @@ public:
     uint64_t get_bluestore_budget();
 
     bool is_activated();
-
-    // log data
-    std::vector<double> txc_start_vec;
-    std::vector<double> txc_lat_vec;
-    std::vector<double> txc_bytes;
-    std::vector<int64_t> target_vec;
-    std::vector<int64_t> cost_vec;
-    std::vector<int64_t> ios_vec;
-    std::vector<double> th_vec;
-    std::vector<double> tr_vec;
-    void dump_log_data();
-    void clear_log_data();
-
-    bool activated = false;    // true if SlowFastCodel is activated
   protected:
-
+    bool activated = false;    // true if SlowFastCodel is activated
     int64_t initial_fast_interval;     // Initial interval for fast loop (original codel)
     int64_t initial_target_latency;     // Initial target latency to start the algorithm
     int64_t slow_interval = INITIAL_LATENCY_VALUE;       // the interval for the slow loop

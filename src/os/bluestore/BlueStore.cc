@@ -16301,12 +16301,6 @@ void BlueStore::BlueStoreSlowFastCoDel::submit_txc_info(TransContext * txc) {
   }
   slow_interval_txc_cnt++;
   slow_interval_registered_bytes += txc->bytes;
-  txc_start_vec.push_back(std::chrono::nanoseconds(txc->txc_state_proc_start - ceph::mono_clock::zero()).count());
-  txc_lat_vec.push_back(latency);
-  txc_bytes.push_back(txc->bytes);
-  target_vec.push_back(target_latency);
-  cost_vec.push_back(txc->cost);
-  ios_vec.push_back(txc->ios);
 }
 
 void BlueStore::BlueStoreSlowFastCoDel::on_min_latency_violation() {
@@ -16408,8 +16402,6 @@ void BlueStore::BlueStoreSlowFastCoDel::_slow_interval_process() {
     slow_interval_throughput /= 1024.0 * 1024.0;    // MB/s
     regression_target_latency_history.push_back(nanosec_to_millisec(target_latency));
     regression_throughput_history.push_back(slow_interval_throughput);
-    th_vec.push_back(slow_interval_throughput);
-    tr_vec.push_back(nanosec_to_millisec(target_latency));
     if (regression_target_latency_history.size() > regression_history_size) {
       regression_target_latency_history.erase(regression_target_latency_history.begin());
       regression_throughput_history.erase(regression_throughput_history.begin());
@@ -16420,7 +16412,7 @@ void BlueStore::BlueStoreSlowFastCoDel::_slow_interval_process() {
     // If there is sufficient number of points, use the regression to find the target_ms.
     // Otherwise, target_ms will be initial_target_latency
     if (regression_target_latency_history.size() >= regression_history_size) {
-      target_ms = RegressionUtils::find_slope_on_logarithmic_curve(
+      target_ms = ceph::find_slope_on_logarithmic_curve(
         regression_target_latency_history,
         regression_throughput_history,
         target_slope);
@@ -16431,7 +16423,7 @@ void BlueStore::BlueStoreSlowFastCoDel::_slow_interval_process() {
     std::default_random_engine generator(seed);
     double dist_params[2];
     double rnd_std_dev = 5;
-    RegressionUtils::find_log_normal_dist_params(
+    ceph::find_log_normal_dist_params(
       target_ms,
       nanosec_to_millisec(min_target_latency),
       target_ms * rnd_std_dev,
@@ -16454,12 +16446,14 @@ void BlueStore::BlueStoreSlowFastCoDel::_slow_interval_process() {
   slow_interval_registered_bytes = 0;
   slow_interval_txc_cnt = 0;
   max_queue_length = min_bluestore_budget;
-  auto codel_ctx = new LambdaContext(
-    [this](int r) {
-      _slow_interval_process();
-    });
-  auto interval_duration = std::chrono::nanoseconds(slow_interval);
-  slow_timer.add_event_after(interval_duration, codel_ctx);
+  if (slow_interval > 0) {
+    auto codel_ctx = new LambdaContext(
+      [this](int r) {
+        _slow_interval_process();
+      });
+    auto interval_duration = std::chrono::nanoseconds(slow_interval);
+    slow_timer.add_event_after(interval_duration, codel_ctx);
+  }
 }
 
 
