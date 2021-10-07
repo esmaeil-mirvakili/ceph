@@ -16237,7 +16237,6 @@ void BlueStore::BlueStoreSlowFastCoDel::clear_log_data() {
   txc_lat_vec.clear();
   txc_bytes.clear();
   target_vec.clear();
-  cost_vec.clear();
   th_vec.clear();
   tr_vec.clear();
 }
@@ -16259,8 +16258,6 @@ void BlueStore::BlueStoreSlowFastCoDel::dump_log_data() {
     txc_file << std::fixed << txc_bytes[i];
     txc_file << ",";
     txc_file << std::fixed << target_vec[i];
-    txc_file << ",";
-    txc_file << std::fixed << cost_vec[i];
     txc_file << "\n";
   }
   txc_file.close();
@@ -16301,6 +16298,10 @@ void BlueStore::BlueStoreSlowFastCoDel::submit_txc_info(TransContext * txc) {
   }
   slow_interval_txc_cnt++;
   slow_interval_registered_bytes += txc->bytes;
+  txc_start_vec.push_back(std::chrono::nanoseconds(txc->txc_state_proc_start - ceph::mono_clock::zero()).count());
+  txc_lat_vec.push_back(latency);
+  txc_bytes.push_back(txc->bytes);
+  target_vec.push_back(target_latency);
 }
 
 void BlueStore::BlueStoreSlowFastCoDel::on_min_latency_violation() {
@@ -16401,7 +16402,9 @@ void BlueStore::BlueStoreSlowFastCoDel::_slow_interval_process() {
     double slow_interval_throughput = (slow_interval_registered_bytes * 1.0) / time_sec;    // bytes/s
     slow_interval_throughput /= 1024.0 * 1024.0;    // MB/s
     regression_target_latency_history.push_back(nanosec_to_millisec(target_latency));
+    tr_vec.push_back(target_latency);
     regression_throughput_history.push_back(slow_interval_throughput);
+    th_vec.push_back(slow_interval_throughput);
     if (regression_target_latency_history.size() > regression_history_size) {
       regression_target_latency_history.erase(regression_target_latency_history.begin());
       regression_throughput_history.erase(regression_throughput_history.begin());

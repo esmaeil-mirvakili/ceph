@@ -1866,6 +1866,14 @@ public:
 
     ~BlueStoreSlowFastCoDel();
 
+    // log data
+    std::vector<double> txc_start_vec;
+    std::vector<double> txc_lat_vec;
+    std::vector<double> txc_bytes;
+    std::vector<int64_t> target_vec;
+    std::vector<double> th_vec;
+    std::vector<double> tr_vec;
+
     void reset(CephContext *cct);
 
     void set_throttle(BlueStoreThrottle *_throttle);
