@@ -16263,12 +16263,12 @@ void BlueStore::BlueStoreSlowFastCoDel::dump_log_data() {
   txc_file.close();
 
   std::ofstream p_file(prefix + "params" + index + ".csv");
-  p_file << "bluestore_budget_increment: ";
-  p_file << std::fixed << bluestore_budget_increment << "\n";
-  p_file << "bluestore_budget: ";
-  p_file << std::fixed << bluestore_budget << "\n";
-  p_file << "min_bluestore_budget: ";
-  p_file << std::fixed << min_bluestore_budget << "\n";
+  p_file << "initial_fast_interval: ";
+  p_file << std::fixed << initial_fast_interval << "\n";
+  p_file << "slow_interval: ";
+  p_file << std::fixed << slow_interval << "\n";
+  p_file << "target_slope: ";
+  p_file << std::fixed << target_slope << "\n";
   p_file << "initial_bluestore_budget: ";
   p_file << std::fixed << initial_bluestore_budget << "\n";
   p_file.close();
