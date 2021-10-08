@@ -16333,7 +16333,7 @@ void BlueStore::BlueStoreSlowFastCoDel::reset(CephContext *cct) {
   {
     std::lock_guard l(register_lock);
 
-    activated = cct->_conf->bluestore_codel;
+//    activated = cct->_conf->bluestore_codel;
     target_slope = cct->_conf->bluestore_codel_throughput_latency_tradeoff;
     slow_interval = cct->_conf->bluestore_codel_slow_interval;
     initial_fast_interval = cct->_conf->bluestore_codel_fast_interval;
