@@ -16237,6 +16237,8 @@ void BlueStore::BlueStoreSlowFastCoDel::clear_log_data() {
   txc_lat_vec.clear();
   txc_bytes.clear();
   target_vec.clear();
+  budget_vec.clear();
+  cost_vec.clear();
   th_vec.clear();
   tr_vec.clear();
 }
@@ -16248,7 +16250,7 @@ void BlueStore::BlueStoreSlowFastCoDel::dump_log_data() {
 
   std::ofstream txc_file(prefix + "txc" + index + ".csv");
   // add column names
-  txc_file << "start, lat, size, target, cost" << "\n";
+  txc_file << "start, lat, size, budget, target, cost" << "\n";
 
   for (unsigned int i = 0; i < txc_start_vec.size(); i++) {
     txc_file << std::fixed << txc_start_vec[i];
@@ -16257,7 +16259,11 @@ void BlueStore::BlueStoreSlowFastCoDel::dump_log_data() {
     txc_file << ",";
     txc_file << std::fixed << txc_bytes[i];
     txc_file << ",";
+    txc_file << std::fixed << budget_vec[i];
+    txc_file << ",";
     txc_file << std::fixed << target_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << cost_vec[i];
     txc_file << "\n";
   }
   txc_file.close();
@@ -16302,6 +16308,8 @@ void BlueStore::BlueStoreSlowFastCoDel::submit_txc_info(TransContext * txc) {
   txc_lat_vec.push_back(latency);
   txc_bytes.push_back(txc->bytes);
   target_vec.push_back(target_latency);
+  cost_vec.push_back(txc->cost);
+  budget_vec.push_back(bs_throttle->get_kv_throttle_max());
 }
 
 void BlueStore::BlueStoreSlowFastCoDel::on_min_latency_violation() {

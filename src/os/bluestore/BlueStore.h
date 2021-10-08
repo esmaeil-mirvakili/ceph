@@ -1837,6 +1837,9 @@ public:
     int64_t get_kv_throttle_current() {
         return throttle_bytes.get_current();
     }
+    int64_t get_kv_throttle_max() {
+      return throttle_bytes.get_max();
+    }
     void reset_kv_throttle_max(int64_t m) {
         throttle_bytes.reset_max(m);
     }
@@ -1870,7 +1873,9 @@ public:
     std::vector<double> txc_start_vec;
     std::vector<double> txc_lat_vec;
     std::vector<double> txc_bytes;
+    std::vector<double> cost_vec;
     std::vector<int64_t> target_vec;
+    std::vector<int64_t> budget_vec;
     std::vector<double> th_vec;
     std::vector<double> tr_vec;
 
