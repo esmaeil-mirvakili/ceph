@@ -80,12 +80,12 @@ protected:
   int64_t test_slow_interval;
   double test_target_slope;
 
-  void on_fast_interval_finished() {
+  void on_fast_interval_finished() override {
     std::unique_lock<std::mutex> locker(iteration_mutex);
     iteration_cond.notify_one();
   }
 
-  void on_slow_interval_finished() {
+  void on_slow_interval_finished() override {
     target_latency_vector.push_back(target_latency);
   }
 };
@@ -144,8 +144,8 @@ public:
       delete slow_fast_codel;
   }
 
-  int no_violation_time_diff[4] = {-15, 20, -20, 10};
-  int violation_time_diff[4] = {30, 25, 10, 15};
+  int no_violation_time_diff[4] = {-0.9, 10, -0.9, 10};
+  int violation_time_diff[4] = {10, 10, 10, 10};
 
   void test_codel() {
     int64_t max_iterations = 10;
@@ -161,7 +161,7 @@ public:
         auto now = ceph::mono_clock::now();
         auto time_diff = violation ? violation_time_diff[i]
                                    : no_violation_time_diff[i];
-        time_diff = milliseconds_to_nanoseconds(time_diff);
+        time_diff = milliseconds_to_nanoseconds(time_diff) * target;
         auto time = now - std::chrono::nanoseconds(target + time_diff);
         slow_fast_codel->update_from_txc_info(time, txc_size);
       }
