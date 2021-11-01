@@ -17,7 +17,7 @@ public:
     std::function<void(int64_t)> _bluestore_budget_reset_callback,
     std::function<int64_t()> _get_kv_throttle_current);
 
-  ~BlueStoreSlowFastCoDel();
+  virtual ~BlueStoreSlowFastCoDel();
 
   void on_config_changed(CephContext *cct);
 
@@ -87,9 +87,9 @@ protected:
 
   void on_no_violation();
 
-  void on_fast_interval_finished() {}
+  virtual void on_fast_interval_finished() {}
 
-  void on_slow_interval_finished() {}
+  virtual void on_slow_interval_finished() {}
 
 private:
 
