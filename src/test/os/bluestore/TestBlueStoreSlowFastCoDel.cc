@@ -88,7 +88,6 @@ protected:
 
   void on_slow_interval_finished() {
     BlueStoreSlowFastCoDel::on_slow_interval_finished();
-    std::vector<int> x;
     target_latency_vector.push_back(target_latency);
   }
 };
@@ -181,6 +180,8 @@ public:
         ASSERT_GT(test_throttle_budget, budget_tmp);
       }
     }
+
+    ASSERT_TRUE(slow_fast_codel->target_latency_vector.size() > 0);
   }
 };
 

@@ -139,9 +139,9 @@ void BlueStoreSlowFastCoDel::_fast_interval_process() {
 
     // reset interval
     min_latency = INITIAL_LATENCY_VALUE;
-  }
 
-  on_fast_interval_finished();
+    on_fast_interval_finished();
+  }
 
   auto codel_ctx = new LambdaContext(
     [this](int r) {
@@ -204,17 +204,19 @@ void BlueStoreSlowFastCoDel::_slow_interval_process() {
                        (target_latency - millisec_to_nanosec(target_ms)) *
                        distr(generator);
     }
+
+    if (target_latency != INITIAL_LATENCY_VALUE) {
+      target_latency = std::max(target_latency, min_target_latency);
+      target_latency = std::min(target_latency, max_target_latency);
+    }
+
+    on_slow_interval_finished();
   }
-  if (target_latency != INITIAL_LATENCY_VALUE) {
-    target_latency = std::max(target_latency, min_target_latency);
-    target_latency = std::min(target_latency, max_target_latency);
-  }
+
   slow_interval_start = ceph::mono_clock::now();
   slow_interval_registered_bytes = 0;
   slow_interval_txc_cnt = 0;
   max_queue_length = min_bluestore_budget;
-
-  on_slow_interval_finished();
 
   auto codel_ctx = new LambdaContext(
     [this](int r) {
