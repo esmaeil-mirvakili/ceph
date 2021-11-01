@@ -27,9 +27,13 @@ public:
     ceph::mono_clock::time_point txc_start_time,
     uint64_t txc_bytes);
 
-  uint64_t get_bluestore_budget();
+  int64_t get_bluestore_budget();
+
+  int64_t get_target_latency();
 
   bool is_activated();
+
+
 
 protected:
   // true if SlowFastCodel is activated
@@ -83,6 +87,10 @@ protected:
   void on_min_latency_violation();
 
   void on_no_violation();
+
+  void on_fast_interval_finished() {}
+
+  void on_slow_interval_finished() {}
 
 private:
   static const int64_t INITIAL_LATENCY_VALUE = -1;

@@ -52,8 +52,9 @@ namespace ceph {
     const int n = x_values.size();
 
     boost::numeric::ublas::matrix<double> y_m(n, 1);
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
       y_m(i, 0) = y_values[i];
+    }
 
     boost::numeric::ublas::scalar_matrix<double> sm(n, 2, 1);
     boost::numeric::ublas::matrix<double> x_new_m(sm);

@@ -141,6 +141,8 @@ void BlueStoreSlowFastCoDel::_fast_interval_process() {
     min_latency = INITIAL_LATENCY_VALUE;
   }
 
+  on_fast_interval_finished();
+
   auto codel_ctx = new LambdaContext(
     [this](int r) {
       _fast_interval_process();
@@ -211,6 +213,9 @@ void BlueStoreSlowFastCoDel::_slow_interval_process() {
   slow_interval_registered_bytes = 0;
   slow_interval_txc_cnt = 0;
   max_queue_length = min_bluestore_budget;
+
+  on_slow_interval_finished();
+
   auto codel_ctx = new LambdaContext(
     [this](int r) {
       _slow_interval_process();
@@ -242,6 +247,10 @@ void BlueStoreSlowFastCoDel::_update_interval() {
   }
 }
 
-uint64_t BlueStoreSlowFastCoDel::get_bluestore_budget() {
+int64_t BlueStoreSlowFastCoDel::get_bluestore_budget() {
   return bluestore_budget;
+}
+
+int64_t BlueStoreSlowFastCoDel::get_target_latency() {
+  return target_latency;
 }
