@@ -42,12 +42,10 @@ public:
     iteration_mutex(_iteration_mutex), iteration_cond(_iteration_cond),
     test_target_latency(_target_latency), test_fast_interval(_fast_interval),
     test_slow_interval(_slow_interval),  test_target_slope(_target_slope) {
-    on_config_changed(_cct);
+    init_test();
   }
 
-  void on_config_changed(CephContext *cct) {
-    std::lock_guard l(register_lock);
-
+  void init_test() {
     activated = true;
     target_slope = test_target_slope;
     slow_interval = test_slow_interval;
