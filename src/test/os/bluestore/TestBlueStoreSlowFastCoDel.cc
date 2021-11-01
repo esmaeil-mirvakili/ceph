@@ -42,7 +42,7 @@ public:
     on_config_changed(_cct);
   }
 
-  void on_config_changed(CephContext *cct) override {
+  void on_config_changed(CephContext *cct) {
     std::lock_guard l(register_lock);
 
     activated = true;
@@ -77,13 +77,13 @@ protected:
   int64_t test_target_latency;
   double test_target_slope;
 
-  void on_fast_interval_finished() override {
+  void on_fast_interval_finished() {
     BlueStoreSlowFastCoDel::on_fast_interval_finished();
     std::unique_lock<std::mutex> locker(iteration_mutex);
     iteration_cond.notify_one();
   }
 
-  void on_slow_interval_finished() override {
+  void on_slow_interval_finished() {
     BlueStoreSlowFastCoDel::on_slow_interval_finished();
     std::vector<int> x;
     target_latency_vector.push_back(target_latency);
@@ -140,8 +140,8 @@ public:
       delete slow_fast_codel;
   }
 
-  int[4] no_violation_time_diff{-15, 20, -20, 10};
-  int[4] violation_time_diff{30, 25, 10, 15};
+  int no_violation_time_diff[4] = {-15, 20, -20, 10};
+  int violation_time_diff[4] = {30, 25, 10, 15};
 
   void test_codel() {
     int64_t max_iterations = 1000;
