@@ -77,13 +77,13 @@ protected:
   int64_t test_target_latency;
   double test_target_slope;
 
-  void on_fast_interval_finished() {
+  void on_fast_interval_finished() override {
     BlueStoreSlowFastCoDel::on_fast_interval_finished();
     std::unique_lock<std::mutex> locker(iteration_mutex);
     iteration_cond.notify_one();
   }
 
-  void on_slow_interval_finished() {
+  void on_slow_interval_finished() override {
     BlueStoreSlowFastCoDel::on_slow_interval_finished();
     std::vector<int> x;
     target_latency_vector.push_back(target_latency);
@@ -144,7 +144,7 @@ public:
   int violation_time_diff[4] = {30, 25, 10, 15};
 
   void test_codel() {
-    int64_t max_iterations = 1000;
+    int64_t max_iterations = 10;
     for (int iteration = 0; iteration < max_iterations; iteration++) {
       std::unique_lock <std::mutex> locker(iteration_mutex);
       bool violation = std::rand() % 2 == 0;
