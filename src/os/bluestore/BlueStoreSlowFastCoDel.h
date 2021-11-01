@@ -33,9 +33,8 @@ public:
 
   bool is_activated();
 
-
-
 protected:
+  static const int64_t INITIAL_LATENCY_VALUE = -1;
   // true if SlowFastCodel is activated
   bool activated = false;
   // Initial interval for fast loop (original codel)
@@ -93,7 +92,6 @@ protected:
   void on_slow_interval_finished() {}
 
 private:
-  static const int64_t INITIAL_LATENCY_VALUE = -1;
 
   bool _check_latency_violation();
 
