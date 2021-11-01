@@ -81,13 +81,11 @@ protected:
   double test_target_slope;
 
   void on_fast_interval_finished() {
-    BlueStoreSlowFastCoDel::on_fast_interval_finished();
     std::unique_lock<std::mutex> locker(iteration_mutex);
     iteration_cond.notify_one();
   }
 
   void on_slow_interval_finished() {
-    BlueStoreSlowFastCoDel::on_slow_interval_finished();
     target_latency_vector.push_back(target_latency);
   }
 };
