@@ -80,7 +80,7 @@ protected:
   int64_t test_target_latency;
   int64_t test_fast_interval;
   int64_t test_slow_interval;
-  double test_target_slope1;
+  double test_target_slope;
 
   void on_fast_interval_finished() {
     BlueStoreSlowFastCoDel::on_fast_interval_finished();
@@ -174,7 +174,8 @@ public:
       if (iteration_cond.wait_for(
         locker,
         std::chrono::seconds(iteration_timeout)) == std::cv_status::timeout) {
-        ASSERT(false);
+        ASSERT_TRUE(false);
+        return;
       }
       if (violation) {
         ASSERT_LT(test_throttle_budget, budget_tmp);
