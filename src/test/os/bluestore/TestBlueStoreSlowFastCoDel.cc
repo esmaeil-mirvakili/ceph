@@ -144,8 +144,8 @@ public:
       delete slow_fast_codel;
   }
 
-  int no_violation_time_diff[4] = {-0.9, 10, -0.9, 10};
-  int violation_time_diff[4] = {10, 10, 10, 10};
+  double no_violation_time_diff[4] = {-0.9, 10, -0.9, 10};
+  double violation_time_diff[4] = {10, 10, 10, 10};
 
   void test_codel() {
     int64_t max_iterations = 10;
@@ -159,9 +159,8 @@ public:
 
       for (int i = 0; i < 4; i++) {
         auto now = ceph::mono_clock::now();
-        auto time_diff = violation ? violation_time_diff[i]
-                                   : no_violation_time_diff[i];
-        time_diff = milliseconds_to_nanoseconds(time_diff) * target;
+        int64_t time_diff = violation ? violation_time_diff[i] * target
+                                   : no_violation_time_diff[i] * target;
         auto time = now - std::chrono::nanoseconds(target + time_diff);
         slow_fast_codel->update_from_txc_info(time, txc_size);
       }
