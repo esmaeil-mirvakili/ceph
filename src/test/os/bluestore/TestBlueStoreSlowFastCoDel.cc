@@ -22,6 +22,34 @@
 #include "common/ceph_time.h"
 #include "os/bluestore/BlueStoreSlowFastCoDel.h"
 
+namespace testing
+{
+  namespace internal
+  {
+    enum GTestColor {
+      COLOR_DEFAULT,
+      COLOR_RED,
+      COLOR_GREEN,
+      COLOR_YELLOW
+    };
+
+    extern void ColoredPrintf(GTestColor color, const char* fmt, ...);
+  }
+}
+#define PRINTF(...)  do { testing::internal::ColoredPrintf(testing::internal::COLOR_GREEN, "[          ] "); testing::internal::ColoredPrintf(testing::internal::COLOR_YELLOW, __VA_ARGS__); } while(0)
+
+// C++ stream interface
+class TestCout : public std::stringstream
+{
+public:
+  ~TestCout()
+  {
+    PRINTF("%s",str().c_str());
+  }
+};
+
+#define TEST_COUT  TestCout()
+
 static int64_t milliseconds_to_nanoseconds(int64_t ms) {
   return ms * 1000.0 * 1000.0;
 }
@@ -150,16 +178,19 @@ public:
   int violation_time_diff[4] = {30, 25, 10, 15};
 
   void test_codel() {
+    TEST_COUT << "SFCoDel: start" << std::endl;
     int64_t max_iterations = 10;
     int iteration_timeout = 10; // 10 sec
     for (int iteration = 0; iteration < max_iterations; iteration++) {
       std::unique_lock <std::mutex> locker(iteration_mutex);
+      TEST_COUT << "SFCoDel: it " << std::to_string(iteration) << std::endl;
       bool violation = std::rand() % 2 == 0;
       auto budget_tmp = test_throttle_budget;
       auto target = slow_fast_codel->get_target_latency();
       int64_t txc_size = (target_slope * target_latency) * std::log(target * 1.0) / 4;
 
       for (int i = 0; i < 4; i++) {
+        TEST_COUT << "SFCoDel: it " << std::to_string(iteration) << " update " << std::to_string(i) << std::endl;
         auto now = ceph::mono_clock::now();
         auto time_diff = violation ? violation_time_diff[i]
                                    : no_violation_time_diff[i];
@@ -167,13 +198,14 @@ public:
         auto time = now - std::chrono::nanoseconds(target + time_diff);
         slow_fast_codel->update_from_txc_info(time, txc_size);
       }
-      iteration_cond.wait(locker);  // wait for fast or slow loop to finish
+      TEST_COUT << "SFCoDel: wait for fast iteration. violation: " << std::to_string(violation) << std::endl;
       if (iteration_cond.wait_for(
         locker,
         std::chrono::seconds(iteration_timeout)) == std::cv_status::timeout) {
         ASSERT_TRUE(false);
         return;
       }
+      TEST_COUT << "SFCoDel: wake up" << std::to_string(iteration) << std::endl;
       if (violation) {
         ASSERT_LT(test_throttle_budget, budget_tmp);
       } else {
