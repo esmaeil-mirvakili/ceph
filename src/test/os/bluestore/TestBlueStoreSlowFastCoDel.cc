@@ -40,8 +40,8 @@ public:
     double _target_slope
     ): BlueStoreSlowFastCoDel(_cct, _bluestore_budget_reset_callback, _get_kv_throttle_current),
     iteration_mutex(_iteration_mutex), iteration_cond(_iteration_cond),
-    test_target_latency(_target_latency), test_target_slope(_target_slope),
-    test_fast_interval(_fast_interval), test_slow_interval(_slow_interval){
+    test_target_latency(_target_latency), test_fast_interval(_fast_interval),
+    test_slow_interval(_slow_interval),  test_target_slope(_target_slope) {
     on_config_changed(_cct);
   }
 
