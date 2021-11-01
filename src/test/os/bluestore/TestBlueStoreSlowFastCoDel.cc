@@ -22,7 +22,7 @@
 #include "common/ceph_time.h"
 #include "os/bluestore/BlueStoreSlowFastCoDel.h"
 
-static int64_t millisec_to_nanosec(int64_t ms) {
+static int64_t milliseconds_to_nanoseconds(int64_t ms) {
   return ms * 1000.0 * 1000.0;
 }
 
@@ -47,11 +47,11 @@ public:
 
     activated = true;
     target_slope = test_target_slope;
-    slow_interval = millisec_to_nanosec(100);
-    initial_fast_interval = millisec_to_nanosec(10);
-    min_target_latency = millisec_to_nanosec(500);
+    slow_interval = milliseconds_to_nanoseconds(100);
+    initial_fast_interval = milliseconds_to_nanoseconds(10);
+    min_target_latency = milliseconds_to_nanoseconds(500);
     initial_target_latency = test_target_latency;
-    max_target_latency = millisec_to_nanosec(1);
+    max_target_latency = milliseconds_to_nanoseconds(1);
     initial_bluestore_budget = 100 * 1024;
     min_bluestore_budget = 10 * 1024;
     bluestore_budget_increment = 1024;
@@ -100,7 +100,7 @@ public:
   int64_t test_throttle_budget = 0;
   std::mutex iteration_mutex;
   std::condition_variable iteration_cond;
-  int64_t target_latency = millisec_to_nanosec(50);
+  int64_t target_latency = milliseconds_to_nanoseconds(50);
   double target_slope = 1;
 
   TestSlowFastCoDel(){}
@@ -156,7 +156,7 @@ public:
         auto now = ceph::mono_clock::now();
         auto time_diff = violation ? violation_time_diff[i]
                                    : no_violation_time_diff[i];
-        time_diff = millisec_to_nanosec(time_diff);
+        time_diff = milliseconds_to_nanoseconds(time_diff);
         auto time = now - std::chrono::nanoseconds(target + time_diff);
         slow_fast_codel->update_from_txc_info(time, txc_size);
       }
