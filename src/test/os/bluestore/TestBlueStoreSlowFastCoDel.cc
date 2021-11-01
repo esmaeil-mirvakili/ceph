@@ -98,7 +98,7 @@ public:
   CephContext* ceph_context = nullptr;
   librados::IoCtx io_ctx;
   std::string temp_pool_name;
-  BlueStoreSlowFastCoDel* slow_fast_codel = nullptr;
+  BlueStoreSlowFastCoDelMock* slow_fast_codel = nullptr;
   int64_t test_throttle_budget = 0;
   std::mutex iteration_mutex;
   std::condition_variable iteration_cond;
