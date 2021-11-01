@@ -87,9 +87,9 @@ protected:
 
   void on_no_violation();
 
-  virtual void on_fast_interval_finished() {}
+  void on_fast_interval_finished() {}
 
-  virtual void on_slow_interval_finished() {}
+  void on_slow_interval_finished() {}
 
 private:
 

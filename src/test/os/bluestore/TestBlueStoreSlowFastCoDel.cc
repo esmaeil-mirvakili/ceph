@@ -35,10 +35,13 @@ public:
     std::mutex &_iteration_mutex,
     std::condition_variable &_iteration_cond,
     int64_t _target_latency,
+    int64_t _fast_interval,
+    int64_t _slow_interval,
     double _target_slope
     ): BlueStoreSlowFastCoDel(_cct, _bluestore_budget_reset_callback, _get_kv_throttle_current),
     iteration_mutex(_iteration_mutex), iteration_cond(_iteration_cond),
-    test_target_latency(_target_latency), test_target_slope(_target_slope) {
+    test_target_latency(_target_latency), test_target_slope(_target_slope),
+    test_fast_interval(_fast_interval), test_slow_interval(_slow_interval){
     on_config_changed(_cct);
   }
 
@@ -47,8 +50,8 @@ public:
 
     activated = true;
     target_slope = test_target_slope;
-    slow_interval = milliseconds_to_nanoseconds(100);
-    initial_fast_interval = milliseconds_to_nanoseconds(10);
+    slow_interval = test_slow_interval;
+    initial_fast_interval = test_fast_interval;
     min_target_latency = milliseconds_to_nanoseconds(500);
     initial_target_latency = test_target_latency;
     max_target_latency = milliseconds_to_nanoseconds(1);
@@ -75,15 +78,17 @@ protected:
   std::mutex &iteration_mutex;
   std::condition_variable &iteration_cond;
   int64_t test_target_latency;
-  double test_target_slope;
+  int64_t test_fast_interval;
+  int64_t test_slow_interval;
+  double test_target_slope1;
 
-  void on_fast_interval_finished() override {
+  void on_fast_interval_finished() {
     BlueStoreSlowFastCoDel::on_fast_interval_finished();
     std::unique_lock<std::mutex> locker(iteration_mutex);
     iteration_cond.notify_one();
   }
 
-  void on_slow_interval_finished() override {
+  void on_slow_interval_finished() {
     BlueStoreSlowFastCoDel::on_slow_interval_finished();
     std::vector<int> x;
     target_latency_vector.push_back(target_latency);
@@ -101,6 +106,8 @@ public:
   std::mutex iteration_mutex;
   std::condition_variable iteration_cond;
   int64_t target_latency = milliseconds_to_nanoseconds(50);
+  int64_t fast_interval = milliseconds_to_nanoseconds(10);
+  int64_t slow_interval = milliseconds_to_nanoseconds(100);
   double target_slope = 1;
 
   TestSlowFastCoDel(){}
@@ -130,6 +137,8 @@ public:
                                                  iteration_mutex,
                                                  iteration_cond,
                                                  target_latency,
+                                                 fast_interval,
+                                                 slow_interval,
                                                  target_slope);
   }
 
@@ -145,6 +154,7 @@ public:
 
   void test_codel() {
     int64_t max_iterations = 10;
+    int iteration_timeout = 10; // 10 sec
     for (int iteration = 0; iteration < max_iterations; iteration++) {
       std::unique_lock <std::mutex> locker(iteration_mutex);
       bool violation = std::rand() % 2 == 0;
@@ -161,6 +171,11 @@ public:
         slow_fast_codel->update_from_txc_info(time, txc_size);
       }
       iteration_cond.wait(locker);  // wait for fast or slow loop to finish
+      if (iteration_cond.wait_for(
+        locker,
+        std::chrono::seconds(iteration_timeout)) == std::cv_status::timeout) {
+        ASSERT(false);
+      }
       if (violation) {
         ASSERT_LT(test_throttle_budget, budget_tmp);
       } else {
