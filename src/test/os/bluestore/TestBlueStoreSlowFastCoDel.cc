@@ -45,6 +45,7 @@ public:
   }
 
   void init_test() {
+    std::lock_guard l(register_lock);
     activated = true;
     target_slope = test_target_slope;
     slow_interval = test_slow_interval;
@@ -123,7 +124,7 @@ public:
     ceph_context = reinterpret_cast<CephContext *>(test_rados->cct());
     slow_fast_codel = new BlueStoreSlowFastCoDelMock(ceph_context,
                                                  [this](int64_t x) mutable {
-                                                   this->test_throttle_budget += x;
+                                                   this->test_throttle_budget = x;
                                                  },
                                                  [this]() mutable {
                                                    return this->test_throttle_budget;
