@@ -89,8 +89,7 @@ protected:
     iteration_cond.notify_one();
   }
 
-  void on_slow_interval_finished(int64_t target_without_noise) override {
-    ASSERT_EQ(target_without_noise, test_target_latency);
+  void on_slow_interval_finished() override {
     target_latency_vector.push_back(target_latency);
   }
 };

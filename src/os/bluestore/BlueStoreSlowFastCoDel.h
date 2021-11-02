@@ -89,7 +89,7 @@ protected:
 
   virtual void on_fast_interval_finished() {}
 
-  virtual void on_slow_interval_finished(int64_t target_without_noise) {}
+  virtual void on_slow_interval_finished() {}
 
 private:
 
