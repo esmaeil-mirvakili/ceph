@@ -32,7 +32,7 @@ public:
   int64_t get_target_latency();
 
   bool is_activated();
-
+  int64_t fast_interval = INITIAL_LATENCY_VALUE;
 protected:
   static const int64_t INITIAL_LATENCY_VALUE = -1;
   // true if SlowFastCodel is activated
@@ -44,7 +44,7 @@ protected:
   // the interval for the slow loop
   int64_t slow_interval = INITIAL_LATENCY_VALUE;
   // current interval for the fast loop
-  int64_t fast_interval = INITIAL_LATENCY_VALUE;
+
   // current target latency that fast loop is using
   int64_t target_latency = INITIAL_LATENCY_VALUE;
   // min latency in the current fast interval

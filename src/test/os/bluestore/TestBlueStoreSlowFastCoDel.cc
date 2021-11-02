@@ -153,7 +153,7 @@ public:
     int iteration_timeout = 10; // 10 sec
     for (int iteration = 0; iteration < max_iterations; iteration++) {
       std::unique_lock <std::mutex> locker(iteration_mutex);
-      bool violation = std::rand() % 2 == 0;
+      bool violation = iteration % 2 == 1;
       auto budget_tmp = test_throttle_budget;
       auto target = slow_fast_codel->get_target_latency();
       uint64_t txc_size = (target_slope * target_latency) * std::log(target * 1.0) / 4;
@@ -173,9 +173,9 @@ public:
         return;
       }
       if (violation) {
-        ASSERT_LT(test_throttle_budget, budget_tmp);
+        ASSERT_LT(test_throttle_budget, budget_tmp) << "Interval: " <<std::to_string(slow_fast_codel->fast_interval);
       } else {
-        ASSERT_GT(test_throttle_budget, budget_tmp);
+        ASSERT_GT(test_throttle_budget, budget_tmp) << "Interval: " <<std::to_string(slow_fast_codel->fast_interval);
       }
     }
 
