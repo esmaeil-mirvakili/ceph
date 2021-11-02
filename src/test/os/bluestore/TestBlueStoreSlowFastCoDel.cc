@@ -89,7 +89,8 @@ protected:
     iteration_cond.notify_one();
   }
 
-  void on_slow_interval_finished() override {
+  void on_slow_interval_finished(int64_t target_without_noise) override {
+    ASSERT_EQ(target_without_noise, test_target_latency);
     target_latency_vector.push_back(target_latency);
   }
 };
@@ -149,7 +150,7 @@ public:
   }
 
   void test_codel() {
-    int64_t max_iterations = 10;
+    int64_t max_iterations = 50;
     int iteration_timeout = 10; // 10 sec
     for (int iteration = 0; iteration < max_iterations; iteration++) {
       std::unique_lock <std::mutex> locker(iteration_mutex);
@@ -173,9 +174,9 @@ public:
         return;
       }
       if (violation) {
-        ASSERT_LT(test_throttle_budget, budget_tmp) << "Interval: " <<std::to_string(slow_fast_codel->fast_interval);
+        ASSERT_LT(test_throttle_budget, budget_tmp);
       } else {
-        ASSERT_GT(test_throttle_budget, budget_tmp) << "Interval: " <<std::to_string(slow_fast_codel->fast_interval);
+        ASSERT_GT(test_throttle_budget, budget_tmp);
       }
     }
 
