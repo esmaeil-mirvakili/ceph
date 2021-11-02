@@ -8,6 +8,9 @@
 #include <cmath>
 #include <vector>
 #include <condition_variable>
+#include "shared.h"
+#include <cmath>
+#include <cstdlib>
 
 #include "gtest/gtest.h"
 #include "include/Context.h"
@@ -21,6 +24,7 @@
 
 #include "common/ceph_time.h"
 #include "os/bluestore/BlueStoreSlowFastCoDel.h"
+
 
 static int64_t milliseconds_to_nanoseconds(int64_t ms) {
   return ms * 1000.0 * 1000.0;
@@ -42,6 +46,7 @@ public:
     iteration_mutex(_iteration_mutex), iteration_cond(_iteration_cond),
     test_target_latency(_target_latency), test_fast_interval(_fast_interval),
     test_slow_interval(_slow_interval),  test_target_slope(_target_slope) {
+    init_test();
   }
 
   void init_test() {
@@ -50,9 +55,9 @@ public:
     target_slope = test_target_slope;
     slow_interval = test_slow_interval;
     initial_fast_interval = test_fast_interval;
-    min_target_latency = milliseconds_to_nanoseconds(500);
+    min_target_latency = milliseconds_to_nanoseconds(1);
     initial_target_latency = test_target_latency;
-    max_target_latency = milliseconds_to_nanoseconds(1);
+    max_target_latency = milliseconds_to_nanoseconds(500);
     initial_bluestore_budget = 100 * 1024;
     min_bluestore_budget = 10 * 1024;
     bluestore_budget_increment = 1024;
@@ -101,8 +106,8 @@ public:
   std::mutex iteration_mutex;
   std::condition_variable iteration_cond;
   int64_t target_latency = milliseconds_to_nanoseconds(50);
-  int64_t fast_interval = milliseconds_to_nanoseconds(10);
-  int64_t slow_interval = milliseconds_to_nanoseconds(100);
+  int64_t fast_interval = milliseconds_to_nanoseconds(1000);
+  int64_t slow_interval = milliseconds_to_nanoseconds(4000);
   double target_slope = 1;
 
   TestSlowFastCoDel(){}
@@ -144,9 +149,6 @@ public:
       delete slow_fast_codel;
   }
 
-  double no_violation_time_diff[4] = {-0.9, 10, -0.9, 10};
-  double violation_time_diff[4] = {10, 10, 10, 10};
-
   void test_codel() {
     int64_t max_iterations = 10;
     int iteration_timeout = 10; // 10 sec
@@ -155,11 +157,14 @@ public:
       bool violation = std::rand() % 2 == 0;
       auto budget_tmp = test_throttle_budget;
       auto target = slow_fast_codel->get_target_latency();
-      int64_t txc_size = (target_slope * target_latency) * std::log(target * 1.0) / 4;
+      uint64_t txc_size = (target_slope * target_latency) * std::log(target * 1.0) / 4;
       for (int i = 0; i < 4; i++) {
-        auto now = ceph::mono_clock::now();
-        int64_t time_diff = violation ? violation_time_diff[i] * target
-                                   : no_violation_time_diff[i] * target;
+        auto time = ceph::mono_clock::now();
+        if (violation) {
+          int rand_ms = std::rand() % 1000 + 1000;
+          int64_t time_diff = milliseconds_to_nanoseconds(rand_ms);
+          time = now - std::chrono::nanoseconds(target + time_diff);
+        }
         auto time = now - std::chrono::nanoseconds(target + time_diff);
         slow_fast_codel->update_from_txc_info(time, txc_size);
       }
@@ -182,6 +187,5 @@ public:
 
 TEST_F(TestSlowFastCoDel, test1) {
   create_bluestore_slow_fast_codel();
-  slow_fast_codel->init_test();
   test_codel();
 }
