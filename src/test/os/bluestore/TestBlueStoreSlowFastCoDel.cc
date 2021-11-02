@@ -162,9 +162,8 @@ public:
         if (violation) {
           int rand_ms = std::rand() % 1000 + 1000;
           int64_t time_diff = milliseconds_to_nanoseconds(rand_ms);
-          time = now - std::chrono::nanoseconds(target + time_diff);
+          time = time - std::chrono::nanoseconds(target + time_diff);
         }
-        auto time = now - std::chrono::nanoseconds(target + time_diff);
         slow_fast_codel->update_from_txc_info(time, txc_size);
       }
       if (iteration_cond.wait_for(
