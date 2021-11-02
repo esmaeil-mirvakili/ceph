@@ -210,7 +210,7 @@ void BlueStoreSlowFastCoDel::_slow_interval_process() {
       target_latency = std::min(target_latency, max_target_latency);
     }
 
-    on_slow_interval_finished((int64_t) millisec_to_nanosec(target_ms));
+    on_slow_interval_finished();
   }
 
   slow_interval_start = ceph::mono_clock::now();
