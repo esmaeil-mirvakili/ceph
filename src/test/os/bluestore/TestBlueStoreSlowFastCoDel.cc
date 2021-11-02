@@ -8,7 +8,6 @@
 #include <cmath>
 #include <vector>
 #include <condition_variable>
-#include "shared.h"
 #include <cmath>
 #include <cstdlib>
 
