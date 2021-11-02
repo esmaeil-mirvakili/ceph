@@ -42,7 +42,6 @@ public:
     iteration_mutex(_iteration_mutex), iteration_cond(_iteration_cond),
     test_target_latency(_target_latency), test_fast_interval(_fast_interval),
     test_slow_interval(_slow_interval),  test_target_slope(_target_slope) {
-    init_test();
   }
 
   void init_test() {
@@ -156,7 +155,6 @@ public:
       auto budget_tmp = test_throttle_budget;
       auto target = slow_fast_codel->get_target_latency();
       int64_t txc_size = (target_slope * target_latency) * std::log(target * 1.0) / 4;
-
       for (int i = 0; i < 4; i++) {
         auto now = ceph::mono_clock::now();
         int64_t time_diff = violation ? violation_time_diff[i] * target
@@ -183,5 +181,6 @@ public:
 
 TEST_F(TestSlowFastCoDel, test1) {
   create_bluestore_slow_fast_codel();
+  slow_fast_codel->init_test();
   test_codel();
 }
