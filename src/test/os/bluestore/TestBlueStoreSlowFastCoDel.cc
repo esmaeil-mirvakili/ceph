@@ -149,7 +149,9 @@ public:
       double target_throughput =
         (target_slope * nanoseconds_to_milliseconds(target_latency)) *
         std::log(nanoseconds_to_milliseconds(target) * 1.0);
-      uint64_t txc_size = (target_throughput * slow_interval) / (1000.0 * 1000.0 * 1000.0) / txc_num;
+      int64_t txc_size =
+        ((nanoseconds_to_milliseconds(slow_interval) * target_throughput *
+          1024 * 1024) / 1000.0) / txc_num;
       for (int i = 0; i < txc_num; i++) {
         auto time = ceph::mono_clock::now();
         if (violation) {
