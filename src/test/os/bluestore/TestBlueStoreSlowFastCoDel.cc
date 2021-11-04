@@ -22,6 +22,10 @@ static int64_t milliseconds_to_nanoseconds(int64_t ms) {
   return ms * 1000.0 * 1000.0;
 }
 
+static int64_t nanoseconds_to_milliseconds(int64_t ms) {
+  return ms / (1000.0 * 1000.0);
+}
+
 class BlueStoreSlowFastCoDelMock : public BlueStoreSlowFastCoDel {
 public:
   BlueStoreSlowFastCoDelMock(
@@ -135,15 +139,18 @@ public:
 
   void test_codel() {
     int64_t max_iterations = 50;
-    int iteration_timeout = 1; // 10 sec
+    int iteration_timeout = 1; // 1 sec
+    int txc_num = 4;
     for (int iteration = 0; iteration < max_iterations; iteration++) {
       std::unique_lock <std::mutex> locker(iteration_mutex);
       bool violation = iteration % 2 == 1;
       auto budget_tmp = test_throttle_budget;
       auto target = slow_fast_codel->get_target_latency();
-      uint64_t txc_size =
-        (target_slope * target_latency) * std::log(target * 1.0) / 4;
-      for (int i = 0; i < 4; i++) {
+      double target_throughput =
+        (target_slope * nanoseconds_to_milliseconds(target_latency)) *
+        std::log(nanoseconds_to_milliseconds(target) * 1.0);
+      uint64_t txc_size = (target_throughput * slow_interval) / (1000.0 * 1000.0 * 1000.0) / txc_num;
+      for (int i = 0; i < txc_num; i++) {
         auto time = ceph::mono_clock::now();
         if (violation) {
           int rand_ms = std::rand() % 1000 + 1000;
@@ -155,7 +162,7 @@ public:
       if (iteration_cond.wait_for(
         locker,
         std::chrono::seconds(iteration_timeout)) == std::cv_status::timeout) {
-        ASSERT_TRUE(false);
+        ASSERT_TRUE(false) << "Test timeout.";
         return;
       }
       if (violation) {
