@@ -166,7 +166,7 @@ public:
     }
 
     ASSERT_TRUE(slow_fast_codel->target_latency_vector.size() > 0);
-    string out = "\n[\n";
+    std::string out = "\n[\n";
     for(int i = 0; i < slow_fast_codel->target_latency_vector.size(); i++) {
       out = out + std::to_string(slow_fast_codel->target_latency_vector[i]) + ",\n";
     }
