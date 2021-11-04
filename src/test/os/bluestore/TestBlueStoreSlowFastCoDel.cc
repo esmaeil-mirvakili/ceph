@@ -34,10 +34,11 @@ public:
     int64_t _fast_interval,
     int64_t _slow_interval,
     double _target_slope
-    ): BlueStoreSlowFastCoDel(_cct, _bluestore_budget_reset_callback, _get_kv_throttle_current),
-    iteration_mutex(_iteration_mutex), iteration_cond(_iteration_cond),
-    test_target_latency(_target_latency), test_fast_interval(_fast_interval),
-    test_slow_interval(_slow_interval),  test_target_slope(_target_slope) {
+  ) : BlueStoreSlowFastCoDel(_cct, _bluestore_budget_reset_callback,
+                             _get_kv_throttle_current),
+      iteration_mutex(_iteration_mutex), iteration_cond(_iteration_cond),
+      test_target_latency(_target_latency), test_fast_interval(_fast_interval),
+      test_slow_interval(_slow_interval), test_target_slope(_target_slope) {
     init_test();
   }
 
@@ -67,7 +68,7 @@ public:
     slow_interval_start = ceph::mono_clock::zero();
   }
 
-  std::vector<int64_t> target_latency_vector;
+  std::vector <int64_t> target_latency_vector;
 
 protected:
   std::mutex &iteration_mutex;
@@ -78,19 +79,19 @@ protected:
   double test_target_slope;
 
   void on_fast_interval_finished() override {
-    std::unique_lock<std::mutex> locker(iteration_mutex);
+    std::unique_lock <std::mutex> locker(iteration_mutex);
     iteration_cond.notify_one();
   }
 
   void on_slow_interval_finished() override {
-    target_latency_vector.push_back(target_latency);
+    target_latency_vector.push_back(target_latency_without_noise);
   }
 };
 
 class TestSlowFastCoDel : public ::testing::Test {
 public:
-  CephContext* ceph_context = nullptr;
-  BlueStoreSlowFastCoDelMock* slow_fast_codel = nullptr;
+  CephContext *ceph_context = nullptr;
+  BlueStoreSlowFastCoDelMock *slow_fast_codel = nullptr;
   int64_t test_throttle_budget = 0;
   std::mutex iteration_mutex;
   std::condition_variable iteration_cond;
@@ -99,11 +100,12 @@ public:
   int64_t slow_interval = milliseconds_to_nanoseconds(400);
   double target_slope = 1;
 
-  TestSlowFastCoDel(){}
+  TestSlowFastCoDel() {}
 
-  ~TestSlowFastCoDel(){}
+  ~TestSlowFastCoDel() {}
 
   static void SetUpTestCase() {}
+
   static void TearDownTestCase() {}
 
   void SetUp() override {
@@ -112,22 +114,22 @@ public:
 
   void create_bluestore_slow_fast_codel() {
     slow_fast_codel = new BlueStoreSlowFastCoDelMock(ceph_context,
-                                                 [this](int64_t x) mutable {
-                                                   this->test_throttle_budget = x;
-                                                 },
-                                                 [this]() mutable {
-                                                   return this->test_throttle_budget;
-                                                 },
-                                                 iteration_mutex,
-                                                 iteration_cond,
-                                                 target_latency,
-                                                 fast_interval,
-                                                 slow_interval,
-                                                 target_slope);
+                                                     [this](int64_t x) mutable {
+                                                       this->test_throttle_budget = x;
+                                                     },
+                                                     [this]() mutable {
+                                                       return this->test_throttle_budget;
+                                                     },
+                                                     iteration_mutex,
+                                                     iteration_cond,
+                                                     target_latency,
+                                                     fast_interval,
+                                                     slow_interval,
+                                                     target_slope);
   }
 
   void TearDown() override {
-    if(slow_fast_codel)
+    if (slow_fast_codel)
       delete slow_fast_codel;
   }
 
@@ -139,7 +141,8 @@ public:
       bool violation = iteration % 2 == 1;
       auto budget_tmp = test_throttle_budget;
       auto target = slow_fast_codel->get_target_latency();
-      uint64_t txc_size = (target_slope * target_latency) * std::log(target * 1.0) / 4;
+      uint64_t txc_size =
+        (target_slope * target_latency) * std::log(target * 1.0) / 4;
       for (int i = 0; i < 4; i++) {
         auto time = ceph::mono_clock::now();
         if (violation) {
@@ -163,6 +166,12 @@ public:
     }
 
     ASSERT_TRUE(slow_fast_codel->target_latency_vector.size() > 0);
+    string out = "\n[\n";
+    for(int i = 0; i < slow_fast_codel->target_latency_vector.size(); i++) {
+      out = out + std::to_string(slow_fast_codel->target_latency_vector[i]) + ",\n";
+    }
+    out = out + "]\n";
+    ASSERT_TRUE(false) << out;
   }
 };
 

@@ -47,6 +47,7 @@ protected:
   int64_t fast_interval = INITIAL_LATENCY_VALUE;
   // current target latency that fast loop is using
   int64_t target_latency = INITIAL_LATENCY_VALUE;
+  int64_t target_latency_without_noise = INITIAL_LATENCY_VALUE;
   // min latency in the current fast interval
   int64_t min_latency = INITIAL_LATENCY_VALUE;
   int64_t min_target_latency = INITIAL_LATENCY_VALUE;  // in ns
