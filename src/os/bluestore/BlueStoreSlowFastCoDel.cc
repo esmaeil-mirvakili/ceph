@@ -160,7 +160,7 @@ void BlueStoreSlowFastCoDel::_slow_interval_process() {
       std::chrono::nanoseconds(now - slow_interval_start).count());
     double slow_interval_throughput =
       (slow_interval_registered_bytes * 1.0) / time_sec;
-    slow_interval_throughput = slow_interval_throughput;
+//    slow_interval_throughput = slow_interval_throughput;
     regression_target_latency_history.push_back(target_latency);
     regression_throughput_history.push_back(slow_interval_throughput);
     if (regression_target_latency_history.size() > regression_history_size) {
