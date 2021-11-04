@@ -127,8 +127,6 @@ public:
   }
 
   void TearDown() override {
-    if(test_rados)
-      delete test_rados;
     if(slow_fast_codel)
       delete slow_fast_codel;
   }
