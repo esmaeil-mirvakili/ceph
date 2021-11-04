@@ -160,8 +160,9 @@ void BlueStoreSlowFastCoDel::_slow_interval_process() {
       std::chrono::nanoseconds(now - slow_interval_start).count());
     double slow_interval_throughput =
       (slow_interval_registered_bytes * 1.0) / time_sec;
-//    slow_interval_throughput = slow_interval_throughput;
-    regression_target_latency_history.push_back(target_latency);
+    slow_interval_throughput = slow_interval_throughput / (1024.0 * 1024.0);
+    regression_target_latency_history.push_back(
+      nanosec_to_millisec(target_latency));
     regression_throughput_history.push_back(slow_interval_throughput);
     if (regression_target_latency_history.size() > regression_history_size) {
       regression_target_latency_history.erase(
@@ -171,16 +172,17 @@ void BlueStoreSlowFastCoDel::_slow_interval_process() {
     }
     std::vector<double> targets;
     std::vector<double> throughputs;
-    double selected_target = initial_target_latency;
+    double target_ms = nanosec_to_millisec(initial_target_latency);
     // If there is sufficient number of points, use the regression to find the
-    //  selected_target. Otherwise, selected_target will be initial_target_latency
+    //  target_ms. Otherwise, target_ms will be initial_target_latency
     if (regression_target_latency_history.size() >= regression_history_size) {
-      selected_target = ceph::find_slope_on_logarithmic_curve(
+      target_ms = ceph::find_slope_on_logarithmic_curve(
         regression_target_latency_history,
         regression_throughput_history,
-        target_slope * ((1024 * 1024) / 1000 * 1000));
+        target_slope);
     }
-    target_latency_without_noise = selected_target;
+
+    target_latency_without_noise = millisec_to_nanosec(target_ms);
 
     // add log_normal noise
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
@@ -188,9 +190,9 @@ void BlueStoreSlowFastCoDel::_slow_interval_process() {
     double dist_params[2];
     double rnd_std_dev = 5;
     ceph::find_log_normal_dist_params(
-      selected_target,
-      min_target_latency,
-      selected_target * rnd_std_dev,
+      target_ms,
+      nanosec_to_millisec(min_target_latency),
+      target_ms * rnd_std_dev,
       dist_params);
     std::lognormal_distribution<double> distribution(dist_params[0],
                                                      dist_params[1]);
@@ -198,10 +200,10 @@ void BlueStoreSlowFastCoDel::_slow_interval_process() {
     target_latency = millisec_to_nanosec(distribution(generator));
     target_latency += min_target_latency;
 
-    if (target_latency < selected_target) {
+    if (target_latency < millisec_to_nanosec(target_ms)) {
       std::uniform_real_distribution<> distr(0, 0.5);
       target_latency = target_latency +
-                       (target_latency - selected_target) *
+                       (target_latency - millisec_to_nanosec(target_ms)) *
                        distr(generator);
     }
 
