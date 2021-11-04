@@ -13,13 +13,6 @@
 
 #include "gtest/gtest.h"
 #include "include/Context.h"
-#include "include/rados/librados.hpp"
-#include "include/rbd/librbd.hpp"
-#include "librbd/ImageCtx.h"
-#include "test/librados/test.h"
-#include "global/global_init.h"
-#include "global/global_context.h"
-#include "test/librados/test_cxx.h"
 
 #include "common/ceph_time.h"
 #include "os/bluestore/BlueStoreSlowFastCoDel.h"
@@ -96,17 +89,14 @@ protected:
 
 class TestSlowFastCoDel : public ::testing::Test {
 public:
-  librados::Rados* test_rados = nullptr;
   CephContext* ceph_context = nullptr;
-  librados::IoCtx io_ctx;
-  std::string temp_pool_name;
   BlueStoreSlowFastCoDelMock* slow_fast_codel = nullptr;
   int64_t test_throttle_budget = 0;
   std::mutex iteration_mutex;
   std::condition_variable iteration_cond;
   int64_t target_latency = milliseconds_to_nanoseconds(50);
-  int64_t fast_interval = milliseconds_to_nanoseconds(1000);
-  int64_t slow_interval = milliseconds_to_nanoseconds(4000);
+  int64_t fast_interval = milliseconds_to_nanoseconds(100);
+  int64_t slow_interval = milliseconds_to_nanoseconds(400);
   double target_slope = 1;
 
   TestSlowFastCoDel(){}
@@ -117,15 +107,10 @@ public:
   static void TearDownTestCase() {}
 
   void SetUp() override {
-    test_rados = new librados::Rados();
-    ASSERT_EQ("", connect_cluster_pp(*test_rados));
+    ceph_context = (new CephContext(CEPH_ENTITY_TYPE_ANY))->get();
   }
 
   void create_bluestore_slow_fast_codel() {
-    temp_pool_name = get_temp_pool_name("test_pool_");
-    ASSERT_EQ(0, test_rados->pool_create(temp_pool_name.c_str()));
-    ASSERT_EQ(0, test_rados->ioctx_create(temp_pool_name.c_str(), io_ctx));
-    ceph_context = reinterpret_cast<CephContext *>(test_rados->cct());
     slow_fast_codel = new BlueStoreSlowFastCoDelMock(ceph_context,
                                                  [this](int64_t x) mutable {
                                                    this->test_throttle_budget = x;
@@ -150,7 +135,7 @@ public:
 
   void test_codel() {
     int64_t max_iterations = 50;
-    int iteration_timeout = 10; // 10 sec
+    int iteration_timeout = 1; // 10 sec
     for (int iteration = 0; iteration < max_iterations; iteration++) {
       std::unique_lock <std::mutex> locker(iteration_mutex);
       bool violation = iteration % 2 == 1;
