@@ -178,7 +178,7 @@ public:
       }
     }
 
-    ASSERT_TRUE(slow_fast_codel->target_latency_vector.size() == int(max_iterations / (slow_interval / fast_interval)));
+    ASSERT_EQ(slow_fast_codel->target_latency_vector.size(), int(max_iterations / (slow_interval / fast_interval)));
   }
 };
 
