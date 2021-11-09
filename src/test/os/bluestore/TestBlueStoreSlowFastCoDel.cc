@@ -22,7 +22,7 @@ static int64_t milliseconds_to_nanoseconds(int64_t ms) {
   return ms * 1000.0 * 1000.0;
 }
 
-static int64_t nanoseconds_to_milliseconds(int64_t ms) {
+static double nanoseconds_to_milliseconds(int64_t ms) {
   return ms / (1000.0 * 1000.0);
 }
 
