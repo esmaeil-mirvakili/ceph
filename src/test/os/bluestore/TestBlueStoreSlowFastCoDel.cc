@@ -74,6 +74,8 @@ public:
 
   std::vector <int64_t> target_latency_vector;
   std::vector <double> beta_vector;
+  std::vector <double> time_vector;
+  std::vector <double> size_vector;
 
 protected:
   std::mutex &iteration_mutex;
@@ -91,6 +93,8 @@ protected:
   void on_slow_interval_finished() override {
     target_latency_vector.push_back(target_latency_without_noise);
     beta_vector.push_back(beta);
+    time_vector.push_back(time_sec);
+    size_vector.push_back(slow_interval_registered_bytes);
   }
 };
 
@@ -181,22 +185,32 @@ public:
     }
 
     ASSERT_TRUE(slow_fast_codel->target_latency_vector.size() > 0);
-    std::string out = "\n[";
+    std::string out = "\ntarget_latency_vector = [";
     for(int i = 0; i < slow_fast_codel->target_latency_vector.size(); i++) {
       out = out + std::to_string(slow_fast_codel->target_latency_vector[i]) + ", ";
     }
     out = out + "]\n";
-    out = out + "[";
+    out = out + "beta_vector = [";
     for(int i = 0; i < slow_fast_codel->beta_vector.size(); i++) {
       out = out + std::to_string(slow_fast_codel->beta_vector[i]) + ", ";
     }
     out = out + "]\n";
-    out = out + "[";
+    out = out + "size_vector = [";
+    for(int i = 0; i < slow_fast_codel->size_vector.size(); i++) {
+      out = out + std::to_string(slow_fast_codel->size_vector[i]) + ", ";
+    }
+    out = out + "]\n";
+    out = out + "time_vector = [";
+    for(int i = 0; i < slow_fast_codel->time_vector.size(); i++) {
+      out = out + std::to_string(slow_fast_codel->time_vector[i]) + ", ";
+    }
+    out = out + "]\n";
+    out = out + "target_latency_vector2 = [";
     for(int i = 0; i < target_latency_vector.size(); i++) {
       out = out + std::to_string(target_latency_vector[i]) + ", ";
     }
     out = out + "]\n";
-    out = out + "[";
+    out = out + "txc_size_vector = [";
     for(int i = 0; i < txc_size_vector.size(); i++) {
       out = out + std::to_string(txc_size_vector[i]) + ", ";
     }

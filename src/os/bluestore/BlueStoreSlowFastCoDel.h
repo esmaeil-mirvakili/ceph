@@ -84,6 +84,7 @@ protected:
   std::function<void(int64_t)> bluestore_budget_reset_callback;
   std::function<int64_t(void)> get_kv_throttle_current;
   double beta = 0;
+  double time_sec = 0;
 
   void on_min_latency_violation();
 
