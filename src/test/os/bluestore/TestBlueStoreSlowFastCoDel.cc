@@ -91,7 +91,7 @@ protected:
   }
 
   void on_slow_interval_finished() override {
-    target_latency_vector.push_back(target_latency_without_noise);
+    target_latency_vector.push_back(target_latency);
     beta_vector.push_back(beta);
     time_vector.push_back(time_sec);
     size_vector.push_back(slow_interval_registered_bytes);
