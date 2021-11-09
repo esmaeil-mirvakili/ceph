@@ -104,6 +104,9 @@ public:
   int64_t slow_interval = milliseconds_to_nanoseconds(400);
   double target_slope = 1;
 
+  std::vector <int64_t> target_latency_vector;
+  std::vector <int64_t> txc_size_vector;
+
   TestSlowFastCoDel() {}
 
   ~TestSlowFastCoDel() {}
@@ -149,9 +152,10 @@ public:
       double target_throughput =
         (target_slope * nanoseconds_to_milliseconds(target_latency)) *
         std::log(nanoseconds_to_milliseconds(target) * 1.0);
-      int64_t txc_size =
-        ((nanoseconds_to_milliseconds(slow_interval) * target_throughput *
-          1024 * 1024) / 1000.0) / txc_num;
+      int64_t txc_size = (nanoseconds_to_milliseconds(slow_interval) * target_throughput) / (1000 * txc_num);
+      txc_size *= 1024 * 1024;
+      txc_size_vector.push_back(txc_size);
+      target_latency_vector.push_back(target);
       for (int i = 0; i < txc_num; i++) {
         auto time = ceph::mono_clock::now();
         if (violation) {
@@ -175,9 +179,19 @@ public:
     }
 
     ASSERT_TRUE(slow_fast_codel->target_latency_vector.size() > 0);
-    std::string out = "\n[\n";
+    std::string out = "\n[";
     for(int i = 0; i < slow_fast_codel->target_latency_vector.size(); i++) {
-      out = out + std::to_string(slow_fast_codel->target_latency_vector[i]) + ",\n";
+      out = out + std::to_string(slow_fast_codel->target_latency_vector[i]) + ", ";
+    }
+    out = out + "]\n";
+    out = out + "[";
+    for(int i = 0; i < target_latency_vector.size(); i++) {
+      out = out + std::to_string(target_latency_vector[i]) + ", ";
+    }
+    out = out + "]\n";
+    out = out + "[";
+    for(int i = 0; i < txc_size_vector.size(); i++) {
+      out = out + std::to_string(txc_size_vector[i]) + ", ";
     }
     out = out + "]\n";
     ASSERT_TRUE(false) << out;
