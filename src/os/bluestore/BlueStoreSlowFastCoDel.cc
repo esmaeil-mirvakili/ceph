@@ -189,6 +189,11 @@ void BlueStoreSlowFastCoDel::_slow_interval_process() {
     }
 
     target_latency_without_noise = millisec_to_nanosec(target_ms);
+    target_latency_without_noise = std::max(target_latency_without_noise,
+                                            min_target_latency);
+    target_latency_without_noise = std::min(target_latency_without_noise,
+                                            max_target_latency);
+    target_ms = nanosec_to_millisec(target_latency_without_noise);
 
     // add log_normal noise
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
