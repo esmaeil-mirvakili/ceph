@@ -115,7 +115,7 @@ namespace ceph {
   find_log_normal_dist_params(double mode, double min_x, double max_x,
                               double params[2]) {
     assert(min_x < max_x && "The min_x should be smaller than max_x");
-    assert(mode > min_x && mode < max_x &&
+    assert(mode >= min_x && mode < max_x &&
            "The mode should be between min_x and max_x");
     double max_x_normalized = max_x - min_x;
     double mode_normalized = mode - min_x;
