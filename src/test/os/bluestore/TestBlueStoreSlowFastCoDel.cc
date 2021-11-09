@@ -187,6 +187,11 @@ public:
     }
     out = out + "]\n";
     out = out + "[";
+    for(int i = 0; i < slow_fast_codel->beta_vector.size(); i++) {
+      out = out + std::to_string(slow_fast_codel->beta_vector[i]) + ", ";
+    }
+    out = out + "]\n";
+    out = out + "[";
     for(int i = 0; i < target_latency_vector.size(); i++) {
       out = out + std::to_string(target_latency_vector[i]) + ", ";
     }
