@@ -147,7 +147,7 @@ public:
   }
 
   void test_codel() {
-    int64_t max_iterations = 50;
+    int64_t max_iterations = 500;
     int iteration_timeout = 1; // 1 sec
     int txc_num = 4;
     for (int iteration = 0; iteration < max_iterations; iteration++) {
