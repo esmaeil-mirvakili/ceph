@@ -73,6 +73,7 @@ public:
   }
 
   std::vector <int64_t> target_latency_vector;
+  std::vector <double> beta_vector;
 
 protected:
   std::mutex &iteration_mutex;
@@ -89,6 +90,7 @@ protected:
 
   void on_slow_interval_finished() override {
     target_latency_vector.push_back(target_latency_without_noise);
+    beta_vector.push_back(beta);
   }
 };
 
