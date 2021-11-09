@@ -156,7 +156,7 @@ void BlueStoreSlowFastCoDel::_slow_interval_process() {
   ceph::mono_clock::time_point now = ceph::mono_clock::now();
   if (activated && !ceph::mono_clock::is_zero(slow_interval_start)
       && slow_interval_txc_cnt > 0) {
-    time_sec = nanosec_to_sec(
+    double time_sec = nanosec_to_sec(
       std::chrono::nanoseconds(now - slow_interval_start).count());
 
     double slow_interval_throughput =
@@ -181,11 +181,6 @@ void BlueStoreSlowFastCoDel::_slow_interval_process() {
         regression_target_latency_history,
         regression_throughput_history,
         target_slope);
-      double theta[2];
-      ceph::logarithmic_regression(regression_target_latency_history,
-                                   regression_throughput_history,
-                                   theta);
-      beta = theta[1];
     }
 
     target_latency_without_noise = millisec_to_nanosec(target_ms);
