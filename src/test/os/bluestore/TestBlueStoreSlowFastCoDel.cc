@@ -158,7 +158,7 @@ public:
       double target_throughput =
         (target_slope * nanoseconds_to_milliseconds(target_latency)) *
         std::log(nanoseconds_to_milliseconds(target) * 1.0);
-      int64_t txc_size = (nanoseconds_to_milliseconds(slow_interval) * target_throughput) / (1000 * txc_num);
+      int64_t txc_size = (nanoseconds_to_milliseconds(slow_interval) * target_throughput) / (1000 * txc_num * (slow_interval/fast_interval));
       txc_size *= 1024 * 1024;
       txc_size_vector.push_back(txc_size);
       target_latency_vector.push_back(target);
