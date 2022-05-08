@@ -19,6 +19,15 @@ public:
 
   virtual ~BlueStoreSlowFastCoDel();
 
+  // log data
+  std::vector<int64_t> log_start_vec;
+  std::vector<int64_t> log_end_vec;
+  std::vector<uint64_t> log_bytes_vec;
+  std::vector<int64_t> log_target_vec;
+  std::vector<int64_t> log_budget_vec;
+
+  SocketHook *asok_hook = nullptr;
+
   void on_config_changed(CephContext *cct);
 
   void reset_bluestore_budget();
@@ -32,6 +41,8 @@ public:
   int64_t get_target_latency();
 
   bool is_activated();
+
+  void dump_log();
 
 protected:
   struct CoDelLoopThread : public Thread {
@@ -149,4 +160,18 @@ private:
   double nanosec_to_sec(T ns) {
     return ns / (1000.0 * 1000.0 * 1000.0);
   }
+};
+
+class SocketHook : public AdminSocketHook{
+public:
+    std::function<void(void)> dump_log;
+    static SocketHook *create(std::function<void(void)> _dump_log, CephContext *_cct);
+    ~SocketHook();
+
+private:
+    SocketHook(std::function<void(void)> _dump_log);
+    int call(std::string_view command, const cmdmap_t &cmdmap,
+             Formatter *f,
+             std::ostream &ss,
+             bufferlist &out) override;
 };
