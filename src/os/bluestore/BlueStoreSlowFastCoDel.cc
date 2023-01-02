@@ -8,20 +8,24 @@ BlueStoreSlowFastCoDel::BlueStoreSlowFastCoDel(
   CephContext *_cct,
   std::function<void(int64_t)> _bluestore_budget_reset_callback,
   std::function<int64_t()> _get_kv_throttle_current) :
+  fast_timer(_cct, fast_timer_lock),
+  slow_timer(_cct, slow_timer_lock),
   bluestore_budget_reset_callback(_bluestore_budget_reset_callback),
   get_kv_throttle_current(_get_kv_throttle_current) {
   on_config_changed(_cct);
 }
 
 BlueStoreSlowFastCoDel::~BlueStoreSlowFastCoDel() {
-  if (slow_loop_thread){
-    slow_loop_thread->stop();
-    slow_loop_thread->join();
+  {
+    std::lock_guard l1{fast_timer_lock};
+    fast_timer.cancel_all_events();
+    fast_timer.shutdown();
   }
 
-  if (fast_loop_thread){
-    fast_loop_thread->stop();
-    fast_loop_thread->join();
+  {
+    std::lock_guard l2{slow_timer_lock};
+    slow_timer.cancel_all_events();
+    slow_timer.shutdown();
   }
 
   regression_throughput_history.clear();
@@ -98,28 +102,18 @@ void BlueStoreSlowFastCoDel::on_config_changed(CephContext *cct) {
     slow_interval_start = ceph::mono_clock::zero();
   }
 
-  if (slow_loop_thread){
-    slow_loop_thread->stop();
-    slow_loop_thread->join();
+  {
+    std::lock_guard l1{fast_timer_lock};
+    fast_timer.cancel_all_events();
+    fast_timer.init();
   }
-
-  slow_loop_thread.reset(
-          new CoDelLoopThread([this]() mutable {
-              this->_slow_interval_process();
-          }, slow_interval));
-  slow_loop_thread->create("codel_slow_loop");
-
-  if (fast_loop_thread){
-    fast_loop_thread->stop();
-    fast_loop_thread->join();
+  _fast_interval_process();
+  {
+    std::lock_guard l2{slow_timer_lock};
+    slow_timer.cancel_all_events();
+    slow_timer.init();
   }
-
-  fast_loop_thread.reset(
-          new CoDelLoopThread([this]() mutable {
-              this->_fast_interval_process();
-          }, fast_interval));
-  fast_loop_thread->create("codel_fast_loop");
-
+  _slow_interval_process();
 }
 
 void BlueStoreSlowFastCoDel::reset_bluestore_budget() {
@@ -154,6 +148,13 @@ void BlueStoreSlowFastCoDel::_fast_interval_process() {
 
     on_fast_interval_finished();
   }
+
+  auto codel_ctx = new LambdaContext(
+    [this](int r) {
+      _fast_interval_process();
+    });
+  auto interval_duration = std::chrono::nanoseconds(fast_interval);
+  fast_timer.add_event_after(interval_duration, codel_ctx);
 }
 
 void BlueStoreSlowFastCoDel::_slow_interval_process() {
@@ -230,6 +231,13 @@ void BlueStoreSlowFastCoDel::_slow_interval_process() {
   slow_interval_registered_bytes = 0;
   slow_interval_txc_cnt = 0;
   max_queue_length = min_bluestore_budget;
+
+  auto codel_ctx = new LambdaContext(
+    [this](int r) {
+      _slow_interval_process();
+    });
+  auto interval_duration = std::chrono::nanoseconds(slow_interval);
+  slow_timer.add_event_after(interval_duration, codel_ctx);
 }
 
 

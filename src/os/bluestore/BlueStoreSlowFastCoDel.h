@@ -6,6 +6,7 @@
 #include <atomic>
 
 #include "include/Context.h"
+#include "common/Timer.h"
 #include "include/utime.h"
 #include "common/Thread.h"
 #include "common/ceph_time.h"
@@ -34,30 +35,6 @@ public:
   bool is_activated();
 
 protected:
-  struct CoDelLoopThread : public Thread {
-      std::function<void(void)> loop_process;
-      utime_t interval;
-      std::atomic<bool> stopped;
-
-      explicit CoDelLoopThread(std::function<void(void)> _loop_process,
-                               int64_t _interval) :
-              loop_process(_loop_process), stopped(false) {
-        interval = utime_t(std::chrono::nanoseconds(_interval));
-      }
-
-      void *entry() override {
-        while (!stopped) {
-          loop_process();
-          interval.sleep();
-        }
-        return NULL;
-      }
-
-      void stop() {
-        stopped = true;
-      }
-  };
-
   static const int64_t INITIAL_LATENCY_VALUE = -1;
 
   /* config values */
@@ -98,9 +75,11 @@ protected:
   // min latency in the current fast interval
   int64_t min_latency = INITIAL_LATENCY_VALUE;
   int64_t violation_count = 0;
+  ceph::mutex fast_timer_lock = ceph::make_mutex("CoDel::fast_timer_lock");
+  ceph::mutex slow_timer_lock = ceph::make_mutex("CoDel::slow_timer_lock");
   ceph::mutex register_lock = ceph::make_mutex("CoDel::register_lock");
-  std::unique_ptr<CoDelLoopThread> slow_loop_thread;
-  std::unique_ptr<CoDelLoopThread> fast_loop_thread;
+  SafeTimer fast_timer;  // fast loop timer
+  SafeTimer slow_timer;  // slow loop timer
   // marks the start of the current slow interval
   ceph::mono_clock::time_point slow_interval_start = ceph::mono_clock::zero();
   // amount of bytes that has been processed in current slow interval
