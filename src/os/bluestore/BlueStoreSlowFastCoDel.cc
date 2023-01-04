@@ -4,6 +4,80 @@
 
 #include "common/regression_utils.h"
 
+SocketHook::SocketHook(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log) : dump_log(_dump_log), clear_log(_clear_log) {}
+
+SocketHook::~SocketHook() {
+  AdminSocket *admin_socket = store->cct->get_admin_socket();
+  admin_socket->unregister_commands(this);
+}
+
+SocketHook *SocketHook::create(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log, CephContext *_cct) {
+  SocketHook *hook = nullptr;
+  AdminSocket *admin_socket = _cct->get_admin_socket();
+  if (admin_socket)
+  {
+    hook = new BlueStore::SocketHook(_dump_log, _clear_log);
+    int r = admin_socket->register_command("dump log vector",
+                                           hook,
+                                           "dump vectors contains logs");
+    r = admin_socket->register_command("reset log vector",
+                                       hook,
+                                       "reset vectors contains logs");
+    if (r != 0)
+    {
+      delete hook;
+      hook = nullptr;
+    }
+  }
+  return hook;
+}
+
+int SocketHook::call(std::string_view command, const int &cmdmap, int *f,
+                     std::ostream &ss, int &out) {
+  if (command == "dump log vector")
+  {
+    dump_log();
+  }
+  else if (command == "reset log vector")
+  {
+    clear_log();
+  }
+  return 0;
+}
+
+void BlueStoreSlowFastCoDel::clear_log(){
+  log_time_vec.clear();
+  log_lat_vec.clear();
+  log_budget_vec.clear();
+  log_bytes_vec.clear();
+  log_target_vec.clear();
+  log_current_vec.clear();
+}
+
+void BlueStoreSlowFastCoDel::dump_log(){
+  std::string prefix = "/users/esmaeil/codel_log_";
+  std::string index = "";
+
+  std::ofstream txc_file(prefix + "txc" + index + ".csv");
+  // add column names
+  txc_file << "time, lat, size, budget, target, current" << "\n";
+  for (unsigned int i = 0; i < log_start_vec.size(); i++) {
+    txc_file << std::fixed << log_time_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << log_lat_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << log_bytes_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << log_budget_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << log_target_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << log_current_vec[i];
+    txc_file << "\n";
+  }
+  txc_file.close();
+}
+
 BlueStoreSlowFastCoDel::BlueStoreSlowFastCoDel(
   CephContext *_cct,
   std::function<void(int64_t)> _bluestore_budget_reset_callback,
@@ -47,6 +121,12 @@ void BlueStoreSlowFastCoDel::update_from_txc_info(
   }
   slow_interval_txc_cnt++;
   slow_interval_registered_bytes += txc_bytes;
+  log_lat_vec.push_back(std::chrono::nanoseconds(latency);
+  log_time_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
+  log_current_vec.push_back(get_kv_throttle_current());
+  log_target_vec.push_back(target_latency);
+  log_budget_vec.push_back(bluestore_budget);
+  log_bytes_vec.push_back(txc_bytes);
 }
 
 void BlueStoreSlowFastCoDel::on_min_latency_violation() {

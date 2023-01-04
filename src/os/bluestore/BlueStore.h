@@ -1911,6 +1911,8 @@ public:
   } throttle;
 
     std::unique_ptr<BlueStoreSlowFastCoDel> codel;
+    class SocketHook;
+    SocketHook *asok_hook = nullptr;
 
   typedef boost::intrusive::list<
     TransContext,

@@ -34,6 +34,19 @@ public:
 
   bool is_activated();
 
+    // log data
+    std::vector<int64_t> log_time_vec;
+    std::vector<int64_t> log_lat_vec;
+    std::vector<uint64_t> log_bytes_vec;
+    std::vector<int64_t> log_target_vec;
+    std::vector<int64_t> log_budget_vec;
+    std::vector<int64_t> log_current_vec;
+
+    SocketHook *asok_hook = nullptr;
+
+    void dump_log();
+    void clear_log();
+
 protected:
   static const int64_t INITIAL_LATENCY_VALUE = -1;
 
@@ -128,4 +141,19 @@ private:
   double nanosec_to_sec(T ns) {
     return ns / (1000.0 * 1000.0 * 1000.0);
   }
+};
+
+class SocketHook : public AdminSocketHook{
+public:
+    std::function<void(void)> dump_log;
+    std::function<void(void)> clear_log;
+    static SocketHook *create(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log, CephContext *_cct);
+    ~SocketHook();
+
+private:
+    SocketHook(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log);
+    int call(std::string_view command, const cmdmap_t &cmdmap,
+             Formatter *f,
+             std::ostream &ss,
+             bufferlist &out) override;
 };
