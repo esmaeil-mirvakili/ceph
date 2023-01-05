@@ -124,7 +124,7 @@ void BlueStoreSlowFastCoDel::update_from_txc_info(
   }
   slow_interval_txc_cnt++;
   slow_interval_registered_bytes += txc_bytes;
-  log_lat_vec.push_back(std::chrono::nanoseconds(latency));
+  log_lat_vec.push_back(std::chrono::nanoseconds(latency).count());
   log_time_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
   log_current_vec.push_back(get_kv_throttle_current());
   log_target_vec.push_back(target_latency);

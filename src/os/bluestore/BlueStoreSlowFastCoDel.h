@@ -5,6 +5,7 @@
 #include <iostream>
 #include <atomic>
 #include <ostream>
+#include <fstream>
 #include <string>
 
 #include "include/Context.h"
