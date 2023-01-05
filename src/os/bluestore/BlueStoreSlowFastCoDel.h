@@ -142,15 +142,15 @@ private:
   }
 };
 
-class SocketHook : public AdminSocketHook{
+class CoDelSocketHook : public AdminSocketHook{
 public:
     std::function<void(void)> dump_log;
     std::function<void(void)> clear_log;
-    static SocketHook *create(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log, CephContext *_cct);
-    ~SocketHook();
+    static CoDelSocketHook *create(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log, CephContext *_cct);
+    ~CoDelSocketHook();
 
 private:
-    SocketHook(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log);
+    CoDelSocketHook(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log);
     int call(std::string_view command, const cmdmap_t &cmdmap,
              Formatter *f,
              std::ostream &ss,

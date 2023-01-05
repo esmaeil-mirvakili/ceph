@@ -4,19 +4,19 @@
 
 #include "common/regression_utils.h"
 
-SocketHook::SocketHook(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log) : dump_log(_dump_log), clear_log(_clear_log) {}
+CoDelSocketHook::CoDelSocketHook(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log) : dump_log(_dump_log), clear_log(_clear_log) {}
 
-SocketHook::~SocketHook() {
+CoDelSocketHook::~CoDelSocketHook() {
   AdminSocket *admin_socket = store->cct->get_admin_socket();
   admin_socket->unregister_commands(this);
 }
 
-SocketHook *SocketHook::create(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log, CephContext *_cct) {
-  SocketHook *hook = nullptr;
+CoDelSocketHook *CoDelSocketHook::create(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log, CephContext *_cct) {
+  CoDelSocketHook *hook = nullptr;
   AdminSocket *admin_socket = _cct->get_admin_socket();
   if (admin_socket)
   {
-    hook = new SocketHook(_dump_log, _clear_log);
+    hook = new CoDelSocketHook(_dump_log, _clear_log);
     int r = admin_socket->register_command("dump log vector",
                                            hook,
                                            "dump vectors contains logs");
@@ -32,7 +32,7 @@ SocketHook *SocketHook::create(std::function<void(void)> _dump_log, std::functio
   return hook;
 }
 
-int SocketHook::call(std::string_view command, const int &cmdmap, int *f,
+int CoDelSocketHook::call(std::string_view command, const int &cmdmap, int *f,
                      std::ostream &ss, int &out) {
   if (command == "dump log vector")
   {
