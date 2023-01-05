@@ -4637,6 +4637,51 @@ BlueStore::~BlueStore()
   buffer_cache_shards.clear();
 }
 
+
+BlueStore::CoDelSocketHook::CoDelSocketHook(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log, CephContext *_cct) : dump_log(_dump_log), clear_log(_clear_log), cct(_cct) {}
+
+BlueStore::CoDelSocketHook::~CoDelSocketHook() {
+  AdminSocket *admin_socket = cct->get_admin_socket();
+  if (admin_socket)
+    admin_socket->unregister_commands(this);
+}
+
+BlueStore::CoDelSocketHook *BlueStore::CoDelSocketHook::create(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log, CephContext *_cct) {
+  CoDelSocketHook *hook = nullptr;
+  AdminSocket *admin_socket = _cct->get_admin_socket();
+  if (admin_socket)
+  {
+    hook = new CoDelSocketHook(_dump_log, _clear_log, _cct);
+    int r = admin_socket->register_command("dump log vector",
+                                           hook,
+                                           "dump vectors contains logs");
+    r = admin_socket->register_command("reset log vector",
+                                       hook,
+                                       "reset vectors contains logs");
+    if (r != 0)
+    {
+      delete hook;
+      hook = nullptr;
+    }
+  }
+  return hook;
+}
+
+int BlueStore::CoDelSocketHook::call(std::string_view command, const cmdmap_t &cmdmap,
+                          Formatter *f,
+                          std::ostream &ss,
+                          bufferlist &out) {
+  if (command == "dump log vector")
+  {
+    dump_log();
+  }
+  else if (command == "reset log vector")
+  {
+    clear_log();
+  }
+  return 0;
+}
+
 const char **BlueStore::get_tracked_conf_keys() const
 {
   static const char* KEYS[] = {

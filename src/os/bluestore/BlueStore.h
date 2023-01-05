@@ -1911,10 +1911,18 @@ public:
   } throttle;
 
     std::unique_ptr<BlueStoreSlowFastCoDel> codel;
-    class CoDelSocketHook;
-    class CoDelSocketHook {
+    class CoDelSocketHook : public AdminSocketHook{
     public:
+        std::function<void(void)> dump_log;
+        std::function<void(void)> clear_log;
+        CephContext *cct;
         static CoDelSocketHook *create(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log, CephContext *_cct);
+        ~CoDelSocketHook();
+        CoDelSocketHook(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log, CephContext *_cct);
+        int call(std::string_view command, const cmdmap_t &cmdmap,
+                 Formatter *f,
+                 std::ostream &ss,
+                 bufferlist &out) override;
     };
     CoDelSocketHook *asok_hook = nullptr;
 
