@@ -4609,12 +4609,12 @@ BlueStore::BlueStore(CephContext *cct,
             [this]() mutable {
                 return this->throttle.get_kv_throttle_current();
             });
-    asok_hook = CoDelSocketHook::create([codel]() mutable {
-                                       codel->dump_log();
-                                   },
-                                   [codel]() mutable {
-                                       codel->clear_log();
-                                   }, cct);
+    asok_hook = CoDelSocketHook::create([this]() mutable {
+                                            this->codel->dump_log();
+                                        },
+                                        [this]() mutable {
+                                            this->codel->clear_log();
+                                        }, cct);
   }
 }
 
