@@ -4,11 +4,12 @@
 
 #include "common/regression_utils.h"
 
-CoDelSocketHook::CoDelSocketHook(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log) : dump_log(_dump_log), clear_log(_clear_log) {}
+CoDelSocketHook::CoDelSocketHook(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log, CephContext *_cct) : dump_log(_dump_log), clear_log(_clear_log), cct(_cct) {}
 
 CoDelSocketHook::~CoDelSocketHook() {
-  AdminSocket *admin_socket = store->cct->get_admin_socket();
-  admin_socket->unregister_commands(this);
+  AdminSocket *admin_socket = cct->get_admin_socket();
+  if (admin_socket)
+    admin_socket->unregister_commands(this);
 }
 
 CoDelSocketHook *CoDelSocketHook::create(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log, CephContext *_cct) {
@@ -16,7 +17,7 @@ CoDelSocketHook *CoDelSocketHook::create(std::function<void(void)> _dump_log, st
   AdminSocket *admin_socket = _cct->get_admin_socket();
   if (admin_socket)
   {
-    hook = new CoDelSocketHook(_dump_log, _clear_log);
+    hook = new CoDelSocketHook(_dump_log, _clear_log, _cct);
     int r = admin_socket->register_command("dump log vector",
                                            hook,
                                            "dump vectors contains logs");
