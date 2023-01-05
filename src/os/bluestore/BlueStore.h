@@ -1913,6 +1913,7 @@ public:
     std::unique_ptr<BlueStoreSlowFastCoDel> codel;
     class CoDelSocketHook;
     class CoDelSocketHook {
+    public:
         static CoDelSocketHook *create(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log, CephContext *_cct);
     };
     CoDelSocketHook *asok_hook = nullptr;
