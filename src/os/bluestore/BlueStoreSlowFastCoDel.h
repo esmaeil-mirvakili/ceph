@@ -10,6 +10,7 @@
 #include "include/utime.h"
 #include "common/Thread.h"
 #include "common/ceph_time.h"
+#include "common/admin_socket.h"
 
 class BlueStoreSlowFastCoDel {
 public:
