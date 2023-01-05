@@ -4,6 +4,8 @@
 
 #include <iostream>
 #include <atomic>
+#include <ostream>
+#include <string>
 
 #include "include/Context.h"
 #include "common/Timer.h"
@@ -11,6 +13,10 @@
 #include "common/Thread.h"
 #include "common/ceph_time.h"
 #include "common/admin_socket.h"
+#include "common/Formatter.h"
+
+using ceph::Formatter;
+using ceph::bufferlist;
 
 class BlueStoreSlowFastCoDel {
 public:
@@ -149,8 +155,6 @@ public:
     CephContext *cct;
     static CoDelSocketHook *create(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log, CephContext *_cct);
     ~CoDelSocketHook();
-
-private:
     CoDelSocketHook(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log, CephContext *_cct);
     int call(std::string_view command, const cmdmap_t &cmdmap,
              Formatter *f,

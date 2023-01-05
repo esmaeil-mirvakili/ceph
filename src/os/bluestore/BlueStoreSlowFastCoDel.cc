@@ -33,8 +33,10 @@ CoDelSocketHook *CoDelSocketHook::create(std::function<void(void)> _dump_log, st
   return hook;
 }
 
-int CoDelSocketHook::call(std::string_view command, const int &cmdmap, int *f,
-                     std::ostream &ss, int &out) {
+int CoDelSocketHook::call(std::string_view command, const cmdmap_t &cmdmap,
+                          Formatter *f,
+                          std::ostream &ss,
+                          bufferlist &out) {
   if (command == "dump log vector")
   {
     dump_log();
@@ -62,7 +64,7 @@ void BlueStoreSlowFastCoDel::dump_log(){
   std::ofstream txc_file(prefix + "txc" + index + ".csv");
   // add column names
   txc_file << "time, lat, size, budget, target, current" << "\n";
-  for (unsigned int i = 0; i < log_start_vec.size(); i++) {
+  for (unsigned int i = 0; i < log_time_vec.size(); i++) {
     txc_file << std::fixed << log_time_vec[i];
     txc_file << ",";
     txc_file << std::fixed << log_lat_vec[i];
@@ -122,7 +124,7 @@ void BlueStoreSlowFastCoDel::update_from_txc_info(
   }
   slow_interval_txc_cnt++;
   slow_interval_registered_bytes += txc_bytes;
-  log_lat_vec.push_back(std::chrono::nanoseconds(latency);
+  log_lat_vec.push_back(std::chrono::nanoseconds(latency));
   log_time_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
   log_current_vec.push_back(get_kv_throttle_current());
   log_target_vec.push_back(target_latency);
