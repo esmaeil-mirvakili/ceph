@@ -16,7 +16,7 @@ SocketHook *SocketHook::create(std::function<void(void)> _dump_log, std::functio
   AdminSocket *admin_socket = _cct->get_admin_socket();
   if (admin_socket)
   {
-    hook = new BlueStore::SocketHook(_dump_log, _clear_log);
+    hook = new SocketHook(_dump_log, _clear_log);
     int r = admin_socket->register_command("dump log vector",
                                            hook,
                                            "dump vectors contains logs");

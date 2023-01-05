@@ -43,8 +43,6 @@ public:
     std::vector<int64_t> log_budget_vec;
     std::vector<int64_t> log_current_vec;
 
-    SocketHook *asok_hook = nullptr;
-
     void dump_log();
     void clear_log();
 
