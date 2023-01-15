@@ -112,16 +112,11 @@ void BlueStoreSlowFastCoDel::on_config_changed(CephContext *cct) {
 
     activated = cct->_conf->bluestore_codel;
     target_slope = cct->_conf->bluestore_codel_throughput_latency_tradeoff;
-    slow_interval = ((int64_t) cct->_conf->bluestore_codel_slow_interval) *
-            1000 * 1000;
-    initial_fast_interval = ((int64_t)
-            cct->_conf->bluestore_codel_fast_interval) * 1000 * 1000;
-    initial_target_latency = ((int64_t)
-            cct->_conf->bluestore_codel_initial_target_latency) * 1000 * 1000;
-    min_target_latency = ((int64_t)
-            cct->_conf->bluestore_codel_min_target_latency) * 1000 * 1000;
-    max_target_latency = ((int64_t)
-            cct->_conf->bluestore_codel_max_target_latency) * 1000 * 1000;
+    slow_interval = (int64_t) millisec_to_nanosec(cct->_conf->bluestore_codel_slow_interval);
+    initial_fast_interval = (int64_t) millisec_to_nanosec(cct->_conf->bluestore_codel_fast_interval);
+    initial_target_latency = (int64_t) millisec_to_nanosec(cct->_conf->bluestore_codel_initial_target_latency);
+    min_target_latency = (int64_t) millisec_to_nanosec(cct->_conf->bluestore_codel_min_target_latency);
+    max_target_latency = (int64_t) millisec_to_nanosec(cct->_conf->bluestore_codel_max_target_latency);
     initial_bluestore_budget = cct->_conf->bluestore_codel_initial_budget_bytes;
     min_bluestore_budget = cct->_conf->bluestore_codel_min_budget_bytes;
     bluestore_budget_increment =
