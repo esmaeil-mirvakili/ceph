@@ -115,6 +115,8 @@ namespace ceph {
     assert(min_x < max_x && "The min_x should be smaller than max_x");
     assert(mode >= min_x && mode < max_x &&
            "The mode should be between min_x and max_x");
+    if(min_x == mode)
+      min_x *= 0.99;
     double max_x_normalized = max_x - min_x;
     double mode_normalized = mode - min_x;
     double std_dev = (-Z_P + std::sqrt(
