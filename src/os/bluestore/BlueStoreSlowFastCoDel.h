@@ -42,16 +42,7 @@ public:
 
   bool is_activated();
 
-    // log data
-    std::vector<int64_t> log_time_vec;
-    std::vector<int64_t> log_lat_vec;
-    std::vector<uint64_t> log_bytes_vec;
-    std::vector<int64_t> log_target_vec;
-    std::vector<int64_t> log_budget_vec;
-    std::vector<int64_t> log_current_vec;
 
-    void dump_log();
-    void clear_log();
 
 protected:
   static const int64_t INITIAL_LATENCY_VALUE = -1;

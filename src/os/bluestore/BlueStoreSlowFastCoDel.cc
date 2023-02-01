@@ -4,39 +4,6 @@
 
 #include "common/regression_utils.h"
 
-void BlueStoreSlowFastCoDel::clear_log(){
-  log_time_vec.clear();
-  log_lat_vec.clear();
-  log_budget_vec.clear();
-  log_bytes_vec.clear();
-  log_target_vec.clear();
-  log_current_vec.clear();
-}
-
-void BlueStoreSlowFastCoDel::dump_log(){
-  std::string prefix = "/users/esmaeil/codel_log_";
-  std::string index = "";
-
-  std::ofstream txc_file(prefix + "txc" + index + ".csv");
-  // add column names
-  txc_file << "time, lat, size, budget, target, current" << "\n";
-  for (unsigned int i = 0; i < log_time_vec.size(); i++) {
-    txc_file << std::fixed << log_time_vec[i];
-    txc_file << ",";
-    txc_file << std::fixed << log_lat_vec[i];
-    txc_file << ",";
-    txc_file << std::fixed << log_bytes_vec[i];
-    txc_file << ",";
-    txc_file << std::fixed << log_budget_vec[i];
-    txc_file << ",";
-    txc_file << std::fixed << log_target_vec[i];
-    txc_file << ",";
-    txc_file << std::fixed << log_current_vec[i];
-    txc_file << "\n";
-  }
-  txc_file.close();
-}
-
 BlueStoreSlowFastCoDel::BlueStoreSlowFastCoDel(
   CephContext *_cct,
   std::function<void(int64_t)> _bluestore_budget_reset_callback,
@@ -80,12 +47,6 @@ void BlueStoreSlowFastCoDel::update_from_txc_info(
   }
   slow_interval_txc_cnt++;
   slow_interval_registered_bytes += txc_bytes;
-  log_lat_vec.push_back(std::chrono::nanoseconds(latency).count());
-  log_time_vec.push_back(std::chrono::nanoseconds(now - mono_clock::zero()).count());
-  log_current_vec.push_back(get_kv_throttle_current());
-  log_target_vec.push_back(target_latency);
-  log_budget_vec.push_back(bluestore_budget);
-  log_bytes_vec.push_back(txc_bytes);
 }
 
 void BlueStoreSlowFastCoDel::on_min_latency_violation() {
