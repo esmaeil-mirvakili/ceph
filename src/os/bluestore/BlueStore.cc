@@ -12599,6 +12599,10 @@ void BlueStore::_txc_state_proc(TransContext *txc)
   while (true) {
     dout(10) << __func__ << " txc " << txc
 	     << " " << txc->get_state_name() << dendl;
+    int64_t latency = 0;
+    int64_t now_nano = 0;
+    int64_t target = 0;
+    int64_t budget = 0;
     switch (txc->get_state()) {
     case TransContext::STATE_PREPARE:
       throttle.log_state_latency(*txc, logger, l_bluestore_state_prepare_lat);
@@ -12687,16 +12691,14 @@ void BlueStore::_txc_state_proc(TransContext *txc)
         codel->update_from_txc_info(txc->txc_state_proc_start, txc->bytes);
       }
         ceph::mono_clock::time_point now = ceph::mono_clock::now();
-        int64_t latency = std::chrono::nanoseconds(now - txc->txc_state_proc_start).count();
+        latency = std::chrono::nanoseconds(now - txc->txc_state_proc_start).count();
         log_lat_vec.push_back(latency);
-        int64_t now_nano = std::chrono::nanoseconds(now - mono_clock::zero()).count();
+        now_nano = std::chrono::nanoseconds(now - mono_clock::zero()).count();
         log_time_vec.push_back(now_nano);
         log_current_vec.push_back(this->throttle.get_kv_throttle_current());
-        int64_t target = 0;
         if(codel)
           target = codel->get_target_latency();
         log_target_vec.push_back(target);
-        int64_t budget = 0;
         if(codel)
           budget = codel->get_bluestore_budget();
         log_budget_vec.push_back(budget);
