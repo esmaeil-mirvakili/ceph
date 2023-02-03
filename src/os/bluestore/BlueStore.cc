@@ -12603,6 +12603,7 @@ void BlueStore::_txc_state_proc(TransContext *txc)
     int64_t now_nano = 0;
     int64_t target = 0;
     int64_t budget = 0;
+    ceph::mono_clock::time_point now = ceph::mono_clock::now();
     switch (txc->get_state()) {
     case TransContext::STATE_PREPARE:
       throttle.log_state_latency(*txc, logger, l_bluestore_state_prepare_lat);
@@ -12690,7 +12691,7 @@ void BlueStore::_txc_state_proc(TransContext *txc)
       if (codel) {
         codel->update_from_txc_info(txc->txc_state_proc_start, txc->bytes);
       }
-        ceph::mono_clock::time_point now = ceph::mono_clock::now();
+        now = ceph::mono_clock::now();
         latency = std::chrono::nanoseconds(now - txc->txc_state_proc_start).count();
         log_lat_vec.push_back(latency);
         now_nano = std::chrono::nanoseconds(now - mono_clock::zero()).count();
