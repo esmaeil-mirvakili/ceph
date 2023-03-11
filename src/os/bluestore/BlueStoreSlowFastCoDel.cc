@@ -153,86 +153,86 @@ void BlueStoreSlowFastCoDel::_fast_interval_process() {
 }
 
 void BlueStoreSlowFastCoDel::_slow_interval_process() {
-  std::lock_guard l(register_lock);
-  ceph::mono_clock::time_point now = ceph::mono_clock::now();
-  if (activated && !ceph::mono_clock::is_zero(slow_interval_start)
-      && slow_interval_txc_cnt > 0) {
-    double time_sec = nanosec_to_sec(
-      std::chrono::nanoseconds(now - slow_interval_start).count());
-
-    double slow_interval_throughput =
-      (slow_interval_registered_bytes * 1.0) / time_sec;
-    slow_interval_throughput = slow_interval_throughput / (1024.0 * 1024.0);
-    regression_target_latency_history.push_back(
-      nanosec_to_millisec(target_latency));
-    regression_throughput_history.push_back(slow_interval_throughput);
-    if (regression_target_latency_history.size() > regression_history_size) {
-      regression_target_latency_history.erase(
-        regression_target_latency_history.begin());
-      regression_throughput_history.erase(
-        regression_throughput_history.begin());
-    }
-    std::vector<double> targets;
-    std::vector<double> throughputs;
-    double target_ms = nanosec_to_millisec(initial_target_latency);
-    // If there is sufficient number of points, use the regression to find the
-    //  target_ms. Otherwise, target_ms will be initial_target_latency
-    if (regression_target_latency_history.size() >= regression_history_size) {
-      target_ms = ceph::find_slope_on_curve(
-        regression_target_latency_history,
-        regression_throughput_history,
-        target_slope);
-    }
-
-    target_latency_without_noise = millisec_to_nanosec(target_ms);
-    target_latency_without_noise = std::max(target_latency_without_noise,
-                                            min_target_latency);
-    target_latency_without_noise = std::min(target_latency_without_noise,
-                                            max_target_latency);
-    target_ms = nanosec_to_millisec(target_latency_without_noise);
-
-    // add log_normal noise
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    std::default_random_engine generator(seed);
-    double dist_params[2];
-    double rnd_std_dev = 5;
-    ceph::find_log_normal_dist_params(
-      target_ms,
-      nanosec_to_millisec(min_target_latency),
-      target_ms * rnd_std_dev,
-      dist_params);
-    std::lognormal_distribution<double> distribution(dist_params[0],
-                                                     dist_params[1]);
-
-    target_latency = millisec_to_nanosec(distribution(generator));
-    target_latency += min_target_latency;
-
-    if (target_latency < millisec_to_nanosec(target_ms)) {
-      std::uniform_real_distribution<> distr(0, 0.5);
-      target_latency = target_latency +
-                       (target_latency - millisec_to_nanosec(target_ms)) *
-                       distr(generator);
-    }
-
-    if (target_latency != INITIAL_LATENCY_VALUE) {
-      target_latency = std::max(target_latency, min_target_latency);
-      target_latency = std::min(target_latency, max_target_latency);
-    }
-
-    on_slow_interval_finished();
-  }
-
-  slow_interval_start = ceph::mono_clock::now();
-  slow_interval_registered_bytes = 0;
-  slow_interval_txc_cnt = 0;
-  max_queue_length = min_bluestore_budget;
-
-  auto codel_ctx = new LambdaContext(
-    [this](int r) {
-      _slow_interval_process();
-    });
-  auto interval_duration = std::chrono::nanoseconds(slow_interval);
-  slow_timer.add_event_after(interval_duration, codel_ctx);
+//  std::lock_guard l(register_lock);
+//  ceph::mono_clock::time_point now = ceph::mono_clock::now();
+//  if (activated && !ceph::mono_clock::is_zero(slow_interval_start)
+//      && slow_interval_txc_cnt > 0) {
+//    double time_sec = nanosec_to_sec(
+//      std::chrono::nanoseconds(now - slow_interval_start).count());
+//
+//    double slow_interval_throughput =
+//      (slow_interval_registered_bytes * 1.0) / time_sec;
+//    slow_interval_throughput = slow_interval_throughput / (1024.0 * 1024.0);
+//    regression_target_latency_history.push_back(
+//      nanosec_to_millisec(target_latency));
+//    regression_throughput_history.push_back(slow_interval_throughput);
+//    if (regression_target_latency_history.size() > regression_history_size) {
+//      regression_target_latency_history.erase(
+//        regression_target_latency_history.begin());
+//      regression_throughput_history.erase(
+//        regression_throughput_history.begin());
+//    }
+//    std::vector<double> targets;
+//    std::vector<double> throughputs;
+//    double target_ms = nanosec_to_millisec(initial_target_latency);
+//    // If there is sufficient number of points, use the regression to find the
+//    //  target_ms. Otherwise, target_ms will be initial_target_latency
+//    if (regression_target_latency_history.size() >= regression_history_size) {
+//      target_ms = ceph::find_slope_on_curve(
+//        regression_target_latency_history,
+//        regression_throughput_history,
+//        target_slope);
+//    }
+//
+//    target_latency_without_noise = millisec_to_nanosec(target_ms);
+//    target_latency_without_noise = std::max(target_latency_without_noise,
+//                                            min_target_latency);
+//    target_latency_without_noise = std::min(target_latency_without_noise,
+//                                            max_target_latency);
+//    target_ms = nanosec_to_millisec(target_latency_without_noise);
+//
+//    // add log_normal noise
+//    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+//    std::default_random_engine generator(seed);
+//    double dist_params[2];
+//    double rnd_std_dev = 5;
+//    ceph::find_log_normal_dist_params(
+//      target_ms,
+//      nanosec_to_millisec(min_target_latency),
+//      target_ms * rnd_std_dev,
+//      dist_params);
+//    std::lognormal_distribution<double> distribution(dist_params[0],
+//                                                     dist_params[1]);
+//
+//    target_latency = millisec_to_nanosec(distribution(generator));
+//    target_latency += min_target_latency;
+//
+//    if (target_latency < millisec_to_nanosec(target_ms)) {
+//      std::uniform_real_distribution<> distr(0, 0.5);
+//      target_latency = target_latency +
+//                       (target_latency - millisec_to_nanosec(target_ms)) *
+//                       distr(generator);
+//    }
+//
+//    if (target_latency != INITIAL_LATENCY_VALUE) {
+//      target_latency = std::max(target_latency, min_target_latency);
+//      target_latency = std::min(target_latency, max_target_latency);
+//    }
+//
+//    on_slow_interval_finished();
+//  }
+//
+//  slow_interval_start = ceph::mono_clock::now();
+//  slow_interval_registered_bytes = 0;
+//  slow_interval_txc_cnt = 0;
+//  max_queue_length = min_bluestore_budget;
+//
+//  auto codel_ctx = new LambdaContext(
+//    [this](int r) {
+//      _slow_interval_process();
+//    });
+//  auto interval_duration = std::chrono::nanoseconds(slow_interval);
+//  slow_timer.add_event_after(interval_duration, codel_ctx);
 }
 
 
