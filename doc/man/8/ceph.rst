@@ -23,7 +23,7 @@ Synopsis
 
 | **ceph** **df** *{detail}*
 
-| **ceph** **fs** [ *ls* \| *new* \| *reset* \| *rm* \| *authorize* ] ...
+| **ceph** **fs** [ *add_data_pool* \| *authorize* \| *dump* \| *feature ls* \| *flag set* \| *get* \| *ls* \| *lsflags* \| *new* \| *rename* \| *reset* \| *required_client_features add* \| *required_client_features rm* \| *rm* \| *rm_data_pool* \| *set*] ...
 
 | **ceph** **fsid**
 
@@ -35,7 +35,7 @@ Synopsis
 
 | **ceph** **mds** [ *compat* \| *fail* \| *rm* \| *rmfailed* \| *set_state* \| *stat* \| *repaired* ] ...
 
-| **ceph** **mon** [ *add* \| *dump* \| *getmap* \| *remove* \| *stat* ] ...
+| **ceph** **mon** [ *add* \| *dump* \| *enable_stretch_mode* \| *getmap* \| *remove* \| *stat* ] ...
 
 | **ceph** **osd** [ *blocklist* \| *blocked-by* \| *create* \| *new* \| *deep-scrub* \| *df* \| *down* \| *dump* \| *erasure-code-profile* \| *find* \| *getcrushmap* \| *getmap* \| *getmaxosd* \| *in* \| *ls* \| *lspools* \| *map* \| *metadata* \| *ok-to-stop* \| *out* \| *pause* \| *perf* \| *pg-temp* \| *force-create-pg* \| *primary-affinity* \| *primary-temp* \| *repair* \| *reweight* \| *reweight-by-pg* \| *rm* \| *destroy* \| *purge* \| *safe-to-destroy* \| *scrub* \| *set* \| *setcrushmap* \| *setmaxosd*  \| *stat* \| *tree* \| *unpause* \| *unset* ] ...
 
@@ -232,7 +232,7 @@ Usage::
     ceph config rm <who> <option>
 
 Subcommand ``log`` to show recent history of config changes. If `count` option
-is omitted it defeaults to 10.
+is omitted it defaults to 10.
 
 Usage::
 
@@ -361,11 +361,62 @@ fs
 
 Manage cephfs file systems. It uses some additional subcommands.
 
+Subcommand ``add_data_pool`` adds an new data pool to the FS. Ths pool can
+be used for file layouts as an alternate location to store the file data.
+
+Usage::
+
+    ceph fs add_data_pool <fs-name> <pool name/id>
+
+Subcommand ``authorize`` creates a new client that will be authorized for the
+given path in ``<fs_name>``. Pass ``/`` to authorize for the entire FS.
+``<perms>`` below can be ``r``, ``rw`` or ``rwp``.
+
+Usage::
+
+    ceph fs authorize <fs_name> client.<client_id> <path> <perms> [<path> <perms>...]
+
+Subcommand ``dump`` displays the FSMap at the given epoch (default: current).
+This includes all file system settings, MDS daemons and the ranks they hold
+and list of standby MDS daemons.
+
+Usage::
+
+    ceph fs dump [epoch]
+
+Subcommand ``feature ls`` lists all CephFS features supported by current
+version of Ceph.
+
+Usage::
+
+    ceph fs feature ls
+
+Subcommand ``flag set`` sets a global CephFS flag. Right now the only flag
+is ``enable_multiple`` which allows multiple CephFSs on a Ceph cluster.
+
+Usage::
+
+    ceph fs flag set <flag-name> <flag-val> --yes-i-really-mean-it
+
+Subcommand ``get`` displays the information about FS, including settings and
+ranks. Information printed here in subset of same information from the
+``fs dump`` command.
+
+Usage::
+
+    ceph fs get <fs-name>
+
 Subcommand ``ls`` to list file systems
 
 Usage::
 
 	ceph fs ls
+
+Subcommand ``lsflags`` displays all the flags set on the given FS.
+
+Usage::
+
+    ceph fs lsflags <fs-name>
 
 Subcommand ``new`` to make a new file system using named pools <metadata> and <data>
 
@@ -373,7 +424,24 @@ Usage::
 
 	ceph fs new <fs_name> <metadata> <data>
 
-Subcommand ``reset`` is used for disaster recovery only: reset to a single-MDS map
+Subcommand ``rename`` assigns a new name to CephFS and also updates
+application tags on the pools of this CephFS.
+
+Usage::
+
+    ceph fs rename <fs-name> <new-fs-name> {--yes-i-really-mean-it}
+
+Subcommand ``required_client_features`` disables a client that doesn't
+possess a certain feature from connecting. This subcommand has two
+subcommands, one to add a requirement and other to remove the requirement.
+
+Usage::
+
+    ceph fs required_client_features <fs name> add <feature-name>
+    ceph fs required_client_features <fs name> rm <feature-name>
+
+Subcommand ``reset`` is used for disaster recovery only: reset to a single-MDS
+map
 
 Usage::
 
@@ -385,13 +453,19 @@ Usage::
 
 	ceph fs rm <fs_name> {--yes-i-really-mean-it}
 
-Subcommand ``authorize`` creates a new client that will be authorized for the
-given path in ``<fs_name>``. Pass ``/`` to authorize for the entire FS.
-``<perms>`` below can be ``r``, ``rw`` or ``rwp``.
+Subcommand ``rm_data_pool``  removes the specified pool from FS's list of
+data pools. File data on this pool will become unavailable. Default data pool
+cannot be removed.
 
 Usage::
 
-    ceph fs authorize <fs_name> client.<client_id> <path> <perms> [<path> <perms>...]
+    ceph fs rm_data_pool <fs-name> <pool name/id>
+
+Subcommand ``set`` sets or updates a FS setting value for given FS name.
+
+Usage::
+
+    ceph fs set <fs-name> <fs-setting> <value>
 
 fsid
 ----
@@ -543,6 +617,23 @@ Subcommand ``getmap`` gets monmap.
 Usage::
 
 	ceph mon getmap {<int[0-]>}
+
+Subcommand ``enable_stretch_mode`` enables stretch mode, changing the peering
+rules and failure handling on all pools. For a given PG to successfully peer
+and be marked active, ``min_size`` replicas will now need to be active under all
+(currently two) CRUSH buckets of type <dividing_bucket>.
+
+<tiebreaker_mon> is the tiebreaker mon to use if a network split happens.
+
+<dividing_bucket> is the bucket type across which to stretch.
+This will typically be ``datacenter`` or other CRUSH hierarchy bucket type that
+denotes physically or logically distant subdivisions.
+
+<new_crush_rule> will be set as CRUSH rule for all pools.
+
+Usage::
+
+	ceph mon enable_stretch_mode <tiebreaker_mon> <new_crush_rule> <dividing_bucket>
 
 Subcommand ``remove`` removes monitor named <name>.
 
@@ -1314,7 +1405,7 @@ Subcommand ``cache-mode`` specifies the caching mode for cache tier <pool>.
 
 Usage::
 
-	ceph osd tier cache-mode <poolname> writeback|readproxy|readonly|none
+	ceph osd tier cache-mode <poolname> writeback|proxy|readproxy|readonly|none
 
 Subcommand ``remove`` removes the tier <tierpool> (the second one) from base pool
 <pool> (the first one).
@@ -1615,9 +1706,9 @@ Options
 
 	Make less verbose.
 
-.. option:: -f {json,json-pretty,xml,xml-pretty,plain}, --format
+.. option:: -f {json,json-pretty,xml,xml-pretty,plain,yaml}, --format
 
-	Format of output.
+	Format of output. Note: yaml is only valid for orch commands. 
 
 .. option:: --connect-timeout CLUSTER_TIMEOUT
 

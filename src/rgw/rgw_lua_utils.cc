@@ -18,7 +18,7 @@ constexpr const char* RGWDebugLogAction{"RGWDebugLog"};
 
 int RGWDebugLog(lua_State* L) 
 {
-  auto cct = reinterpret_cast<CephContext*>(lua_touserdata(L, lua_upvalueindex(1)));
+  auto cct = reinterpret_cast<CephContext*>(lua_touserdata(L, lua_upvalueindex(FIRST_UPVAL)));
 
   auto message = luaL_checkstring(L, 1);
   ldout(cct, 20) << "Lua INFO: " << message << dendl;
@@ -50,11 +50,11 @@ void set_package_path(lua_State* L, const std::string& install_dir) {
   if (!lua_istable(L, -1)) {
     return;
   }
-  const auto path = install_dir+"/share/lua/"+CEPH_LUA_VERSION+"/?.lua";  
+  const auto path = install_dir+"/share/lua/"+CEPH_LUA_VERSION+"/?.lua";
   pushstring(L, path);
   lua_setfield(L, -2, "path");
   
-  const auto cpath = install_dir+"/lib/lua/"+CEPH_LUA_VERSION+"/?.so";
+  const auto cpath = install_dir+"/lib/lua/"+CEPH_LUA_VERSION+"/?.so;"+install_dir+"/lib64/lua/"+CEPH_LUA_VERSION+"/?.so";
   pushstring(L, cpath);
   lua_setfield(L, -2, "cpath");
 }
@@ -73,4 +73,5 @@ void open_standard_libs(lua_State* L) {
   lua_settable(L, -3);
 }
 
-}
+} // namespace rgw::lua
+

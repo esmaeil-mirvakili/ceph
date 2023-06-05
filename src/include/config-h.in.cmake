@@ -84,6 +84,9 @@
 /* Defined if you have libaio */
 #cmakedefine HAVE_LIBAIO
 
+/* Defined if you have libdml */
+#cmakedefine HAVE_LIBDML
+
 /* Defined if you have libzbd */
 #cmakedefine HAVE_LIBZBD
 
@@ -350,6 +353,9 @@
 
 /* Backend CORTX-Motr for Rados Gateway */
 #cmakedefine WITH_RADOSGW_MOTR
+
+/* Backend CORTX-DAOS for Rados Gateway */
+#cmakedefine WITH_RADOSGW_DAOS
 
 /* Defined if std::map::merge() is supported */
 #cmakedefine HAVE_STDLIB_MAP_SPLICING

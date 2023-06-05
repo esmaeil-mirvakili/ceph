@@ -1,10 +1,11 @@
+.. _documenting_ceph:
+
 ==================
  Documenting Ceph
 ==================
 
 You can help the Ceph project by contributing to the documentation.  Even
-small contributions help the Ceph project, such as fixing
-spelling errors or rewriting confusing instructions.
+small contributions help the Ceph project. 
 
 The easiest way to suggest a correction to the documentation is to send an
 email to `ceph-users@ceph.io`. Include the string "ATTN: DOCS" or
@@ -30,12 +31,14 @@ repository. Python Sphinx renders the source into HTML and manpages.
 
 Viewing Old Ceph Documentation
 ==============================
-The https://docs.ceph.com link displays the ``master`` branch by default, but
-you can view the documentation for older versions of Ceph (e.g., ``mimic``) by
-replacing the version name in the url (e.g. ``pacific`` in
-`https://docs.ceph.com/en/pacific <https://docs.ceph.com/en/pacific>`_) with the
-branch name you prefer (e.g. ``mimic``, to create a URL that reads
-`https://docs.ceph.com/en/mimic/ <https://docs.ceph.com/en/mimic/>`_).
+The https://docs.ceph.com link displays the latest release branch by default
+(for example, if "Quincy" is the most recent release, then by default
+https://docs.ceph.com displays the documentation for Quincy), but you can view
+the documentation for older versions of Ceph (for example, ``pacific``) by
+replacing the version name in the url (for example, ``quincy`` in
+`https://docs.ceph.com/en/pacific <https://docs.ceph.com/en/quincy>`_) with the
+branch name you prefer (for example, ``pacific``, to create a URL that reads
+`https://docs.ceph.com/en/pacific/ <https://docs.ceph.com/en/pacific/>`_).
 
 .. _making_contributions:
 
@@ -44,7 +47,8 @@ Making Contributions
 
 Making a documentation contribution involves the same basic procedure as making
 a code contribution, with one exception: you must build documentation source
-instead of compiling program source. This sequence (the sequence of building the documentation source) includes the following steps:
+instead of compiling program source. This sequence (the sequence of building
+the documentation source) includes the following steps:
 
 #. `Get the Source`_
 #. `Select a Branch`_
@@ -58,32 +62,33 @@ instead of compiling program source. This sequence (the sequence of building the
 Get the Source
 --------------
 
-Ceph documentation lives in the Ceph repository right alongside the Ceph source
-code under the ``ceph/doc`` directory. For details on github and Ceph,
-see :ref:`Get Involved`.
+The source of the Ceph documentation is a collection of ReStructured Text files
+that are in the Ceph repository in the ``ceph/doc`` directory. For details
+on GitHub and Ceph, see :ref:`Get Involved`.
 
-The most common way to make contributions is to use the `Fork and Pull`_
-approach. You must:
+Use the `Fork and Pull`_ approach to make documentation contributions. To do
+this, you must:
 
-#. Install git locally. For Debian/Ubuntu, execute:
+#. Install git locally. In Debian or Ubuntu, run the following command:
 
    .. prompt:: bash $
 
 	sudo apt-get install git
 
-   For Fedora, execute:
+   In Fedora, run the following command:
 
    .. prompt:: bash $
 
 	sudo yum install git
 
-   For CentOS/RHEL, execute:
+   In CentOS/RHEL, run the following command:
 
    .. prompt:: bash $
 
 	sudo yum install git
 
-#. Ensure your ``.gitconfig`` file has your name and email address. :
+#. Make sure that your ``.gitconfig`` file has been configured to include your
+   name and email address:
 
    .. code-block:: ini
 
@@ -103,50 +108,49 @@ approach. You must:
 
 #. Fork the Ceph project. See https://github.com/ceph/ceph.
 
-#. Clone your fork of the Ceph project to your local host.
+#. Clone your fork of the Ceph project to your local host. This creates what is
+   known as a "local working copy".
 
+The Ceph documentation is organized by component:
 
-Ceph organizes documentation into an information architecture primarily by its
-main components.
-
-- **Ceph Storage Cluster:** The Ceph Storage Cluster documentation resides
-  under the ``doc/rados`` directory.
+- **Ceph Storage Cluster:** The Ceph Storage Cluster documentation is 
+  in the ``doc/rados`` directory.
   
-- **Ceph Block Device:** The Ceph Block Device documentation resides under
+- **Ceph Block Device:** The Ceph Block Device documentation is in 
   the ``doc/rbd`` directory.
   
-- **Ceph Object Storage:** The Ceph Object Storage documentation resides under
+- **Ceph Object Storage:** The Ceph Object Storage documentation is in 
   the ``doc/radosgw`` directory.
 
-- **Ceph File System:** The Ceph File System documentation resides under the 
+- **Ceph File System:** The Ceph File System documentation is in the 
   ``doc/cephfs`` directory.
   
-- **Installation (Quick):** Quick start documentation resides under the
+- **Installation (Quick):** Quick start documentation is in the
   ``doc/start`` directory.
   
-- **Installation (Manual):** Manual installation documentation resides under
-  the ``doc/install`` directory.
+- **Installation (Manual):** Documentaton concerning the manual installation of
+  Ceph is in the ``doc/install`` directory.
   
-- **Manpage:** Manpage source resides under the ``doc/man`` directory.
+- **Manpage:** Manpage source is in the ``doc/man`` directory.
 
-- **Developer:** Developer documentation resides under the ``doc/dev`` 
+- **Developer:** Developer documentation is in the ``doc/dev`` 
   directory.
 
-- **Images:** If you include images such as JPEG or PNG files, you should 
-  store them under the ``doc/images`` directory.
+- **Images:** Images including JPEG and PNG files are stored in the
+  ``doc/images`` directory.
 
 
 Select a Branch
 ---------------
 
 When you make small changes to the documentation, such as fixing typographical
-errors or clarifying explanations, use the ``master`` branch (default). You
-should also use the ``master`` branch when making contributions to features that
-are in the current release. ``master`` is the most commonly used branch. :
+errors or clarifying explanations, use the ``main`` branch (default). You
+should also use the ``main`` branch when making contributions to features that
+are in the current release. ``main`` is the most commonly used branch. :
 
 .. prompt:: bash $
 
-	git checkout master
+	git checkout main
 
 When you make changes to documentation that affect an upcoming release, use 
 the ``next`` branch. ``next`` is the second most commonly used branch. :
@@ -158,7 +162,7 @@ the ``next`` branch. ``next`` is the second most commonly used branch. :
 When you are making substantial contributions such as new features that are not
 yet in the current release; if your contribution is related to an issue with a
 tracker ID; or, if you want to see your documentation rendered on the Ceph.com
-website before it gets merged into the ``master`` branch, you should create a
+website before it gets merged into the ``main`` branch, you should create a
 branch. To distinguish branches that include only documentation updates, we
 prepend them with ``wip-doc`` by convention, following the form
 ``wip-doc-{your-branch-name}``. If the branch relates to an issue filed in
@@ -171,8 +175,8 @@ http://tracker.ceph.com/issues/4000.
    contributions in a single commit. When you keep documentation
    commits separate from source code commits, it simplifies the review
    process. We highly recommend that any pull request that adds a feature or
-   a configuration option, should also include a documentation commit,
-   describing the relevant changes/options.
+   a configuration option should also include a documentation commit that
+   describes the changes.
 
 Before you create your branch name, ensure that it doesn't already exist in the
 local or remote repository. :
@@ -350,7 +354,7 @@ distributions, execute the following:
 .. prompt:: bash $
 
 	sudo apt-get install gcc python-dev python3-pip libxml2-dev libxslt-dev doxygen graphviz ant ditaa
-	sudo apt-get install python-sphinx
+	sudo apt-get install python3-sphinx python3-venv
 
 For Fedora distributions, execute the following:
 
@@ -529,12 +533,273 @@ As noted earlier, you can make documentation contributions using the `Fork and
 Pull`_ approach.
 
 
+Squash Extraneous Commits
+-------------------------
+Each pull request ought to be associated with only a single commit. If you have
+made more than one commit to the feature branch that you are working in, you
+will need to "squash" the multiple commits. "Squashing" is the colloquial term
+for a particular kind of "interactive rebase". Squashing can be done in a great
+number of ways, but the example here will deal with a situation in which there
+are three commits and the changes in all three of the commits are kept. The three
+commits will be squashed into a single commit.
+
+#. Make the commits that you will later squash.
+
+   #. Make the first commit.
+   
+      ::
+   
+         doc/glossary: improve "CephX" entry
+   
+         Improve the glossary entry for "CephX".
+   
+         Signed-off-by: Zac Dover <zac.dover@proton.me>
+   
+         # Please enter the commit message for your changes. Lines starting
+         # with '#' will be ignored, and an empty message aborts the commit.
+         #
+         # On branch wip-doc-2023-03-28-glossary-cephx
+         # Changes to be committed:
+         #       modified:   glossary.rst
+         #
+   
+   #. Make the second commit.
+   
+      ::
+   
+         doc/glossary: add link to architecture doc
+         
+         Add a link to a section in the architecture document, which link
+         will be used in the process of improving the "CephX" glossary entry.
+         
+         Signed-off-by: Zac Dover <zac.dover@proton.me>
+      
+            # Please enter the commit message for your changes. Lines starting
+            # with '#' will be ignored, and an empty message aborts the commit.
+            #
+            # On branch wip-doc-2023-03-28-glossary-cephx
+            # Your branch is up to date with 'origin/wip-doc-2023-03-28-glossary-cephx'.
+            #
+            # Changes to be committed:
+            #       modified:   architecture.rst
+      
+   #. Make the third commit.
+   
+      ::
+      
+         doc/glossary: link to Arch doc in "CephX" glossary
+         
+         Link to the Architecture document from the "CephX" entry in the
+         Glossary.
+         
+         Signed-off-by: Zac Dover <zac.dover@proton.me>
+         
+         # Please enter the commit message for your changes. Lines starting
+         # with '#' will be ignored, and an empty message aborts the commit.
+         #
+         # On branch wip-doc-2023-03-28-glossary-cephx
+         # Your branch is up to date with 'origin/wip-doc-2023-03-28-glossary-cephx'.
+         #
+         # Changes to be committed:
+         #       modified:   glossary.rst
+
+#. There are now three commits in the feature branch. We will now begin the
+   process of squashing them into a single commit. 
+   
+   #. Run the command ``git rebase -i main``, which rebases the current branch 
+      (the feature branch) against the ``main`` branch:
+
+      .. prompt:: bash
+   
+         git rebase -i main
+   
+   #. A list of the commits that have been made to the feature branch now
+      appear, and looks like this:
+
+      ::
+      
+         pick d395e500883 doc/glossary: improve "CephX" entry
+         pick b34986e2922 doc/glossary: add link to architecture doc
+         pick 74d0719735c doc/glossary: link to Arch doc in "CephX" glossary
+         
+         # Rebase 0793495b9d1..74d0719735c onto 0793495b9d1 (3 commands)
+         #
+         # Commands:
+         # p, pick <commit> = use commit
+         # r, reword <commit> = use commit, but edit the commit message
+         # e, edit <commit> = use commit, but stop for amending
+         # s, squash <commit> = use commit, but meld into previous commit
+         # f, fixup [-C | -c] <commit> = like "squash" but keep only the previous
+         #                    commit's log message, unless -C is used, in which case
+         #                    keep only this commit's message; -c is same as -C but
+         #                    opens the editor
+         # x, exec <command> = run command (the rest of the line) using shell
+         # b, break = stop here (continue rebase later with 'git rebase --continue')
+         # d, drop <commit> = remove commit
+         # l, label <label> = label current HEAD with a name
+         # t, reset <label> = reset HEAD to a label
+         # m, merge [-C <commit> | -c <commit>] <label> [# <oneline>]
+         #         create a merge commit using the original merge commit's
+         #         message (or the oneline, if no original merge commit was
+         #         specified); use -c <commit> to reword the commit message
+         # u, update-ref <ref> = track a placeholder for the <ref> to be updated
+         #                       to this position in the new commits. The <ref> is
+         #                       updated at the end of the rebase
+         #
+         # These lines can be re-ordered; they are executed from top to bottom.
+         #
+         # If you remove a line here THAT COMMIT WILL BE LOST.
+
+      Find the part of the screen that says "pick". This is the part that you will 
+      alter. There are three commits that are currently labeled "pick". We will
+      choose one of them to remain labeled "pick", and we will label the other two
+      commits "squash".
+
+#. Label two of the three commits ``squash``:
+
+   ::
+
+      pick d395e500883 doc/glossary: improve "CephX" entry
+      squash b34986e2922 doc/glossary: add link to architecture doc
+      squash 74d0719735c doc/glossary: link to Arch doc in "CephX" glossary
+      
+      # Rebase 0793495b9d1..74d0719735c onto 0793495b9d1 (3 commands)
+      #
+      # Commands:
+      # p, pick <commit> = use commit
+      # r, reword <commit> = use commit, but edit the commit message
+      # e, edit <commit> = use commit, but stop for amending
+      # s, squash <commit> = use commit, but meld into previous commit
+      # f, fixup [-C | -c] <commit> = like "squash" but keep only the previous
+      #                    commit's log message, unless -C is used, in which case
+      #                    keep only this commit's message; -c is same as -C but
+      #                    opens the editor
+      # x, exec <command> = run command (the rest of the line) using shell
+      # b, break = stop here (continue rebase later with 'git rebase --continue')
+      # d, drop <commit> = remove commit
+      # l, label <label> = label current HEAD with a name
+      # t, reset <label> = reset HEAD to a label
+      # m, merge [-C <commit> | -c <commit>] <label> [# <oneline>]
+      #         create a merge commit using the original merge commit's
+      #         message (or the oneline, if no original merge commit was
+      #         specified); use -c <commit> to reword the commit message
+      # u, update-ref <ref> = track a placeholder for the <ref> to be updated
+      #                       to this position in the new commits. The <ref> is
+      #                       updated at the end of the rebase
+      #
+      # These lines can be re-ordered; they are executed from top to bottom.
+      #
+      # If you remove a line here THAT COMMIT WILL BE LOST.
+
+#. Now we create a commit message that applies to all the commits that have
+   been squashed together:
+
+   #. When you save and close the list of commits that you have designated for
+      squashing, a list of all three commit messages appears, and it looks
+      like this:
+
+      ::
+      
+         # This is a combination of 3 commits.
+         # This is the 1st commit message:
+      
+         doc/glossary: improve "CephX" entry
+      
+         Improve the glossary entry for "CephX".
+      
+         Signed-off-by: Zac Dover <zac.dover@proton.me>
+      
+         # This is the commit message #2:
+      
+         doc/glossary: add link to architecture doc
+      
+         Add a link to a section in the architecture document, which link
+         will be used in the process of improving the "CephX" glossary entry.
+      
+         Signed-off-by: Zac Dover <zac.dover@proton.me>
+      
+         # This is the commit message #3:
+      
+         doc/glossary: link to Arch doc in "CephX" glossary
+      
+         Link to the Architecture document from the "CephX" entry in the
+         Glossary.
+      
+         Signed-off-by: Zac Dover <zac.dover@proton.me>
+      
+         # Please enter the commit message for your changes. Lines starting
+         # with '#' will be ignored, and an empty message aborts the commit.
+         #
+         # Date:      Tue Mar 28 18:42:11 2023 +1000
+         #
+         # interactive rebase in progress; onto 0793495b9d1
+         # Last commands done (3 commands done):
+         #    squash b34986e2922 doc/glossary: add link to architecture doc
+         #    squash 74d0719735c doc/glossary: link to Arch doc in "CephX" glossary
+         # No commands remaining.
+         # You are currently rebasing branch 'wip-doc-2023-03-28-glossary-cephx' on '0793495b9d1'.
+         #
+         # Changes to be committed:
+         #       modified:   doc/architecture.rst
+         #       modified:   doc/glossary.rst
+      
+   #. The commit messages have been revised into the simpler form presented here:   
+            
+      ::
+      
+         doc/glossary: improve "CephX" entry
+      
+         Improve the glossary entry for "CephX".
+      
+         Signed-off-by: Zac Dover <zac.dover@proton.me>
+      
+         # Please enter the commit message for your changes. Lines starting
+         # with '#' will be ignored, and an empty message aborts the commit.
+         #
+         # Date:      Tue Mar 28 18:42:11 2023 +1000
+         #
+         # interactive rebase in progress; onto 0793495b9d1
+         # Last commands done (3 commands done):
+         #    squash b34986e2922 doc/glossary: add link to architecture doc
+         #    squash 74d0719735c doc/glossary: link to Arch doc in "CephX" glossary
+         # No commands remaining.
+         # You are currently rebasing branch 'wip-doc-2023-03-28-glossary-cephx' on '0793495b9d1'.
+         #
+         # Changes to be committed:
+         #       modified:   doc/architecture.rst
+         #       modified:   doc/glossary.rst
+
+#. Force push the squashed commit from your local working copy to the remote
+   upstream branch. The force push is necessary because the newly squashed commit
+   does not have an ancestor in the remote. If that confuses you, just run this 
+   command and don't think too much about it:
+
+   .. prompt:: bash $  
+
+      git push -f
+   
+   ::
+
+      Enumerating objects: 9, done.
+      Counting objects: 100% (9/9), done.
+      Delta compression using up to 8 threads
+      Compressing objects: 100% (5/5), done.
+      Writing objects: 100% (5/5), 722 bytes | 722.00 KiB/s, done.
+      Total 5 (delta 4), reused 0 (delta 0), pack-reused 0
+      remote: Resolving deltas: 100% (4/4), completed with 4 local objects.
+      To github.com:zdover23/ceph.git
+       + b34986e2922...02e3a5cb763 wip-doc-2023-03-28-glossary-cephx -> wip-doc-2023-03-28-glossary-cephx (forced update)
+
+
+
+
 
 Notify Us
 ---------
 
-In case The PR did not got a review within in a reasonable timeframe, please get in touch
-with the corresponding component lead of the :ref:`clt`.
+If some time has passed and the pull request that you raised has not been
+reviewed, contact the component lead and ask what's taking so long. See
+:ref:`ctl` for a list of component leads.
 
 Documentation Style Guide
 =========================
@@ -642,32 +907,159 @@ The Ceph project uses `paragraph level markup`_ to highlight points.
    additional details.
 
 
-TOC and Hyperlinks
-------------------
+Table of Contents (TOC) and Hyperlinks
+---------------------------------------
 
-All documents must be linked from another document or a table of contents,
-otherwise you will receive a warning when building the documentation.
+The documents in the Ceph documentation suite follow certain conventions that
+are explained in this section.
 
-The Ceph project uses the ``.. toctree::`` directive. See `The TOC tree`_
-for details. When rendering a TOC, consider specifying the ``:maxdepth:`` 
-parameter so the rendered TOC is reasonably terse.
+Every document (every ``.rst`` file) in the Sphinx-controlled Ceph
+documentation suite must be linked either (1) from another document in the
+documentation suite or (2) from a table of contents (TOC). If any document in
+the documentation suite is not linked in this way, the ``build-doc`` script
+generates warnings when it tries to build the documentation. 
 
-Document authors should prefer to use the ``:ref:`` syntax where a link target
-contains a specific unique identifier (e.g., ``.. _unique-target-id:``), and  a
-reference to the target specifically references the target  (e.g.,
-``:ref:`unique-target-id```) so that if source files are moved or the
-information architecture changes, the links will still work. See
-`Cross referencing arbitrary locations`_ for details.
+The Ceph project uses the ``.. toctree::`` directive. See `The TOC tree`_ for
+details. When rendering a table of contents (TOC), specify the ``:maxdepth:``
+parameter so that the rendered TOC is not too long.
 
-Ceph documentation also uses the backtick (accent grave) character followed by
-the link text, another backtick and an underscore. Sphinx allows you to
-incorporate the link destination inline; however, we prefer to use the use the
-``.. _Link Text: ../path`` convention at the bottom of the document, because it
-improves the readability of the document in a command line interface.
+Use the ``:ref:`` syntax where a link target contains a specific unique
+identifier (for example, ``.. _unique-target-id:``). A link to the section
+designated by ``.. _unique-target-id:`` looks like this:
+``:ref:`unique-target-id```. If this convention is followed, the links within
+the ``.rst`` source files will work even if the source files are moved within
+the ``ceph/doc`` directory. See `Cross referencing arbitrary locations`_ for
+details.
 
+.. _start_external_hyperlink_example:
 
-.. _Python Sphinx: http://sphinx-doc.org
-.. _resturcturedText: http://docutils.sourceforge.net/rst.html
+External Hyperlink Example
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It is also possible to create a link to a section of the documentation and to
+have custom text appear in the body of the link. This is useful when it is more
+important to preserve the text of the sentence containing the link than it is
+to refer explicitly to the title of the section being linked to.
+
+For example, RST that links to the Sphinx Python Document Generator homepage
+and generates a sentence reading "Click here to learn more about Python
+Sphinx." looks like this: 
+
+::
+
+    ``Click `here <https://www.sphinx-doc.org>`_ to learn more about Python
+    Sphinx.`` 
+
+And here it is, rendered:
+
+Click `here <https://www.sphinx-doc.org>`_ to learn more about Python Sphinx. 
+
+Pay special attention to the underscore after the backtick. If you forget to
+include it and this is your first day working with RST, there's a chance that
+you'll spend all day wondering what went wrong without realizing that you
+omitted that underscore. Also, pay special attention to the space between the
+substitution text (in this case, "here") and the less-than bracket that sets
+the explicit link apart from the substition text. The link will not render
+properly without this space.
+
+Linking Customs
+~~~~~~~~~~~~~~~
+
+By a custom established when Ceph was still being developed by Inktank,
+contributors to the documentation of the Ceph project preferred to use the
+convention of putting ``.. _Link Text: ../path`` links at the bottom of the
+document and linking to them using references of the form ``:ref:`path```. This
+convention was preferred because it made the documents more readable in a
+command line interface. As of 2023, though, we have no preference for one over
+the other. Use whichever convention makes the text easier to read.
+
+Quirks of ReStructured Text
+---------------------------
+
+External Links
+~~~~~~~~~~~~~~
+
+.. _external_link_with_inline_text:
+
+This is the formula for links to addresses external to the Ceph documentation:
+
+::
+
+   `inline text <http:www.foo.com>`_
+
+.. note:: Do not fail to include the space between the inline text and the
+   less-than sign. 
+   
+   Do not fail to include the underscore after the final backtick.
+
+   To link to addresses that are external to the Ceph documentation, include a
+   space between the inline text and the angle bracket that precedes the
+   external address. This is precisely the opposite of :ref:`the convention for
+   inline text that links to a location inside the Ceph
+   documentation<internal_link_with_inline_text>`. If this seems inconsistent
+   and confusing to you, then you're right. It is inconsistent and confusing.
+
+See also ":ref:`External Hyperlink Example<start_external_hyperlink_example>`".
+
+Internal Links
+~~~~~~~~~~~~~~
+
+To link to a section in the Ceph documentation, you must (1) define a target
+link before the section and then (2) link to that target from another location
+in the documentation. Here are the formulas for targets and links to those
+targets:
+
+Target::
+
+   .. _target:
+
+   Title of Targeted Section
+   =========================
+
+   Lorem ipsum...
+
+Link to target::
+
+   :ref:`target`
+
+.. _internal_link_with_inline_text:
+
+Link to target with inline text::
+
+   :ref:`inline text<target>`
+
+.. note:: 
+
+   There is no space between "inline text" and the angle bracket that
+   immediately follows it. This is precisely the opposite of :ref:`the
+   convention for inline text that links to a location outside of the Ceph
+   documentation<external_link_with_inline_text>`. If this seems inconsistent
+   and confusing to you, then you're right. It is inconsistent and confusing.
+
+Escaping Bold Characters within Words
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This section explains how to make certain letters within a word bold while
+leaving the other letters in the word regular (non-bold). 
+
+The following single-line paragraph provides an example of this:
+
+**C**\eph **F**\ile **S**\ystem.
+
+In ReStructured Text, the following formula will not work:
+
+::
+
+   **C**eph **F**ile **S**ystem
+
+The bolded notation must be turned off by means of the escape character (\\), as shown here:
+
+::
+
+   **C**\eph **F**\ile **S**\ystem
+
+.. _Python Sphinx: https://www.sphinx-doc.org
+.. _restructuredText: http://docutils.sourceforge.net/rst.html
 .. _Fork and Pull: https://help.github.com/articles/using-pull-requests
 .. _github: http://github.com
 .. _ditaa: http://ditaa.sourceforge.net/

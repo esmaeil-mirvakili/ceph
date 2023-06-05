@@ -62,47 +62,8 @@ class TestPrepare(object):
         with pytest.raises(SystemExit):
             lvm.prepare.Prepare(argv=['--help']).main()
         stdout, stderr = capsys.readouterr()
-        assert 'Use the filestore objectstore' in stdout
         assert 'Use the bluestore objectstore' in stdout
         assert 'A physical device or logical' in stdout
-
-    def test_excludes_filestore_bluestore_flags(self, capsys, device_info):
-        device_info()
-        with pytest.raises(SystemExit):
-            lvm.prepare.Prepare(argv=['--data', '/dev/sdfoo', '--filestore', '--bluestore']).main()
-        stdout, stderr = capsys.readouterr()
-        expected = 'Cannot use --filestore (filestore) with --bluestore (bluestore)'
-        assert expected in stderr
-
-    def test_excludes_other_filestore_bluestore_flags(self, capsys, device_info):
-        device_info()
-        with pytest.raises(SystemExit):
-            lvm.prepare.Prepare(argv=[
-                '--bluestore', '--data', '/dev/sdfoo',
-                '--journal', '/dev/sf14',
-            ]).main()
-        stdout, stderr = capsys.readouterr()
-        expected = 'Cannot use --bluestore (bluestore) with --journal (filestore)'
-        assert expected in stderr
-
-    def test_excludes_block_and_journal_flags(self, capsys, device_info):
-        device_info()
-        with pytest.raises(SystemExit):
-            lvm.prepare.Prepare(argv=[
-                '--bluestore', '--data', '/dev/sdfoo', '--block.db', 'vg/ceph1',
-                '--journal', '/dev/sf14',
-            ]).main()
-        stdout, stderr = capsys.readouterr()
-        expected = 'Cannot use --block.db (bluestore) with --journal (filestore)'
-        assert expected in stderr
-
-    def test_journal_is_required_with_filestore(self, is_root, monkeypatch, device_info):
-        monkeypatch.setattr("os.path.exists", lambda path: True)
-        device_info()
-        with pytest.raises(SystemExit) as error:
-            lvm.prepare.Prepare(argv=['--filestore', '--data', '/dev/sdfoo']).main()
-        expected = '--journal is required when using --filestore'
-        assert expected in str(error.value)
 
     @patch('ceph_volume.devices.lvm.prepare.api.is_ceph_device')
     def test_safe_prepare_osd_already_created(self, m_is_ceph_device):

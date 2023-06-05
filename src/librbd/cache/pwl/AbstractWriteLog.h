@@ -212,8 +212,6 @@ private:
   /* Throttle writes concurrently allocating & replicating */
   unsigned int m_free_lanes = pwl::MAX_CONCURRENT_WRITES;
 
-  /* Initialized from config, then set false during shutdown */
-  std::atomic<bool> m_periodic_stats_enabled = {false};
   SafeTimer *m_timer = nullptr; /* Used with m_timer_lock */
   mutable ceph::mutex *m_timer_lock = nullptr; /* Used with and by m_timer */
   Context *m_timer_ctx = nullptr;
@@ -235,7 +233,6 @@ private:
   void arm_periodic_stats();
 
   void pwl_init(Context *on_finish, pwl::DeferredContexts &later);
-  void update_image_cache_state(Context *on_finish);
   void check_image_cache_state_clean();
 
   void flush_dirty_entries(Context *on_finish);
@@ -301,7 +298,7 @@ protected:
   mutable ceph::mutex m_log_retire_lock;
   /* Hold a read lock on m_entry_reader_lock to add readers to log entry
    * bufs. Hold a write lock to prevent readers from being added (e.g. when
-   * removing log entrys from the map). No lock required to remove readers. */
+   * removing log entries from the map). No lock required to remove readers. */
   mutable RWLock m_entry_reader_lock;
   /* Hold m_log_append_lock while appending or retiring log entries. */
   mutable ceph::mutex m_log_append_lock;
@@ -399,7 +396,9 @@ protected:
   virtual uint64_t get_max_extent() {
     return 0;
   }
-
+  void update_image_cache_state(void);
+  void write_image_cache_state(std::unique_lock<ceph::mutex>& locker);
+  void handle_write_image_cache_state(int r);
 };
 
 } // namespace pwl

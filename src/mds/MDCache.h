@@ -72,6 +72,14 @@ class ESubtreeMap;
 
 enum {
   l_mdc_first = 3000,
+
+  // dir updates for replication
+  l_mdc_dir_update,
+  l_mdc_dir_update_receipt,
+  l_mdc_dir_try_discover,
+  l_mdc_dir_send_discover,
+  l_mdc_dir_handle_discover,
+
   // How many inodes currently in stray dentries
   l_mdc_num_strays,
   // How many stray dentries are currently delayed for purge due to refs
@@ -121,6 +129,7 @@ static const int MDS_TRAVERSE_RDLOCK_PATH	= (1 << 7);
 static const int MDS_TRAVERSE_XLOCK_DENTRY	= (1 << 8);
 static const int MDS_TRAVERSE_RDLOCK_AUTHLOCK	= (1 << 9);
 static const int MDS_TRAVERSE_CHECK_LOCKCACHE	= (1 << 10);
+static const int MDS_TRAVERSE_WANT_INODE	= (1 << 11);
 
 
 // flags for predirty_journal_parents()
@@ -192,6 +201,19 @@ class MDCache {
 
   explicit MDCache(MDSRank *m, PurgeQueue &purge_queue_);
   ~MDCache();
+
+  void insert_taken_inos(inodeno_t ino) {
+    replay_taken_inos.insert(ino);
+  }
+  void clear_taken_inos(inodeno_t ino) {
+    replay_taken_inos.erase(ino);
+  }
+  bool test_and_clear_taken_inos(inodeno_t ino) {
+    return replay_taken_inos.erase(ino) != 0;
+  }
+  bool is_taken_inos_empty(void) {
+    return replay_taken_inos.empty();
+  }
 
   uint64_t cache_limit_memory(void) {
     return cache_memory_limit;
@@ -506,6 +528,7 @@ class MDCache {
   void clean_open_file_lists();
   void dump_openfiles(Formatter *f);
   bool dump_inode(Formatter *f, uint64_t number);
+  void dump_dir(Formatter *f, CDir *dir, bool dentry_dump=false);
 
   void rejoin_start(MDSContext *rejoin_done_);
   void rejoin_gather_finish();
@@ -802,8 +825,13 @@ class MDCache {
    * dentry is encountered.
    * MDS_TRAVERSE_WANT_DENTRY: Caller wants tail dentry. Add a null dentry if
    * tail dentry does not exist. return 0 even tail dentry is null.
+   * MDS_TRAVERSE_WANT_INODE: Caller only wants target inode if it exists, or
+   * wants tail dentry if target inode does not exist and MDS_TRAVERSE_WANT_DENTRY
+   * is also set.
    * MDS_TRAVERSE_WANT_AUTH: Always forward request to auth MDS of target inode
    * or auth MDS of tail dentry (MDS_TRAVERSE_WANT_DENTRY is set).
+   * MDS_TRAVERSE_XLOCK_DENTRY: Caller wants to xlock tail dentry if MDS_TRAVERSE_WANT_INODE
+   * is not set or (MDS_TRAVERSE_WANT_INODE is set but target inode does not exist)
    *
    * @param pdnvec Data return parameter -- on success, contains a
    * vector of dentries. On failure, is either empty or contains the
@@ -820,6 +848,9 @@ class MDCache {
   int path_traverse(MDRequestRef& mdr, MDSContextFactory& cf,
 		    const filepath& path, int flags,
 		    std::vector<CDentry*> *pdnvec, CInode **pin=nullptr);
+
+  int maybe_request_forward_to_auth(MDRequestRef& mdr, MDSContextFactory& cf,
+				    MDSCacheObject *p);
 
   CInode *cache_traverse(const filepath& path);
 
@@ -877,13 +908,13 @@ class MDCache {
   void decode_replica_inode(CInode *&in, bufferlist::const_iterator& p, CDentry *dn, MDSContext::vec& finished);
 
   void encode_replica_stray(CDentry *straydn, mds_rank_t who, bufferlist& bl);
-  void decode_replica_stray(CDentry *&straydn, const bufferlist &bl, mds_rank_t from);
+  void decode_replica_stray(CDentry *&straydn, CInode **in, const bufferlist &bl, mds_rank_t from);
 
   // -- namespace --
   void encode_remote_dentry_link(CDentry::linkage_t *dnl, bufferlist& bl);
   void decode_remote_dentry_link(CDir *dir, CDentry *dn, bufferlist::const_iterator& p);
   void send_dentry_link(CDentry *dn, MDRequestRef& mdr);
-  void send_dentry_unlink(CDentry *dn, CDentry *straydn, MDRequestRef& mdr);
+  void send_dentry_unlink(CDentry *dn, CDentry *straydn, MDRequestRef& mdr, bool unlinking=false);
 
   void wait_for_uncommitted_fragment(dirfrag_t dirfrag, MDSContext *c) {
     uncommitted_fragments.at(dirfrag).waiters.push_back(c);
@@ -945,7 +976,7 @@ class MDCache {
    */
   void enqueue_scrub(std::string_view path, std::string_view tag,
                      bool force, bool recursive, bool repair,
-		     Formatter *f, Context *fin);
+                     bool scrub_mdsdir, Formatter *f, Context *fin);
   void repair_inode_stats(CInode *diri);
   void repair_dirfrag_stats(CDir *dir);
   void rdlock_dirfrags_stats(CInode *diri, MDSInternalContext *fin);
@@ -1126,6 +1157,7 @@ class MDCache {
   void handle_discover_reply(const cref_t<MDiscoverReply> &m);
   void handle_dentry_link(const cref_t<MDentryLink> &m);
   void handle_dentry_unlink(const cref_t<MDentryUnlink> &m);
+  void handle_dentry_unlink_ack(const cref_t<MDentryUnlinkAck> &m);
 
   int dump_cache(std::string_view fn, Formatter *f, double timeout);
 
@@ -1227,6 +1259,8 @@ class MDCache {
   StrayManager stray_manager;
 
  private:
+  std::set<inodeno_t> replay_taken_inos; // the inos have been taken when replaying
+
   // -- fragmenting --
   struct ufragment {
     ufragment() {}

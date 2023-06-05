@@ -4,7 +4,6 @@ from ceph_volume import terminal
 from ceph_volume.devices.lvm.zap import Zap
 import argparse
 
-
 def rollback_osd(args, osd_id=None):
     """
     When the process of creating or preparing fails, the OSD needs to be
@@ -40,7 +39,7 @@ common_args = {
     '--data': {
         'help': 'OSD data path. A physical device or logical volume',
         'required': True,
-        'type': arg_validators.ValidDevice(as_string=True),
+        'type': arg_validators.ValidDataDevice(as_string=True),
         #'default':,
         #'type':,
     },
@@ -127,33 +126,12 @@ bluestore_args = {
     },
 }
 
-filestore_args = {
-    '--filestore': {
-        'action': 'store_true',
-        'help': 'Use the filestore objectstore',
-    },
-    '--journal': {
-        'help': 'A logical volume (vg_name/lv_name), or path to a device',
-        'type': arg_validators.ValidDevice(as_string=True),
-    },
-    '--journal-size': {
-        'help': 'Size of journal LV in case a raw block device was passed in --journal',
-        'default': '0',
-        'type': disk.Size.parse
-    },
-    '--journal-slots': {
-        'help': ('Intended number of slots on journal device. The new OSD gets one'
-              'of those slots or 1/nth of the available capacity'),
-        'type': int,
-        'default': 1,
-    },
-}
 
 def get_default_args():
     defaults = {}
     def format_name(name):
         return name.strip('-').replace('-', '_').replace('.', '_')
-    for argset in (common_args, filestore_args, bluestore_args):
+    for argset in (common_args, bluestore_args):
         defaults.update({format_name(name): val.get('default', None) for name, val in argset.items()})
     return defaults
 
@@ -169,7 +147,6 @@ def common_parser(prog, description):
         description=description,
     )
 
-    filestore_group = parser.add_argument_group('filestore')
     bluestore_group = parser.add_argument_group('bluestore')
 
     for name, kwargs in common_args.items():
@@ -177,9 +154,6 @@ def common_parser(prog, description):
 
     for name, kwargs in bluestore_args.items():
         bluestore_group.add_argument(name, **kwargs)
-
-    for name, kwargs in filestore_args.items():
-        filestore_group.add_argument(name, **kwargs)
 
     # Do not parse args, so that consumers can do something before the args get
     # parsed triggering argparse behavior

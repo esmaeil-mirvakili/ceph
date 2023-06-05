@@ -351,8 +351,10 @@ class RookOrchestrator(MgrModule, orchestrator.Orchestrator):
             all_nfs = self.rook_cluster.get_resource("cephnfses")
             nfs_pods = self.rook_cluster.describe_pods('nfs', None, None)
             for nfs in all_nfs:
-                if nfs['spec']['rados']['pool'] != NFS_POOL_NAME:
-                    continue
+                # Starting with V.17.2.0, the 'rados' spec part in 'cephnfs' resources does not contain the 'pool' item
+                if 'pool' in nfs['spec']['rados']:
+                    if nfs['spec']['rados']['pool'] != NFS_POOL_NAME:
+                        continue
                 nfs_name = nfs['metadata']['name']
                 svc = 'nfs.' + nfs_name
                 if svc in spec:
@@ -623,7 +625,12 @@ class RookOrchestrator(MgrModule, orchestrator.Orchestrator):
         }
         self.set_store("drive_group_map", json.dumps(json_drive_group_map))
 
-    def remove_osds(self, osd_ids: List[str], replace: bool = False, force: bool = False, zap: bool = False) -> OrchResult[str]:
+    def remove_osds(self,
+                    osd_ids: List[str],
+                    replace: bool = False,
+                    force: bool = False,
+                    zap: bool = False,
+                    no_destroy: bool = False) -> OrchResult[str]:
         assert self._rook_cluster is not None
         if zap:
             raise RuntimeError("Rook does not support zapping devices during OSD removal.")

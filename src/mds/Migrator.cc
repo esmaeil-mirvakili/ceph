@@ -153,21 +153,6 @@ void Migrator::dispatch(const cref_t<Message> &m)
   }
 }
 
-
-class C_MDC_EmptyImport : public MigratorContext {
-  CDir *dir;
-public:
-  C_MDC_EmptyImport(Migrator *m, CDir *d) :
-    MigratorContext(m), dir(d) {
-    dir->get(CDir::PIN_PTRWAITER);
-  }
-  void finish(int r) override {
-    mig->export_empty_import(dir);
-    dir->put(CDir::PIN_PTRWAITER);
-  }
-};
-
-
 void Migrator::export_empty_import(CDir *dir)
 {
   dout(7) << *dir << dendl;
@@ -3393,8 +3378,6 @@ void Migrator::decode_import_dir(bufferlist::const_iterator& blp,
   // add to journal entry
   if (le) 
     le->metablob.add_import_dir(dir);
-
-  int num_imported = 0;
 
   // take all waiters on this dir
   // NOTE: a pass of imported data is guaranteed to get all of my waiters because

@@ -2,7 +2,7 @@
 # Unfortunately this means we have to manually update those 
 # packages regularly. 
 
-mypy==0.901
+mypy==0.981
 
 # global
 types-python-dateutil==0.1.3
@@ -12,6 +12,7 @@ types-PyYAML==5.4.0
 
 # src/pybind
 types-backports==0.1.2
+types-pkg_resources==0.1.3
 
 # qa/
 types-boto==0.1.0

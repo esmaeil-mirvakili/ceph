@@ -129,6 +129,7 @@ public:
   }
 
   int call(std::string_view command, const cmdmap_t& cmdmap,
+           const bufferlist&,
            Formatter *f, std::ostream &errss, bufferlist &out) override {
     auto p = commands.at(std::string(command));
     return p->call(f);
@@ -761,7 +762,7 @@ int PeerReplayer::cleanup_remote_dir(const std::string &dir_root,
   int r = ceph_statxat(m_remote_mount, fh.r_fd_dir_root, epath.c_str(), &tstx,
                        CEPH_STATX_MODE | CEPH_STATX_UID | CEPH_STATX_GID |
                        CEPH_STATX_SIZE | CEPH_STATX_ATIME | CEPH_STATX_MTIME,
-                       AT_NO_ATTR_SYNC | AT_SYMLINK_NOFOLLOW);
+                       AT_STATX_DONT_SYNC | AT_SYMLINK_NOFOLLOW);
   if (r < 0) {
     derr << ": failed to stat remote directory=" << epath << ": "
          << cpp_strerror(r) << dendl;
@@ -794,7 +795,7 @@ int PeerReplayer::cleanup_remote_dir(const std::string &dir_root,
       struct dirent de;
       while (true) {
         r = ceph_readdirplus_r(m_remote_mount, entry.dirp, &de, &stx,
-                               CEPH_STATX_MODE, AT_NO_ATTR_SYNC | AT_SYMLINK_NOFOLLOW, NULL);
+                               CEPH_STATX_MODE, AT_STATX_DONT_SYNC | AT_SYMLINK_NOFOLLOW, NULL);
         if (r < 0) {
           derr << ": failed to read remote directory=" << entry.epath << dendl;
           break;
@@ -880,7 +881,7 @@ int PeerReplayer::should_sync_entry(const std::string &epath, const struct ceph_
   int r = ceph_statxat(fh.p_mnt, fh.p_fd, epath.c_str(), &pstx,
                        CEPH_STATX_MODE | CEPH_STATX_UID | CEPH_STATX_GID |
                        CEPH_STATX_SIZE | CEPH_STATX_CTIME | CEPH_STATX_MTIME,
-                       AT_NO_ATTR_SYNC | AT_SYMLINK_NOFOLLOW);
+                       AT_STATX_DONT_SYNC | AT_SYMLINK_NOFOLLOW);
   if (r < 0 && r != -ENOENT && r != -ENOTDIR) {
     derr << ": failed to stat prev entry= " << epath << ": " << cpp_strerror(r)
          << dendl;
@@ -974,7 +975,7 @@ int PeerReplayer::propagate_deleted_entries(const std::string &dir_root,
       struct ceph_statx pstx;
       auto dpath = entry_path(epath, d_name);
       r = ceph_statxat(fh.p_mnt, fh.p_fd, dpath.c_str(), &pstx,
-                       CEPH_STATX_MODE, AT_NO_ATTR_SYNC | AT_SYMLINK_NOFOLLOW);
+                       CEPH_STATX_MODE, AT_STATX_DONT_SYNC | AT_SYMLINK_NOFOLLOW);
       if (r < 0) {
         derr << ": failed to stat (prev) directory=" << dpath << ": "
              << cpp_strerror(r) << dendl;
@@ -988,7 +989,7 @@ int PeerReplayer::propagate_deleted_entries(const std::string &dir_root,
 
       struct ceph_statx cstx;
       r = ceph_statxat(m_local_mount, fh.c_fd, dpath.c_str(), &cstx,
-                       CEPH_STATX_MODE, AT_NO_ATTR_SYNC | AT_SYMLINK_NOFOLLOW);
+                       CEPH_STATX_MODE, AT_STATX_DONT_SYNC | AT_SYMLINK_NOFOLLOW);
       if (r < 0 && r != -ENOENT) {
         derr << ": failed to stat local (cur) directory=" << dpath << ": "
              << cpp_strerror(r) << dendl;
@@ -1127,6 +1128,27 @@ int PeerReplayer::pre_sync_check_and_open_handles(
   return 0;
 }
 
+// sync the mode of the remote dir_root with that of the local dir_root
+int PeerReplayer::sync_perms(const std::string& path) {
+  int r = 0;
+  struct ceph_statx tstx;
+
+  r = ceph_statx(m_local_mount, path.c_str(), &tstx, CEPH_STATX_MODE,
+		 AT_STATX_DONT_SYNC | AT_SYMLINK_NOFOLLOW);
+  if (r < 0) {
+    derr << ": failed to fetch stat for local path: "
+	 << cpp_strerror(r) << dendl;
+    return r;
+  }
+  r = ceph_chmod(m_remote_mount, path.c_str(), tstx.stx_mode);
+  if (r < 0) {
+    derr << ": failed to set mode for remote path: "
+	 << cpp_strerror(r) << dendl;
+    return r;
+  }
+  return 0;
+}
+
 void PeerReplayer::post_sync_close_handles(const FHandles &fh) {
   dout(20) << dendl;
 
@@ -1169,7 +1191,7 @@ int PeerReplayer::do_synchronize(const std::string &dir_root, const Snapshot &cu
   r = ceph_fstatx(m_local_mount, fh.c_fd, &tstx,
                   CEPH_STATX_MODE | CEPH_STATX_UID | CEPH_STATX_GID |
                   CEPH_STATX_SIZE | CEPH_STATX_ATIME | CEPH_STATX_MTIME,
-                  AT_NO_ATTR_SYNC | AT_SYMLINK_NOFOLLOW);
+                  AT_STATX_DONT_SYNC | AT_SYMLINK_NOFOLLOW);
   if (r < 0) {
     derr << ": failed to stat snap=" << current.first << ": " << cpp_strerror(r)
          << dendl;
@@ -1214,7 +1236,7 @@ int PeerReplayer::do_synchronize(const std::string &dir_root, const Snapshot &cu
         r = ceph_readdirplus_r(m_local_mount, entry.dirp, &de, &stx,
                                CEPH_STATX_MODE | CEPH_STATX_UID | CEPH_STATX_GID |
                                CEPH_STATX_SIZE | CEPH_STATX_ATIME | CEPH_STATX_MTIME,
-                               AT_NO_ATTR_SYNC | AT_SYMLINK_NOFOLLOW, NULL);
+                               AT_STATX_DONT_SYNC | AT_SYMLINK_NOFOLLOW, NULL);
         if (r < 0) {
           derr << ": failed to local read directory=" << entry.epath << dendl;
           break;
@@ -1498,8 +1520,13 @@ void PeerReplayer::run(SnapshotReplayerThread *replayer) {
         dout(5) << ": picked dir_root=" << *dir_root << dendl;
         int r = register_directory(*dir_root, replayer);
         if (r == 0) {
-          sync_snaps(*dir_root, locker);
-          unregister_directory(*dir_root);
+	  r = sync_perms(*dir_root);
+	  if (r < 0) {
+	    _inc_failed_count(*dir_root);
+	  } else {
+	    sync_snaps(*dir_root, locker);
+	  }
+	  unregister_directory(*dir_root);
         }
       }
 

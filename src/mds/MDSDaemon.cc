@@ -116,6 +116,7 @@ public:
   int call(
     std::string_view command,
     const cmdmap_t& cmdmap,
+    const bufferlist&,
     Formatter *f,
     std::ostream& errss,
     ceph::buffer::list& out) override {
@@ -183,7 +184,9 @@ void MDSDaemon::asok_command(
       if (cmd_getval(cmdmap, "value", value)) {
 	heapcmd_vec.push_back(value);
       }
-      ceph_heap_profiler_handle_command(heapcmd_vec, ss);
+      std::stringstream outss;
+      ceph_heap_profiler_handle_command(heapcmd_vec, outss);
+      outbl.append(outss);
       r = 0;
     }
   } else if (command == "cpu_profiler") {
@@ -283,7 +286,7 @@ void MDSDaemon::set_up_admin_socket()
   ceph_assert(r == 0);
   r = admin_socket->register_command("scrub start "
 				     "name=path,type=CephString "
-				     "name=scrubops,type=CephChoices,strings=force|recursive|repair,n=N,req=false "
+				     "name=scrubops,type=CephChoices,strings=force|recursive|repair|scrub_mdsdir,n=N,req=false "
 				     "name=tag,type=CephString,req=false",
 				     asok_hook,
 				     "scrub and inode and output results");
@@ -340,7 +343,8 @@ void MDSDaemon::set_up_admin_socket()
 				     asok_hook,
 				     "dump metadata cache for subtree");
   ceph_assert(r == 0);
-  r = admin_socket->register_command("dump loads",
+  r = admin_socket->register_command("dump loads "
+                                     "name=depth,type=CephInt,range=0,req=false",
                                      asok_hook,
                                      "dump metadata loads");
   ceph_assert(r == 0);
@@ -441,6 +445,12 @@ void MDSDaemon::set_up_admin_socket()
                                      "name=number,type=CephInt,req=true",
 				     asok_hook,
 				     "dump inode by inode number");
+  ceph_assert(r == 0);
+  r = admin_socket->register_command("dump dir "
+				     "name=path,type=CephString,req=true "
+				     "name=dentry_dump,type=CephBool,req=false",
+				     asok_hook,
+				     "dump directory by path");
   ceph_assert(r == 0);
   r = admin_socket->register_command("exit",
 				     asok_hook,
@@ -548,7 +558,8 @@ int MDSDaemon::init()
       continue;
     }
     derr << "ERROR: failed to refresh rotating keys, "
-         << "maximum retry time reached." << dendl;
+         << "maximum retry time reached."
+	 << " Maybe I have a clock skew against the monitors?" << dendl;
     std::lock_guard locker{mds_lock};
     suicide();
     return -CEPHFS_ETIMEDOUT;
@@ -1041,9 +1052,6 @@ void MDSDaemon::ms_handle_remote_reset(Connection *con)
       dout(3) << "ms_handle_remote_reset closing connection for session " << session->info.inst << dendl;
       con->mark_down();
       con->set_priv(nullptr);
-    } else if (session->is_open()) {
-      dout(3) << "ms_handle_remote_reset kill session " << session->info.inst << dendl;
-      mds_rank->server->kill_session(session, nullptr);
     }
   }
 }

@@ -131,6 +131,7 @@ describe('CreateClusterComponent', () => {
   });
 
   it('should ensure osd creation did not happen when no devices are selected', () => {
+    component.simpleDeployment = false;
     const osdServiceSpy = spyOn(osdService, 'create').and.callThrough();
     component.onSubmit();
     fixture.detectChanges();
@@ -149,5 +150,29 @@ describe('CreateClusterComponent', () => {
     const hostServiceSpy = spyOn(hostService, 'list').and.callThrough();
     component.onSubmit();
     expect(hostServiceSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('should show skip button in the Create OSDs Steps', () => {
+    component.createCluster();
+    fixture.detectChanges();
+
+    component.onNextStep();
+    fixture.detectChanges();
+    const skipBtn = fixture.debugElement.query(By.css('#skipStepBtn')).nativeElement;
+    expect(skipBtn).not.toBe(null);
+    expect(skipBtn.innerHTML).toBe('Skip');
+  });
+
+  it('should skip the Create OSDs Steps', () => {
+    component.createCluster();
+    fixture.detectChanges();
+
+    component.onNextStep();
+    fixture.detectChanges();
+    const skipBtn = fixture.debugElement.query(By.css('#skipStepBtn')).nativeElement;
+    skipBtn.click();
+    fixture.detectChanges();
+
+    expect(component.stepsToSkip['Create OSDs']).toBe(true);
   });
 });

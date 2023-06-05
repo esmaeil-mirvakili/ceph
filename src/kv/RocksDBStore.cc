@@ -18,6 +18,7 @@
 #include "rocksdb/cache.h"
 #include "rocksdb/filter_policy.h"
 #include "rocksdb/utilities/convenience.h"
+#include "rocksdb/utilities/table_properties_collectors.h"
 #include "rocksdb/merge_operator.h"
 
 #include "common/perf_counters.h"
@@ -622,6 +623,18 @@ bool RocksDBStore::is_column_family(const std::string& prefix) {
   return cf_handles.count(prefix);
 }
 
+std::string_view RocksDBStore::get_key_hash_view(const prefix_shards& shards, const char* key, const size_t keylen) {
+  uint32_t hash_l = std::min<uint32_t>(shards.hash_l, keylen);
+  uint32_t hash_h = std::min<uint32_t>(shards.hash_h, keylen);
+  return { key + hash_l, hash_h - hash_l };
+}
+
+rocksdb::ColumnFamilyHandle *RocksDBStore::get_key_cf(const prefix_shards& shards, const char* key, const size_t keylen) {
+  auto sv = get_key_hash_view(shards, key, keylen);
+  uint32_t hash = ceph_str_hash_rjenkins(sv.data(), sv.size());
+  return shards.handles[hash % shards.handles.size()];
+}
+
 rocksdb::ColumnFamilyHandle *RocksDBStore::get_cf_handle(const std::string& prefix, const std::string& key) {
   auto iter = cf_handles.find(prefix);
   if (iter == cf_handles.end()) {
@@ -630,10 +643,7 @@ rocksdb::ColumnFamilyHandle *RocksDBStore::get_cf_handle(const std::string& pref
     if (iter->second.handles.size() == 1) {
       return iter->second.handles[0];
     } else {
-      uint32_t hash_l = std::min<uint32_t>(iter->second.hash_l, key.size());
-      uint32_t hash_h = std::min<uint32_t>(iter->second.hash_h, key.size());
-      uint32_t hash = ceph_str_hash_rjenkins(&key[hash_l], hash_h - hash_l);
-      return iter->second.handles[hash % iter->second.handles.size()];
+      return get_key_cf(iter->second, key.data(), key.size());
     }
   }
 }
@@ -646,11 +656,33 @@ rocksdb::ColumnFamilyHandle *RocksDBStore::get_cf_handle(const std::string& pref
     if (iter->second.handles.size() == 1) {
       return iter->second.handles[0];
     } else {
-      uint32_t hash_l = std::min<uint32_t>(iter->second.hash_l, keylen);
-      uint32_t hash_h = std::min<uint32_t>(iter->second.hash_h, keylen);
-      uint32_t hash = ceph_str_hash_rjenkins(&key[hash_l], hash_h - hash_l);
-      return iter->second.handles[hash % iter->second.handles.size()];
+      return get_key_cf(iter->second, key, keylen);
     }
+  }
+}
+
+/**
+ * If the specified IteratorBounds arg has both an upper and a lower bound defined, and they have equal placement hash
+ * strings, we can be sure that the entire iteration range exists in a single CF. In that case, we return the relevant
+ * CF handle. In all other cases, we return a nullptr to indicate that the specified bounds cannot necessarily be mapped
+ * to a single CF.
+ */
+rocksdb::ColumnFamilyHandle *RocksDBStore::check_cf_handle_bounds(const cf_handles_iterator& iter, const IteratorBounds& bounds) {
+  if (!bounds.lower_bound || !bounds.upper_bound) {
+    return nullptr;
+  }
+  ceph_assert(iter != cf_handles.end());
+  ceph_assert(iter->second.handles.size() != 1);
+  if (iter->second.hash_l != 0) {
+    return nullptr;
+  }
+  auto lower_bound_hash_str = get_key_hash_view(iter->second, bounds.lower_bound->data(), bounds.lower_bound->size());
+  auto upper_bound_hash_str = get_key_hash_view(iter->second, bounds.upper_bound->data(), bounds.upper_bound->size());
+  if (lower_bound_hash_str == upper_bound_hash_str) {
+    auto key = *bounds.lower_bound;
+    return get_key_cf(iter->second, key.data(), key.size());
+  } else {
+    return nullptr;
   }
 }
 
@@ -901,6 +933,14 @@ int RocksDBStore::update_column_family_options(const std::string& base_name,
       // apply_block_cache_options already does all necessary douts
       return r;
     }
+  }
+
+  // Set Compact on Deletion Factory
+  if (cct->_conf->rocksdb_cf_compact_on_deletion) {
+    size_t sliding_window = cct->_conf->rocksdb_cf_compact_on_deletion_sliding_window;
+    size_t trigger = cct->_conf->rocksdb_cf_compact_on_deletion_trigger;
+    cf_opt->table_properties_collector_factories.emplace_back(
+        rocksdb::NewCompactOnDeletionCollectorFactory(sliding_window, trigger));
   }
   return 0;
 }
@@ -1353,9 +1393,6 @@ int64_t RocksDBStore::estimate_prefix_size(const string& prefix,
 					   const string& key_prefix)
 {
   uint64_t size = 0;
-  uint8_t flags =
-    //rocksdb::DB::INCLUDE_MEMTABLES |  // do not include memtables...
-    rocksdb::DB::INCLUDE_FILES;
   auto p_iter = cf_handles.find(prefix);
   if (p_iter != cf_handles.end()) {
     for (auto cf : p_iter->second.handles) {
@@ -1363,14 +1400,14 @@ int64_t RocksDBStore::estimate_prefix_size(const string& prefix,
       string start = key_prefix + string(1, '\x00');
       string limit = key_prefix + string("\xff\xff\xff\xff");
       rocksdb::Range r(start, limit);
-      db->GetApproximateSizes(cf, &r, 1, &s, flags);
+      db->GetApproximateSizes(cf, &r, 1, &s);
       size += s;
     }
   } else {
     string start = combine_strings(prefix , key_prefix);
     string limit = combine_strings(prefix , key_prefix + "\xff\xff\xff\xff");
     rocksdb::Range r(start, limit);
-    db->GetApproximateSizes(default_cf, &r, 1, &size, flags);
+    db->GetApproximateSizes(default_cf, &r, 1, &size);
   }
   return size;
 }
@@ -1410,7 +1447,7 @@ void RocksDBStore::get_statistics(Formatter *f)
       f->close_section();
     }
     f->open_object_section("rocksdbstore_perf_counters");
-    logger->dump_formatted(f,0);
+    logger->dump_formatted(f, false, false);
     f->close_section();
   }
   if (cct->_conf->rocksdb_collect_memory_stats) {
@@ -1670,7 +1707,7 @@ void RocksDBStore::RocksDBTransactionImpl::rmkeys_by_prefix(const string &prefix
 {
   auto p_iter = db->cf_handles.find(prefix);
   if (p_iter == db->cf_handles.end()) {
-    uint64_t cnt = db->delete_range_threshold;
+    uint64_t cnt = db->get_delete_range_threshold();
     bat.SetSavePoint();
     auto it = db->get_iterator(prefix);
     for (it->seek_to_first(); it->valid() && (--cnt) != 0; it->next()) {
@@ -1689,10 +1726,10 @@ void RocksDBStore::RocksDBTransactionImpl::rmkeys_by_prefix(const string &prefix
   } else {
     ceph_assert(p_iter->second.handles.size() >= 1);
     for (auto cf : p_iter->second.handles) {
-      uint64_t cnt = db->delete_range_threshold;
+      uint64_t cnt = db->get_delete_range_threshold();
       bat.SetSavePoint();
       auto it = db->new_shard_iterator(cf);
-      for (it->SeekToFirst(); it->Valid() && (--cnt) != 0; it->Next()) {
+      for (it->seek_to_first(); it->valid() && (--cnt) != 0; it->next()) {
 	bat.Delete(cf, it->key());
       }
       if (cnt == 0) {
@@ -1710,9 +1747,14 @@ void RocksDBStore::RocksDBTransactionImpl::rm_range_keys(const string &prefix,
                                                          const string &start,
                                                          const string &end)
 {
+  ldout(db->cct, 10) << __func__
+                     << " enter prefix=" << prefix
+                     << " start=" << pretty_binary_string(start)
+		     << " end=" << pretty_binary_string(end) << dendl;
   auto p_iter = db->cf_handles.find(prefix);
+  uint64_t cnt = db->get_delete_range_threshold();
   if (p_iter == db->cf_handles.end()) {
-    uint64_t cnt = db->delete_range_threshold;
+    uint64_t cnt0 = cnt;
     bat.SetSavePoint();
     auto it = db->get_iterator(prefix);
     for (it->lower_bound(start);
@@ -1720,7 +1762,12 @@ void RocksDBStore::RocksDBTransactionImpl::rm_range_keys(const string &prefix,
 	 it->next()) {
       bat.Delete(db->default_cf, combine_strings(prefix, it->key()));
     }
+    ldout(db->cct, 15) << __func__
+                       << " count = " << cnt0 - cnt
+                       << dendl;
     if (cnt == 0) {
+      ldout(db->cct, 10) << __func__ << " p_iter == end(), resorting to DeleteRange"
+			 << dendl;
       bat.RollbackToSavePoint();
       bat.DeleteRange(db->default_cf,
 		      rocksdb::Slice(combine_strings(prefix, start)),
@@ -1728,27 +1775,42 @@ void RocksDBStore::RocksDBTransactionImpl::rm_range_keys(const string &prefix,
     } else {
       bat.PopSavePoint();
     }
-  } else {
+  } else if (cnt == 0) {
     ceph_assert(p_iter->second.handles.size() >= 1);
     for (auto cf : p_iter->second.handles) {
-      uint64_t cnt = db->delete_range_threshold;
+      ldout(db->cct, 10) << __func__ << " p_iter != end(), resorting to DeleteRange"
+			   << dendl;
+	bat.DeleteRange(cf, rocksdb::Slice(start), rocksdb::Slice(end));
+    }
+  } else {
+    auto bounds = KeyValueDB::IteratorBounds();
+    bounds.lower_bound = start;
+    bounds.upper_bound = end;
+    ceph_assert(p_iter->second.handles.size() >= 1);
+    for (auto cf : p_iter->second.handles) {
+      cnt = db->get_delete_range_threshold();
+      uint64_t cnt0 = cnt;
       bat.SetSavePoint();
-      rocksdb::Iterator* it = db->new_shard_iterator(cf);
-      ceph_assert(it != nullptr);
-      for (it->Seek(start);
-	   it->Valid() && db->comparator->Compare(it->key(), end) < 0 && (--cnt) != 0;
-	   it->Next()) {
+      auto it = db->new_shard_iterator(cf, prefix, bounds);
+      for (it->lower_bound(start);
+	   it->valid() && (--cnt) != 0;
+	   it->next()) {
 	bat.Delete(cf, it->key());
       }
+      ldout(db->cct, 10) << __func__
+                         << " count = " << cnt0 - cnt
+                         << dendl;
       if (cnt == 0) {
+        ldout(db->cct, 10) << __func__ << " p_iter != end(), resorting to DeleteRange"
+			   << dendl;
 	bat.RollbackToSavePoint();
 	bat.DeleteRange(cf, rocksdb::Slice(start), rocksdb::Slice(end));
       } else {
 	bat.PopSavePoint();
       }
-      delete it;
     }
   }
+  ldout(db->cct, 10) << __func__ << " end" << dendl;
 }
 
 void RocksDBStore::RocksDBTransactionImpl::merge(
@@ -2194,10 +2256,29 @@ class CFIteratorImpl : public KeyValueDB::IteratorImpl {
 protected:
   string prefix;
   rocksdb::Iterator *dbiter;
+  const KeyValueDB::IteratorBounds bounds;
+  const rocksdb::Slice iterate_lower_bound;
+  const rocksdb::Slice iterate_upper_bound;
 public:
-  explicit CFIteratorImpl(const std::string& p,
-				 rocksdb::Iterator *iter)
-    : prefix(p), dbiter(iter) { }
+  explicit CFIteratorImpl(const RocksDBStore* db,
+                          const std::string& p,
+                          rocksdb::ColumnFamilyHandle* cf,
+                          KeyValueDB::IteratorBounds bounds_)
+    : prefix(p), bounds(std::move(bounds_)),
+      iterate_lower_bound(make_slice(bounds.lower_bound)),
+      iterate_upper_bound(make_slice(bounds.upper_bound))
+      {
+      auto options = rocksdb::ReadOptions();
+      if (db->cct->_conf->osd_rocksdb_iterator_bounds_enabled) {
+        if (bounds.lower_bound) {
+          options.iterate_lower_bound = &iterate_lower_bound;
+        }
+        if (bounds.upper_bound) {
+          options.iterate_upper_bound = &iterate_upper_bound;
+        }
+      }
+      dbiter = db->db->NewIterator(options, cf);
+  }
   ~CFIteratorImpl() {
     delete dbiter;
   }
@@ -2729,16 +2810,31 @@ private:
   const RocksDBStore* db;
   KeyLess keyless;
   string prefix;
+  const KeyValueDB::IteratorBounds bounds;
+  const rocksdb::Slice iterate_lower_bound;
+  const rocksdb::Slice iterate_upper_bound;
   std::vector<rocksdb::Iterator*> iters;
 public:
   explicit ShardMergeIteratorImpl(const RocksDBStore* db,
 				  const std::string& prefix,
-				  const std::vector<rocksdb::ColumnFamilyHandle*>& shards)
-    : db(db), keyless(db->comparator), prefix(prefix)
+				  const std::vector<rocksdb::ColumnFamilyHandle*>& shards,
+                  KeyValueDB::IteratorBounds bounds_)
+    : db(db), keyless(db->comparator), prefix(prefix), bounds(std::move(bounds_)),
+      iterate_lower_bound(make_slice(bounds.lower_bound)),
+      iterate_upper_bound(make_slice(bounds.upper_bound))
   {
     iters.reserve(shards.size());
+    auto options = rocksdb::ReadOptions();
+    if (db->cct->_conf->osd_rocksdb_iterator_bounds_enabled) {
+      if (bounds.lower_bound) {
+        options.iterate_lower_bound = &iterate_lower_bound;
+      }
+      if (bounds.upper_bound) {
+        options.iterate_upper_bound = &iterate_upper_bound;
+      }
+    }
     for (auto& s : shards) {
-      iters.push_back(db->db->NewIterator(rocksdb::ReadOptions(), s));
+      iters.push_back(db->db->NewIterator(options, s));
     }
   }
   ~ShardMergeIteratorImpl() {
@@ -2909,38 +3005,64 @@ public:
   }
 };
 
-KeyValueDB::Iterator RocksDBStore::get_iterator(const std::string& prefix, IteratorOpts opts)
+KeyValueDB::Iterator RocksDBStore::get_iterator(const std::string& prefix, IteratorOpts opts, IteratorBounds bounds)
 {
   auto cf_it = cf_handles.find(prefix);
   if (cf_it != cf_handles.end()) {
+    rocksdb::ColumnFamilyHandle* cf = nullptr;
     if (cf_it->second.handles.size() == 1) {
+      cf = cf_it->second.handles[0];
+    } else if (cct->_conf->osd_rocksdb_iterator_bounds_enabled) {
+      cf = check_cf_handle_bounds(cf_it, bounds);
+    }
+    if (cf) {
       return std::make_shared<CFIteratorImpl>(
-        prefix,
-        db->NewIterator(rocksdb::ReadOptions(), cf_it->second.handles[0]));
+              this,
+              prefix,
+              cf,
+              std::move(bounds));
     } else {
       return std::make_shared<ShardMergeIteratorImpl>(
         this,
         prefix,
-        cf_it->second.handles);
+        cf_it->second.handles,
+        std::move(bounds));
     }
   } else {
-    return KeyValueDB::get_iterator(prefix, opts);
+    // use wholespace engine if no cfs are configured
+    // or use default cf otherwise as there is no
+    // matching cf for the specified prefix.
+    auto w_it = cf_handles.size() == 0 || prefix.empty() ?
+      get_wholespace_iterator(opts) :
+      get_default_cf_iterator();
+    return KeyValueDB::make_iterator(prefix, w_it);
   }
 }
 
-rocksdb::Iterator* RocksDBStore::new_shard_iterator(rocksdb::ColumnFamilyHandle* cf)
+RocksDBStore::WholeSpaceIterator RocksDBStore::new_shard_iterator(rocksdb::ColumnFamilyHandle* cf)
 {
-  return db->NewIterator(rocksdb::ReadOptions(), cf);
+  return std::make_shared<RocksDBWholeSpaceIteratorImpl>(
+    this,
+    cf,
+    0);
+}
+
+KeyValueDB::Iterator RocksDBStore::new_shard_iterator(rocksdb::ColumnFamilyHandle* cf,
+						      const std::string& prefix,
+						      IteratorBounds bounds)
+{
+  return std::make_shared<CFIteratorImpl>(
+    this,
+    prefix,
+    cf,
+    std::move(bounds));
 }
 
 RocksDBStore::WholeSpaceIterator RocksDBStore::get_wholespace_iterator(IteratorOpts opts)
 {
   if (cf_handles.size() == 0) {
-    rocksdb::ReadOptions opt = rocksdb::ReadOptions();
-    if (opts & ITERATOR_NOCACHE)
-      opt.fill_cache=false;
     return std::make_shared<RocksDBWholeSpaceIteratorImpl>(
-      db->NewIterator(opt, default_cf));
+      this, default_cf, opts);
   } else {
     return std::make_shared<WholeMergeIteratorImpl>(this);
   }
@@ -2948,8 +3070,7 @@ RocksDBStore::WholeSpaceIterator RocksDBStore::get_wholespace_iterator(IteratorO
 
 RocksDBStore::WholeSpaceIterator RocksDBStore::get_default_cf_iterator()
 {
-  return std::make_shared<RocksDBWholeSpaceIteratorImpl>(
-    db->NewIterator(rocksdb::ReadOptions(), default_cf));
+  return std::make_shared<RocksDBWholeSpaceIteratorImpl>(this, default_cf, 0);
 }
 
 int RocksDBStore::prepare_for_reshard(const std::string& new_sharding,

@@ -15,12 +15,10 @@
 
 #pragma once
 
-#include "include/rados/librados_fwd.hpp"
 #include <memory>
 #include "common/ceph_mutex.h"
 #include "common/async/completion.h"
 #include "common/async/yield_context.h"
-#include "services/svc_rados.h"
 #include "rgw_aio.h"
 
 namespace rgw {
@@ -45,7 +43,7 @@ class Throttle {
  public:
   Throttle(uint64_t window) : window(window) {}
 
-  ~Throttle() {
+  virtual ~Throttle() {
     // must drain before destructing
     ceph_assert(pending.empty());
     ceph_assert(completed.empty());
@@ -61,12 +59,13 @@ class BlockingAioThrottle final : public Aio, private Throttle {
   struct Pending : AioResultEntry {
     BlockingAioThrottle *parent = nullptr;
     uint64_t cost = 0;
-    librados::AioCompletion *completion = nullptr;
   };
  public:
   BlockingAioThrottle(uint64_t window) : Throttle(window) {}
 
-  AioResultList get(const RGWSI_RADOS::Obj& obj, OpFunc&& f,
+  virtual ~BlockingAioThrottle() override {};
+
+  AioResultList get(rgw_raw_obj obj, OpFunc&& f,
                     uint64_t cost, uint64_t id) override final;
 
   void put(AioResult& r) override final;
@@ -100,7 +99,9 @@ class YieldingAioThrottle final : public Aio, private Throttle {
     : Throttle(window), context(context), yield(yield)
   {}
 
-  AioResultList get(const RGWSI_RADOS::Obj& obj, OpFunc&& f,
+  virtual ~YieldingAioThrottle() override {};
+
+  AioResultList get(rgw_raw_obj obj, OpFunc&& f,
                     uint64_t cost, uint64_t id) override final;
 
   void put(AioResult& r) override final;

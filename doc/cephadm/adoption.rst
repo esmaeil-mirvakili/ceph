@@ -14,8 +14,7 @@ clusters can be converted to a state in which they can be managed by
 Limitations
 -----------
 
-* Cephadm works only with BlueStore OSDs. FileStore OSDs that are in your
-  cluster cannot be managed with ``cephadm``.
+* Cephadm works only with BlueStore OSDs.
 
 Preparation
 -----------
@@ -113,15 +112,15 @@ Adoption process
       ssh-copy-id -f -i ~/ceph.pub root@<host>
 
    .. note::
-     It is also possible to import an existing ssh key. See
-     :ref:`ssh errors <cephadm-ssh-errors>` in the troubleshooting
+     It is also possible to import an existing SSH key. See
+     :ref:`SSH errors <cephadm-ssh-errors>` in the troubleshooting
      document for instructions that describe how to import existing
-     ssh keys.
+     SSH keys.
 
    .. note::
-     It is also possible to have cephadm use a non-root user to ssh
+     It is also possible to have cephadm use a non-root user to SSH 
      into cluster hosts. This user needs to have passwordless sudo access.
-     Use ``ceph cephadm set-user <user>`` and copy the ssh key to that user.
+     Use ``ceph cephadm set-user <user>`` and copy the SSH key to that user.
      See :ref:`cephadm-ssh-user`
 
 #. Tell cephadm which hosts to manage:

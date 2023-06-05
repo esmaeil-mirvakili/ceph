@@ -22,6 +22,7 @@ export class RbdSnapshotFormModalComponent {
   namespace: string;
   imageName: string;
   snapName: string;
+  mirroring: string;
 
   snapshotForm: CdFormGroup;
 
@@ -47,13 +48,24 @@ export class RbdSnapshotFormModalComponent {
     this.snapshotForm = new CdFormGroup({
       snapshotName: new FormControl('', {
         validators: [Validators.required]
-      })
+      }),
+      mirrorImageSnapshot: new FormControl(false, {})
     });
   }
 
   setSnapName(snapName: string) {
     this.snapName = snapName;
-    this.snapshotForm.get('snapshotName').setValue(snapName);
+    if (this.mirroring !== 'snapshot') {
+      this.snapshotForm.get('snapshotName').setValue(snapName);
+    } else {
+      this.snapshotForm.get('snapshotName').clearValidators();
+    }
+  }
+
+  onMirrorCheckBoxChange() {
+    if (this.snapshotForm.getValue('mirrorImageSnapshot') === true) {
+      this.snapshotForm.get('snapshotName').setValue('');
+    }
   }
 
   /**
@@ -96,6 +108,7 @@ export class RbdSnapshotFormModalComponent {
 
   createAction() {
     const snapshotName = this.snapshotForm.getValue('snapshotName');
+    const mirrorImageSnapshot = this.snapshotForm.getValue('mirrorImageSnapshot');
     const imageSpec = new ImageSpec(this.poolName, this.namespace, this.imageName);
     const finishedTask = new FinishedTask();
     finishedTask.name = 'rbd/snap/create';
@@ -104,7 +117,7 @@ export class RbdSnapshotFormModalComponent {
       snapshot_name: snapshotName
     };
     this.rbdService
-      .createSnapshot(imageSpec, snapshotName)
+      .createSnapshot(imageSpec, snapshotName, mirrorImageSnapshot)
       .toPromise()
       .then(() => {
         this.taskManagerService.subscribe(

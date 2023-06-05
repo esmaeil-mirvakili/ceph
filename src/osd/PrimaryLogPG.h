@@ -442,9 +442,6 @@ public:
     release_object_locks(manager);
   }
 
-  bool pg_is_repair() override {
-    return is_repair();
-  }
   void inc_osd_stat_repaired() override {
     osd->inc_osd_stat_repaired();
   }
@@ -546,7 +543,8 @@ public:
   }
 
   void schedule_recovery_work(
-    GenContext<ThreadPool::TPHandle&> *c) override;
+    GenContext<ThreadPool::TPHandle&> *c,
+    uint64_t cost) override;
 
   pg_shard_t whoami_shard() const override {
     return pg_whoami;
@@ -573,7 +571,7 @@ public:
   }
   void send_message_osd_cluster(
     MessageRef m, Connection *con) override {
-    osd->send_message_osd_cluster(m, con);
+    osd->send_message_osd_cluster(std::move(m), con);
   }
   void send_message_osd_cluster(
     Message *m, const ConnectionRef& con) override {
@@ -1152,7 +1150,7 @@ protected:
   void _make_clone(
     OpContext *ctx,
     PGTransaction* t,
-    ObjectContextRef obc,
+    ObjectContextRef clone_obc,
     const hobject_t& head, const hobject_t& coid,
     object_info_t *poi);
   void execute_ctx(OpContext *ctx);
@@ -1356,7 +1354,8 @@ protected:
   int start_flush(
     OpRequestRef op, ObjectContextRef obc,
     bool blocking, hobject_t *pmissing,
-    std::optional<std::function<void()>> &&on_flush);
+    std::optional<std::function<void()>> &&on_flush,
+    bool force_dedup = false);
   void finish_flush(hobject_t oid, ceph_tid_t tid, int r);
   int try_flush_mark_clean(FlushOpRef fop);
   void cancel_flush(FlushOpRef fop, bool requeue, std::vector<ceph_tid_t> *tids);
@@ -1459,7 +1458,7 @@ protected:
   int do_cdc(const object_info_t& oi, std::map<uint64_t, chunk_info_t>& chunk_map,
 	     std::map<uint64_t, bufferlist>& chunks);
   int start_dedup(OpRequestRef op, ObjectContextRef obc);
-  hobject_t get_fpoid_from_chunk(const hobject_t soid, bufferlist& chunk);
+  std::pair<int, hobject_t> get_fpoid_from_chunk(const hobject_t soid, bufferlist& chunk);
   int finish_set_dedup(hobject_t oid, int r, ceph_tid_t tid, uint64_t offset);
   int finish_set_manifest_refcount(hobject_t oid, int r, ceph_tid_t tid, uint64_t offset);
 
@@ -1533,12 +1532,6 @@ private:
   /// generate a new temp object name (for recovery)
   hobject_t get_temp_recovery_object(const hobject_t& target,
 				     eversion_t version) override;
-  int get_recovery_op_priority() const {
-    int64_t pri = 0;
-    pool.info.opts.get(pool_opts_t::RECOVERY_OP_PRIORITY, &pri);
-    return  pri > 0 ? pri : cct->_conf->osd_recovery_op_priority;
-  }
-
 public:
   coll_t get_coll() {
     return coll;
@@ -1797,7 +1790,7 @@ private:
       > reactions;
     explicit WaitScrub(my_context ctx)
       : my_base(ctx),
-	NamedState(nullptr, "Trimming/WaitScrub") {
+	NamedState(nullptr, "WaitScrub") {
       context< SnapTrimmer >().log_enter(state_name);
     }
     void exit() {
@@ -1915,6 +1908,13 @@ public:
     ObjectContextRef obc,
     PGTransaction *t,
     const std::string &key);
+  /** 
+   * getattr_maybe_cache 
+   *
+   * Populates val (if non-null) with the value of the attr with the specified key. 
+   * Returns -ENOENT if object does not exist, -ENODATA if the object exists, 
+   * but the specified key does not. 
+   */
   int getattr_maybe_cache(
     ObjectContextRef obc,
     const std::string &key,

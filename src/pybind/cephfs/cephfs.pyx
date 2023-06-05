@@ -22,8 +22,11 @@ import os
 import time
 from typing import Any, Dict, Optional
 
-AT_NO_ATTR_SYNC = 0x4000
-AT_SYMLINK_NOFOLLOW = 0x100
+AT_SYMLINK_NOFOLLOW = 0x0100
+AT_STATX_SYNC_TYPE  = 0x6000
+AT_STATX_SYNC_AS_STAT = 0x0000
+AT_STATX_FORCE_SYNC = 0x2000
+AT_STATX_DONT_SYNC = 0x4000
 cdef int AT_SYMLINK_NOFOLLOW_CDEF = AT_SYMLINK_NOFOLLOW
 CEPH_STATX_BASIC_STATS = 0x7ff
 cdef int CEPH_STATX_BASIC_STATS_CDEF = CEPH_STATX_BASIC_STATS
@@ -53,6 +56,8 @@ CEPH_SETATTR_ATIME = 0x10
 CEPH_SETATTR_SIZE  = 0x20
 CEPH_SETATTR_CTIME = 0x40
 CEPH_SETATTR_BTIME = 0x200
+
+CEPH_NOSNAP = -2
 
 # errno definitions
 cdef enum:
@@ -216,7 +221,7 @@ cdef make_ex(ret, msg):
 
 
 class DirEntry(namedtuple('DirEntry',
-               ['d_ino', 'd_off', 'd_reclen', 'd_type', 'd_name'])):
+               ['d_ino', 'd_off', 'd_reclen', 'd_type', 'd_name', 'd_snapid'])):
     DT_DIR = 0x4
     DT_REG = 0x8
     DT_LNK = 0xA
@@ -274,13 +279,15 @@ cdef class DirResult(object):
                             d_off=0,
                             d_reclen=dirent.d_reclen,
                             d_type=dirent.d_type,
-                            d_name=dirent.d_name)
+                            d_name=dirent.d_name,
+                            d_snapid=CEPH_NOSNAP)
         ELSE:
             return DirEntry(d_ino=dirent.d_ino,
                             d_off=dirent.d_off,
                             d_reclen=dirent.d_reclen,
                             d_type=dirent.d_type,
-                            d_name=dirent.d_name)
+                            d_name=dirent.d_name,
+                            d_snapid=CEPH_NOSNAP)
 
     def close(self):
         if self.handle:
@@ -317,6 +324,56 @@ cdef class DirResult(object):
         cdef int64_t _offset = offset
         with nogil:
             ceph_seekdir(self.lib.cluster, self.handle, _offset)
+
+cdef class SnapDiffHandle(object):
+    cdef LibCephFS lib
+    cdef ceph_snapdiff_info handle
+    cdef int opened
+
+    def __cinit__(self, _lib):
+        self.opened = 0
+        self.lib = _lib
+
+    def __dealloc__(self):
+        self.close()
+
+    def readdir(self):
+        self.lib.require_state("mounted")
+
+        cdef:
+            ceph_snapdiff_entry_t difent
+        with nogil:
+            ret = ceph_readdir_snapdiff(&self.handle, &difent)
+        if ret < 0:
+            raise make_ex(ret, "ceph_readdir_snapdiff failed, ret {}"
+                .format(ret))
+        if ret == 0:
+            return None
+
+        IF UNAME_SYSNAME == "FreeBSD" or UNAME_SYSNAME == "Darwin":
+            return DirEntry(d_ino=difent.dir_entry.d_ino,
+                            d_off=0,
+                            d_reclen=difent.dir_entry.d_reclen,
+                            d_type=difent.dir_entry.d_type,
+                            d_name=difent.dir_entry.d_name,
+                            d_snapid=difent.snapid)
+        ELSE:
+            return DirEntry(d_ino=difent.dir_entry.d_ino,
+                            d_off=difent.dir_entry.d_off,
+                            d_reclen=difent.dir_entry.d_reclen,
+                            d_type=difent.dir_entry.d_type,
+                            d_name=difent.dir_entry.d_name,
+                            d_snapid=difent.snapid)
+
+    def close(self):
+        if (not self.opened):
+            return
+        self.lib.require_state("mounted")
+        with nogil:
+            ret = ceph_close_snapdiff(&self.handle)
+        if ret < 0:
+            raise make_ex(ret, "closesnapdiff failed")
+        self.opened = 0
 
 
 def cstr(val, name, encoding="utf-8", opt=False) -> bytes:
@@ -970,6 +1027,34 @@ cdef class LibCephFS(object):
         self.require_state("mounted")
 
         return handle.close()
+
+    def opensnapdiff(self, root_path, rel_path, snap1name, snap2name) -> SnapDiffHandle:
+        """
+        Open the given directory.
+
+        :param path: the path name of the directory to open.  Must be either an absolute path
+                     or a path relative to the current working directory.
+        :returns: the open directory stream handle
+        """
+        self.require_state("mounted")
+
+        h = SnapDiffHandle(self)
+        root = cstr(root_path, 'root')
+        relp = cstr(rel_path, 'relp')
+        snap1 = cstr(snap1name, 'snap1')
+        snap2 = cstr(snap2name, 'snap2')
+        cdef:
+            char* _root = root
+            char* _relp = relp
+            char* _snap1 = snap1
+            char* _snap2 = snap2
+        with nogil:
+            ret = ceph_open_snapdiff(self.cluster, _root, _relp, _snap1, _snap2, &h.handle);
+        if ret < 0:
+            raise make_ex(ret, "open_snapdiff failed for {} vs. {}"
+                .format(snap1.decode('utf-8'), snap2.decode('utf-8')))
+        h.opened = 1
+        return h
 
     def rewinddir(self, DirResult handle):
         """
@@ -1900,9 +1985,9 @@ cdef class LibCephFS(object):
 
     def lstat(self, path):
         """
-        Get a file's extended statistics and attributes. When file's a
-        symbolic link, return the informaion of the link itself rather
-        than that of the file it points too.
+        Get a file's extended statistics and attributes. If the file is a
+        symbolic link, return the information of the link itself rather than
+        the information of the file it points to.
 
         :param path: the file or directory to get the statistics of.
         """
@@ -1943,7 +2028,7 @@ cdef class LibCephFS(object):
 
         :param path: the file or directory to get the statistics of.
         :param mask: want bitfield of CEPH_STATX_* flags showing designed attributes.
-        :param flag: bitfield that can be used to set AT_* modifier flags (only AT_NO_ATTR_SYNC and AT_SYMLINK_NOFOLLOW)
+        :param flag: bitfield that can be used to set AT_* modifier flags (AT_STATX_SYNC_AS_STAT, AT_STATX_FORCE_SYNC, AT_STATX_DONT_SYNC and AT_SYMLINK_NOFOLLOW)
         """
 
         self.require_state("mounted")

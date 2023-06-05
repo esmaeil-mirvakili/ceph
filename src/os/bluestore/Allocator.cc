@@ -2,6 +2,7 @@
 // vim: ts=8 sw=2 smarttab
 
 #include "Allocator.h"
+#include <bit>
 #include "StupidAllocator.h"
 #include "BitmapAllocator.h"
 #include "AvlAllocator.h"
@@ -64,6 +65,7 @@ public:
 
   int call(std::string_view command,
 	   const cmdmap_t& cmdmap,
+	   const bufferlist&,
 	   Formatter *f,
 	   std::ostream& ss,
 	   bufferlist& out) override {
@@ -87,7 +89,7 @@ public:
         f->dump_string("length", len_hex);
         f->close_section();
       };
-      alloc->dump(iterated_allocation);
+      alloc->foreach(iterated_allocation);
       f->close_section();
       f->close_section();
     } else if (command == "bluestore allocator score " + name) {
@@ -188,18 +190,31 @@ void Allocator::release(const PExtentVector& release_vec)
 double Allocator::get_fragmentation_score()
 {
   // this value represents how much worth is 2X bytes in one chunk then in X + X bytes
-  static const double double_size_worth = 1.1 ;
-  std::vector<double> scales{1};
+  static const double double_size_worth_small = 1.2;
+  // chunks larger then 128MB are large enough that should be counted without penalty
+  static const double double_size_worth_huge = 1;
+  static const size_t small_chunk_p2 = 20; // 1MB
+  static const size_t huge_chunk_p2 = 27; // 128MB
+  // for chunks 1MB - 128MB penalty coeffs are linearly weighted 1.2 (at small) ... 1 (at huge)
+  static std::vector<double> scales{1};
   double score_sum = 0;
   size_t sum = 0;
 
   auto get_score = [&](size_t v) -> double {
-    size_t sc = sizeof(v) * 8 - clz(v) - 1; //assign to grade depending on log2(len)
+    size_t sc = sizeof(v) * 8 - std::countl_zero(v) - 1; //assign to grade depending on log2(len)
     while (scales.size() <= sc + 1) {
       //unlikely expand scales vector
-      scales.push_back(scales[scales.size() - 1] * double_size_worth);
+      auto ss = scales.size();
+      double scale = double_size_worth_small;
+      if (ss >= huge_chunk_p2) {
+	scale = double_size_worth_huge;
+      } else if (ss > small_chunk_p2) {
+	// linear decrease 1.2 ... 1
+	scale = (double_size_worth_huge * (ss - small_chunk_p2) + double_size_worth_small * (huge_chunk_p2 - ss)) /
+	  (huge_chunk_p2 - small_chunk_p2);
+      }
+      scales.push_back(scales[scales.size() - 1] * scale);
     }
-
     size_t sc_shifted = size_t(1) << sc;
     double x = double(v - sc_shifted) / sc_shifted; //x is <0,1) in its scale grade
     // linear extrapolation in its scale grade
@@ -213,10 +228,9 @@ double Allocator::get_fragmentation_score()
     score_sum += get_score(len);
     sum += len;
   };
-  dump(iterated_allocation);
-
+  foreach(iterated_allocation);
 
   double ideal = get_score(sum);
-  double terrible = sum * get_score(1);
+  double terrible = (sum / block_size) * get_score(block_size);
   return (ideal - score_sum) / (ideal - terrible);
 }

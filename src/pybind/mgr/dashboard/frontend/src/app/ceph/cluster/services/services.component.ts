@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, OnInit, ViewChild } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { NgbModalRef } from '@ng-bootstrap/ng-bootstrap';
@@ -39,6 +39,8 @@ const BASE_URL = 'services';
 export class ServicesComponent extends ListWithDetails implements OnChanges, OnInit {
   @ViewChild(TableComponent, { static: true })
   table: TableComponent;
+  @ViewChild('runningTpl', { static: true })
+  public runningTpl: TemplateRef<any>;
 
   @Input() hostname: string;
 
@@ -54,6 +56,7 @@ export class ServicesComponent extends ListWithDetails implements OnChanges, OnI
   permissions: Permissions;
   tableActions: CdTableAction[];
   showDocPanel = false;
+  count = 0;
   bsModalRef: NgbModalRef;
 
   orchStatus: OrchestratorStatus;
@@ -67,6 +70,7 @@ export class ServicesComponent extends ListWithDetails implements OnChanges, OnI
   services: Array<CephServiceSpec> = [];
   isLoadingServices = false;
   selection: CdTableSelection = new CdTableSelection();
+  icons = Icons;
 
   constructor(
     private actionLabels: ActionLabelsI18n,
@@ -154,13 +158,9 @@ export class ServicesComponent extends ListWithDetails implements OnChanges, OnI
       },
       {
         name: $localize`Running`,
-        prop: 'status.running',
-        flexGrow: 1
-      },
-      {
-        name: $localize`Size`,
-        prop: 'status.size',
-        flexGrow: 1
+        prop: 'status',
+        flexGrow: 1,
+        cellTemplate: this.runningTpl
       },
       {
         name: $localize`Last Refreshed`,
@@ -213,9 +213,11 @@ export class ServicesComponent extends ListWithDetails implements OnChanges, OnI
       return;
     }
     this.isLoadingServices = true;
-    this.cephServiceService.list().subscribe(
+    const pagination_obs = this.cephServiceService.list(context.toParams());
+    pagination_obs.observable.subscribe(
       (services: CephServiceSpec[]) => {
         this.services = services;
+        this.count = pagination_obs.count;
         this.services = this.services.filter((col: any) => {
           return !this.hiddenServices.includes(col.service_name);
         });

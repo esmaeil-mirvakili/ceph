@@ -7,8 +7,10 @@ import { RouterTestingModule } from '@angular/router/testing';
 import { NgbActiveModal, NgbTypeaheadModule } from '@ng-bootstrap/ng-bootstrap';
 import _ from 'lodash';
 import { ToastrModule } from 'ngx-toastr';
+import { of } from 'rxjs';
 
 import { CephServiceService } from '~/app/shared/api/ceph-service.service';
+import { PaginateObservable } from '~/app/shared/api/paginate.model';
 import { CdFormGroup } from '~/app/shared/forms/cd-form-group';
 import { SharedModule } from '~/app/shared/shared.module';
 import { configureTestBed, FormHelper } from '~/testing/unit-test-helper';
@@ -118,17 +120,7 @@ describe('ServiceFormComponent', () => {
 
     it('should test various services', () => {
       _.forEach(
-        [
-          'alertmanager',
-          'crash',
-          'grafana',
-          'mds',
-          'mgr',
-          'mon',
-          'node-exporter',
-          'prometheus',
-          'rbd-mirror'
-        ],
+        ['alertmanager', 'crash', 'mds', 'mgr', 'mon', 'node-exporter', 'prometheus', 'rbd-mirror'],
         (serviceType) => {
           formHelper.setValue('service_type', serviceType);
           component.onSubmit();
@@ -139,6 +131,36 @@ describe('ServiceFormComponent', () => {
           });
         }
       );
+    });
+
+    describe('should test service grafana', () => {
+      beforeEach(() => {
+        formHelper.setValue('service_type', 'grafana');
+      });
+
+      it('should sumbit grafana', () => {
+        component.onSubmit();
+        expect(cephServiceService.create).toHaveBeenCalledWith({
+          service_type: 'grafana',
+          placement: {},
+          unmanaged: false,
+          initial_admin_password: null,
+          port: null
+        });
+      });
+
+      it('should sumbit grafana with custom port and initial password', () => {
+        formHelper.setValue('grafana_port', 1234);
+        formHelper.setValue('grafana_admin_password', 'foo');
+        component.onSubmit();
+        expect(cephServiceService.create).toHaveBeenCalledWith({
+          service_type: 'grafana',
+          placement: {},
+          unmanaged: false,
+          initial_admin_password: 'foo',
+          port: 1234
+        });
+      });
     });
 
     describe('should test service nfs', () => {
@@ -436,6 +458,30 @@ x4Ea7kGVgx9kWh5XjWz9wjZvY49UKIT5ppIAWPMbLl3UpfckiuNhTA==
         formHelper.expectError('frontend_port', 'pattern');
         formHelper.expectError('monitor_port', 'pattern');
       });
+
+      it('should not show private key field with ssl enabled', () => {
+        formHelper.setValue('ssl', true);
+        fixture.detectChanges();
+        const ssl_key = fixture.debugElement.query(By.css('#ssl_key'));
+        expect(ssl_key).toBeNull();
+      });
+
+      it('should test .pem file with ssl enabled', () => {
+        const pemCert = `
+-----BEGIN CERTIFICATE-----
+iJ5IbgzlKPssdYwuAEI3yPZxX/g5vKBrgcyD3LttLL/DlElq/1xCnwVrv7WROSNu
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+mn/S7BNBEC7AGe5ajmN+8hBTGdACUXe8rwMNrtTy/MwBZ0VpJsAAjJh+aptZh5yB
+-----END CERTIFICATE-----
+-----BEGIN RSA PRIVATE KEY-----
+x4Ea7kGVgx9kWh5XjWz9wjZvY49UKIT5ppIAWPMbLl3UpfckiuNhTA==
+-----END RSA PRIVATE KEY-----`;
+        formHelper.setValue('ssl', true);
+        formHelper.setValue('ssl_cert', pemCert);
+        fixture.detectChanges();
+        formHelper.expectValid('ssl_cert');
+      });
     });
 
     describe('should test service snmp-gateway', () => {
@@ -506,13 +552,38 @@ x4Ea7kGVgx9kWh5XjWz9wjZvY49UKIT5ppIAWPMbLl3UpfckiuNhTA==
       });
     });
 
+    describe('should test service mds', () => {
+      beforeEach(() => {
+        formHelper.setValue('service_type', 'mds');
+        const paginate_obs = new PaginateObservable<any>(of({}));
+        spyOn(cephServiceService, 'list').and.returnValue(paginate_obs);
+      });
+
+      it('should test mds valid service id', () => {
+        formHelper.setValue('service_id', 'svc123');
+        formHelper.expectValid('service_id');
+        formHelper.setValue('service_id', 'svc_id-1');
+        formHelper.expectValid('service_id');
+      });
+
+      it('should test mds invalid service id', () => {
+        formHelper.setValue('service_id', '123');
+        formHelper.expectError('service_id', 'mdsPattern');
+        formHelper.setValue('service_id', '123svc');
+        formHelper.expectError('service_id', 'mdsPattern');
+        formHelper.setValue('service_id', 'svc#1');
+        formHelper.expectError('service_id', 'mdsPattern');
+      });
+    });
+
     describe('check edit fields', () => {
       beforeEach(() => {
         component.editing = true;
       });
 
       it('should check whether edit field is correctly loaded', () => {
-        const cephServiceSpy = spyOn(cephServiceService, 'list').and.callThrough();
+        const paginate_obs = new PaginateObservable<any>(of({}));
+        const cephServiceSpy = spyOn(cephServiceService, 'list').and.returnValue(paginate_obs);
         component.ngOnInit();
         expect(cephServiceSpy).toBeCalledTimes(2);
         expect(component.action).toBe('Edit');

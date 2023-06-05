@@ -37,6 +37,8 @@ import { LoginLayoutComponent } from './core/layouts/login-layout/login-layout.c
 import { WorkbenchLayoutComponent } from './core/layouts/workbench-layout/workbench-layout.component';
 import { ApiDocsComponent } from './core/navigation/api-docs/api-docs.component';
 import { ActionLabels, URLVerbs } from './shared/constants/app.constants';
+import { CrudFormComponent } from './shared/forms/crud-form/crud-form.component';
+import { CRUDTableComponent } from './shared/datatable/crud-table/crud-table.component';
 import { BreadcrumbsResolver, IBreadcrumb } from './shared/models/breadcrumbs';
 import { AuthGuardService } from './shared/services/auth-guard.service';
 import { ChangePasswordGuardService } from './shared/services/change-password-guard.service';
@@ -96,7 +98,7 @@ const routes: Routes = [
         canActivate: [ModuleStatusGuardService],
         data: {
           moduleStatusGuardConfig: {
-            apiPath: 'orchestrator',
+            uiApiPath: 'orchestrator',
             redirectTo: 'dashboard',
             backend: 'cephadm'
           },
@@ -116,6 +118,38 @@ const routes: Routes = [
         ]
       },
       {
+        path: 'ceph-users',
+        component: CRUDTableComponent,
+        data: {
+          breadcrumbs: 'Cluster/Ceph Users',
+          resource: 'api.cluster.user@1.0'
+        }
+      },
+      {
+        path: 'cluster/user/create',
+        component: CrudFormComponent,
+        data: {
+          breadcrumbs: 'Cluster/Ceph Users/Create',
+          resource: 'api.cluster.user@1.0'
+        }
+      },
+      {
+        path: 'cluster/user/import',
+        component: CrudFormComponent,
+        data: {
+          breadcrumbs: 'Cluster/Ceph Users/Import',
+          resource: 'api.cluster.user@1.0'
+        }
+      },
+      {
+        path: 'cluster/user/edit',
+        component: CrudFormComponent,
+        data: {
+          breadcrumbs: 'Cluster/Ceph Users/Edit',
+          resource: 'api.cluster.user@1.0'
+        }
+      },
+      {
         path: 'monitor',
         component: MonitorComponent,
         data: { breadcrumbs: 'Cluster/Monitors' }
@@ -126,7 +160,7 @@ const routes: Routes = [
         canActivate: [ModuleStatusGuardService],
         data: {
           moduleStatusGuardConfig: {
-            apiPath: 'orchestrator',
+            uiApiPath: 'orchestrator',
             redirectTo: 'error',
             section: 'orch',
             section_info: 'Orchestrator',
@@ -153,7 +187,7 @@ const routes: Routes = [
         component: InventoryComponent,
         data: {
           moduleStatusGuardConfig: {
-            apiPath: 'orchestrator',
+            uiApiPath: 'orchestrator',
             redirectTo: 'error',
             section: 'orch',
             section_info: 'Orchestrator',
@@ -203,7 +237,7 @@ const routes: Routes = [
       },
       {
         path: 'monitoring',
-        data: { breadcrumbs: 'Cluster/Monitoring' },
+        data: { breadcrumbs: 'Cluster/Alerts' },
         children: [
           { path: '', redirectTo: 'active-alerts', pathMatch: 'full' },
           {
@@ -295,10 +329,10 @@ const routes: Routes = [
       // Object Gateway
       {
         path: 'rgw',
-        canActivateChild: [FeatureTogglesGuardService, ModuleStatusGuardService],
+        canActivate: [FeatureTogglesGuardService, ModuleStatusGuardService],
         data: {
           moduleStatusGuardConfig: {
-            apiPath: 'rgw',
+            uiApiPath: 'rgw',
             redirectTo: 'error',
             section: 'rgw',
             section_info: 'Object Gateway',
@@ -335,7 +369,7 @@ const routes: Routes = [
         canActivateChild: [FeatureTogglesGuardService, ModuleStatusGuardService],
         data: {
           moduleStatusGuardConfig: {
-            apiPath: 'nfs-ganesha',
+            uiApiPath: 'nfs-ganesha',
             redirectTo: 'error',
             section: 'nfs-ganesha',
             section_info: 'NFS GANESHA',

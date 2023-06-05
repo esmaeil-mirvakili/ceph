@@ -20,6 +20,11 @@ describe('when cluster creation is completed', () => {
     createCluster.navigateTo();
     createCluster.createCluster();
 
+    // Explicitly skip OSD Creation Step so that it prevents from
+    // deploying OSDs to the hosts automatically.
+    cy.get('.nav-link').contains('Create OSDs').click();
+    cy.get('button[aria-label="Skip this step"]').click();
+
     cy.get('.nav-link').contains('Review').click();
     cy.get('button[aria-label="Next"]').click();
     cy.get('cd-dashboard').should('exist');
@@ -34,6 +39,16 @@ describe('when cluster creation is completed', () => {
       hosts.navigateTo('add');
       hosts.add(hostnames[3]);
       hosts.checkExist(hostnames[3], true);
+    });
+
+    it('should check if monitoring stacks are running on the root host', { retries: 2 }, () => {
+      const monitoringStack = ['alertmanager', 'grafana', 'node-exporter', 'prometheus'];
+      hosts.clickTab('cd-host-details', 'ceph-node-00', 'Daemons');
+      for (const daemon of monitoringStack) {
+        cy.get('cd-host-details').within(() => {
+          services.checkServiceStatus(daemon);
+        });
+      }
     });
 
     it('should have removed "_no_schedule" label', () => {

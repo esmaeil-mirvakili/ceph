@@ -258,7 +258,7 @@ Commands
   Show the rbd images that are mapped via the rbd kernel module
   (default) or other supported device.
 
-:command:`device map` [-t | --device-type *device-type*] [--cookie *device-cookie*] [--show-cookie] [--read-only] [--exclusive] [-o | --options *device-options*] *image-spec* | *snap-spec*
+:command:`device map` [-t | --device-type *device-type*] [--cookie *device-cookie*] [--show-cookie] [--snap-id *snap-id*] [--read-only] [--exclusive] [-o | --options *device-options*] *image-spec* | *snap-spec*
   Map the specified image to a block device via the rbd kernel module
   (default) or other supported device (*nbd* on Linux or *ggate* on
   FreeBSD).
@@ -266,14 +266,14 @@ Commands
   The --options argument is a comma separated list of device type
   specific options (opt1,opt2=val,...).
 
-:command:`device unmap` [-t | --device-type *device-type*] [-o | --options *device-options*] *image-spec* | *snap-spec* | *device-path*
+:command:`device unmap` [-t | --device-type *device-type*] [-o | --options *device-options*] [--snap-id *snap-id*] *image-spec* | *snap-spec* | *device-path*
   Unmap the block device that was mapped via the rbd kernel module
   (default) or other supported device.
 
   The --options argument is a comma separated list of device type
   specific options (opt1,opt2=val,...).
 
-:command:`device attach` [-t | --device-type *device-type*] --device *device-path* [--cookie *device-cookie*] [--show-cookie] [--read-only] [--exclusive] [--force] [-o | --options *device-options*] *image-spec* | *snap-spec*
+:command:`device attach` [-t | --device-type *device-type*] --device *device-path* [--cookie *device-cookie*] [--show-cookie] [--snap-id *snap-id*] [--read-only] [--exclusive] [--force] [-o | --options *device-options*] *image-spec* | *snap-spec*
   Attach the specified image to the specified block device (currently only
   `nbd` on Linux). This operation is unsafe and should not be normally used.
   In particular, specifying the wrong image or the wrong block device may
@@ -282,7 +282,7 @@ Commands
   The --options argument is a comma separated list of device type
   specific options (opt1,opt2=val,...).
 
-:command:`device detach` [-t | --device-type *device-type*] [-o | --options *device-options*] *image-spec* | *snap-spec* | *device-path*
+:command:`device detach` [-t | --device-type *device-type*] [-o | --options *device-options*] [--snap-id *snap-id*] *image-spec* | *snap-spec* | *device-path*
   Detach the block device that was mapped or attached (currently only `nbd`
   on Linux). This operation is unsafe and should not be normally used.
 
@@ -308,7 +308,6 @@ Commands
 :command:`encryption format` *image-spec* *format* *passphrase-file* [--cipher-alg *alg*]
   Formats image to an encrypted format.
   All data previously written to the image will become unreadable.
-  A cloned image cannot be formatted, although encrypted images can be cloned.
   Supported formats: *luks1*, *luks2*.
   Supported cipher algorithms: *aes-128*, *aes-256* (default).
 
@@ -333,7 +332,7 @@ Commands
   Enable the specified feature on the specified image. Multiple features can
   be specified.
 
-:command:`flatten` *image-spec*
+:command:`flatten` [--encryption-format *encryption-format* --encryption-passphrase-file *passphrase-file*]... *image-spec*
   If image is a clone, copy all shared blocks from the parent snapshot and
   make the child independent of the parent, severing the link between
   parent snap and child.  The parent snapshot can be unprotected and
@@ -464,7 +463,7 @@ Commands
   The first diff could be - for stdin, and merged diff could be - for stdout, which
   enables multiple diff files to be merged using something like
   'rbd merge-diff first second - | rbd merge-diff - third result'. Note this command
-  currently only support the source incremental diff with stripe_count == 1
+  currently only support the source incremental diff with stripe-count == 1
 
 :command:`migration abort` *image-spec*
   Cancel image migration. This step may be run after successful or
@@ -607,7 +606,7 @@ Commands
   Initialize pool for use by RBD. Newly created pools must initialized
   prior to use.
 
-:command:`resize` (-s | --size *size-in-M/G/T*) [--allow-shrink] *image-spec*
+:command:`resize` (-s | --size *size-in-M/G/T*) [--allow-shrink] [--encryption-format *encryption-format* --encryption-passphrase-file *passphrase-file*]... *image-spec*
   Resize rbd image. The size parameter also needs to be specified.
   The --allow-shrink option lets the size be reduced.
   
@@ -732,19 +731,19 @@ The striping is controlled by three parameters:
   The size of objects we stripe over is a power of two. It will be rounded up the nearest power of two.
   The default object size is 4 MB, smallest is 4K and maximum is 32M.
 
-.. option:: stripe_unit
+.. option:: stripe-unit
 
-  Each [*stripe_unit*] contiguous bytes are stored adjacently in the same object, before we move on
+  Each [*stripe-unit*] contiguous bytes are stored adjacently in the same object, before we move on
   to the next object.
 
-.. option:: stripe_count
+.. option:: stripe-count
 
-  After we write [*stripe_unit*] bytes to [*stripe_count*] objects, we loop back to the initial object
+  After we write [*stripe-unit*] bytes to [*stripe-count*] objects, we loop back to the initial object
   and write another stripe, until the object reaches its maximum size.  At that point,
-  we move on to the next [*stripe_count*] objects.
+  we move on to the next [*stripe-count*] objects.
 
-By default, [*stripe_unit*] is the same as the object size and [*stripe_count*] is 1.  Specifying a different
-[*stripe_unit*] and/or [*stripe_count*] is often referred to as using "fancy" striping and requires format 2.
+By default, [*stripe-unit*] is the same as the object size and [*stripe-count*] is 1.  Specifying a different
+[*stripe-unit*] and/or [*stripe-count*] is often referred to as using "fancy" striping and requires format 2.
 
 
 Kernel rbd (krbd) options
@@ -830,7 +829,8 @@ Per mapping (block device) `rbd device map` options:
 * alloc_size - Minimum allocation unit of the underlying OSD object store
   backend (since 5.1, default is 64K bytes).  This is used to round off and
   drop discards that are too small.  For bluestore, the recommended setting is
-  bluestore_min_alloc_size (typically 64K for hard disk drives and 16K for
+  bluestore_min_alloc_size (currently set to 4K for all types of drives,
+  previously used to be set to 64K for hard disk drives and 16K for
   solid-state drives).  For filestore with filestore_punch_hole = false, the
   recommended setting is image object size (typically 4M).
 
@@ -983,7 +983,7 @@ To create an image and a clone from it::
        rbd snap protect mypool/parent@snap
        rbd clone mypool/parent@snap otherpool/child
 
-To create an image with a smaller stripe_unit (to better distribute small writes in some workloads)::
+To create an image with a smaller stripe-unit (to better distribute small writes in some workloads)::
 
        rbd create mypool/myimage --size 102400 --stripe-unit 65536B --stripe-count 16
 

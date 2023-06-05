@@ -31,7 +31,7 @@ if(libblk_srcs)
 endif()
 
 if(HAVE_LIBAIO)
-  target_link_libraries(blk PUBLIC ${AIO_LIBRARIES})
+  target_link_libraries(blk PUBLIC ${AIO_LIBRARIES} extblkdev)
 endif(HAVE_LIBAIO)
 
 if(WITH_SPDK)
@@ -44,8 +44,12 @@ if(WITH_ZBD)
 endif()
 
 if(WITH_BLUESTORE_PMEM)
+  if(HAVE_LIBDML)
+    target_link_libraries(blk PRIVATE dml::dml dml::dmlhl)
+  endif()
+
   target_link_libraries(blk
-    PRIVATE pmem::pmem)
+    PRIVATE pmdk::pmem)
 endif()
 
 if(WITH_EVENTTRACE)

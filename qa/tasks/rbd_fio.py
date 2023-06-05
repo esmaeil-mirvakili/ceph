@@ -87,7 +87,7 @@ def run_rbd_map(remote, image, iodepth):
 def run_fio(remote, config, rbd_test_dir):
     """
     create fio config file with options based on above config
-    get the fio from github, generate binary, and use it to run on
+    get the fio from GitHub, generate binary, and use it to run on
     the generated fio config file
     """
     fio_config=NamedTemporaryFile(mode='w', prefix='fio_rbd_', dir='/tmp/', delete=False)
@@ -123,7 +123,7 @@ def run_fio(remote, config, rbd_test_dir):
 
     formats=[1,2]
     features=[['layering'],['striping'],['exclusive-lock','object-map']]
-    fio_version='3.16'
+    fio_version='3.32'
     if config.get('formats'):
         formats=config['formats']
     if config.get('features'):

@@ -1246,6 +1246,44 @@ test_trash_purge_schedule() {
     ceph osd pool rm rbd2 rbd2 --yes-i-really-really-mean-it
 }
 
+test_trash_purge_schedule_recovery() {
+    echo "testing recovery of trash_purge_schedule handler after module's RADOS client is blocklisted..."
+    remove_images
+    ceph osd pool create rbd3 8
+    rbd pool init rbd3
+    rbd namespace create rbd3/ns1
+
+    rbd trash purge schedule add -p rbd3/ns1 2d
+    rbd trash purge schedule ls -p rbd3 -R | grep 'rbd3 *ns1 *every 2d'
+
+    # Fetch and blocklist the rbd_support module's RADOS client
+    CLIENT_ADDR=$(ceph mgr dump | jq .active_clients[] |
+	jq 'select(.name == "rbd_support")' |
+	jq -r '[.addrvec[0].addr, "/", .addrvec[0].nonce|tostring] | add')
+    ceph osd blocklist add $CLIENT_ADDR
+    ceph osd blocklist ls | grep $CLIENT_ADDR
+
+    # Check that you can add a trash purge schedule after a few retries
+    expect_fail rbd trash purge schedule add -p rbd3 10m
+    sleep 10
+    for i in `seq 24`; do
+        rbd trash purge schedule add -p rbd3 10m && break
+	sleep 10
+    done
+
+    rbd trash purge schedule ls -p rbd3 -R | grep 'every 10m'
+    # Verify that the schedule present before client blocklisting is preserved
+    rbd trash purge schedule ls -p rbd3 -R | grep 'rbd3 *ns1 *every 2d'
+
+    rbd trash purge schedule remove -p rbd3 10m
+    rbd trash purge schedule remove -p rbd3/ns1 2d
+    rbd trash purge schedule ls -p rbd3 -R | expect_fail grep 'every 10m'
+    rbd trash purge schedule ls -p rbd3 -R | expect_fail grep 'rbd3 *ns1 *every 2d'
+
+    ceph osd pool rm rbd3 rbd3 --yes-i-really-really-mean-it
+
+}
+
 test_mirror_snapshot_schedule() {
     echo "testing mirror snapshot schedule..."
     remove_images
@@ -1310,6 +1348,20 @@ test_mirror_snapshot_schedule() {
     test "$(rbd mirror snapshot schedule status -p rbd2/ns1 --image test1 --format xml |
         $XMLSTARLET sel -t -v '//scheduled_images/image/image')" = 'rbd2/ns1/test1'
 
+    rbd mirror image demote rbd2/ns1/test1
+    for i in `seq 12`; do
+        rbd mirror snapshot schedule status | grep 'rbd2/ns1/test1' || break
+        sleep 10
+    done
+    rbd mirror snapshot schedule status | expect_fail grep 'rbd2/ns1/test1'
+
+    rbd mirror image promote rbd2/ns1/test1
+    for i in `seq 12`; do
+        rbd mirror snapshot schedule status | grep 'rbd2/ns1/test1' && break
+        sleep 10
+    done
+    rbd mirror snapshot schedule status | grep 'rbd2/ns1/test1'
+
     rbd mirror snapshot schedule add 1h 00:15
     test "$(rbd mirror snapshot schedule ls)" = 'every 1h starting at 00:15:00'
     rbd mirror snapshot schedule ls -R | grep 'every 1h starting at 00:15:00'
@@ -1331,16 +1383,302 @@ test_mirror_snapshot_schedule() {
     test "$(rbd mirror snapshot schedule ls -p rbd2/ns1 --image test1)" = 'every 1m'
 
     rbd rm rbd2/ns1/test1
-
     for i in `seq 12`; do
         rbd mirror snapshot schedule status | grep 'rbd2/ns1/test1' || break
         sleep 10
     done
+    rbd mirror snapshot schedule status | expect_fail grep 'rbd2/ns1/test1'
 
     rbd mirror snapshot schedule remove
     test "$(rbd mirror snapshot schedule ls -R --format json)" = "[]"
 
     remove_images
+    ceph osd pool rm rbd2 rbd2 --yes-i-really-really-mean-it
+}
+
+test_mirror_snapshot_schedule_recovery() {
+    echo "testing recovery of mirror snapshot scheduler after module's RADOS client is blocklisted..."
+    remove_images
+    ceph osd pool create rbd3 8
+    rbd pool init rbd3
+    rbd namespace create rbd3/ns1
+
+    rbd mirror pool enable rbd3 image
+    rbd mirror pool enable rbd3/ns1 image
+    rbd mirror pool peer add rbd3 cluster1
+
+    rbd create $RBD_CREATE_ARGS -s 1 rbd3/ns1/test1
+    rbd mirror image enable rbd3/ns1/test1 snapshot
+    test "$(rbd mirror image status rbd3/ns1/test1 |
+        grep -c mirror.primary)" = '1'
+
+    rbd mirror snapshot schedule add -p rbd3/ns1 --image test1 1m
+    test "$(rbd mirror snapshot schedule ls -p rbd3/ns1 --image test1)" = 'every 1m'
+
+    # Fetch and blocklist rbd_support module's RADOS client
+    CLIENT_ADDR=$(ceph mgr dump | jq .active_clients[] |
+	jq 'select(.name == "rbd_support")' |
+	jq -r '[.addrvec[0].addr, "/", .addrvec[0].nonce|tostring] | add')
+    ceph osd blocklist add $CLIENT_ADDR
+    ceph osd blocklist ls | grep $CLIENT_ADDR
+
+    # Check that you can add a mirror snapshot schedule after a few retries
+    expect_fail rbd mirror snapshot schedule add -p rbd3/ns1 --image test1 2m
+    sleep 10
+    for i in `seq 24`; do
+        rbd mirror snapshot schedule add -p rbd3/ns1 --image test1 2m && break
+	sleep 10
+    done
+
+    rbd mirror snapshot schedule ls -p rbd3/ns1 --image test1 | grep 'every 2m'
+    # Verify that the schedule present before client blocklisting is preserved
+    rbd mirror snapshot schedule ls -p rbd3/ns1 --image test1 | grep 'every 1m'
+
+    rbd mirror snapshot schedule rm -p rbd3/ns1 --image test1 2m
+    rbd mirror snapshot schedule rm -p rbd3/ns1 --image test1 1m
+    rbd mirror snapshot schedule ls -p rbd3/ns1 --image test1 | expect_fail grep 'every 2m'
+    rbd mirror snapshot schedule ls -p rbd3/ns1 --image test1 | expect_fail grep 'every 1m'
+
+    rbd snap purge rbd3/ns1/test1
+    rbd rm rbd3/ns1/test1
+    ceph osd pool rm rbd3 rbd3 --yes-i-really-really-mean-it
+}
+
+test_perf_image_iostat() {
+    echo "testing perf image iostat..."
+    remove_images
+
+    ceph osd pool create rbd1 8
+    rbd pool init rbd1
+    rbd namespace create rbd1/ns
+    ceph osd pool create rbd2 8
+    rbd pool init rbd2
+    rbd namespace create rbd2/ns
+
+    IMAGE_SPECS=("test1" "rbd1/test2" "rbd1/ns/test3" "rbd2/test4" "rbd2/ns/test5")
+    for spec in "${IMAGE_SPECS[@]}"; do
+        # ensure all images are created without a separate data pool
+        # as we filter iostat by specific pool specs below
+        rbd create $RBD_CREATE_ARGS --size 10G --rbd-default-data-pool '' $spec
+    done
+
+    BENCH_PIDS=()
+    for spec in "${IMAGE_SPECS[@]}"; do
+        rbd bench --io-type write --io-pattern rand --io-total 10G --io-threads 1 \
+            --rbd-cache false $spec >/dev/null 2>&1 &
+        BENCH_PIDS+=($!)
+    done
+
+    # test specifying pool spec via spec syntax
+    test "$(rbd perf image iostat --format json rbd1 |
+        jq -r 'map(.image) | sort | join(" ")')" = 'test2'
+    test "$(rbd perf image iostat --format json rbd1/ns |
+        jq -r 'map(.image) | sort | join(" ")')" = 'test3'
+    test "$(rbd perf image iostat --format json --rbd-default-pool rbd1 /ns |
+        jq -r 'map(.image) | sort | join(" ")')" = 'test3'
+
+    # test specifying pool spec via options
+    test "$(rbd perf image iostat --format json --pool rbd2 |
+        jq -r 'map(.image) | sort | join(" ")')" = 'test4'
+    test "$(rbd perf image iostat --format json --pool rbd2 --namespace ns |
+        jq -r 'map(.image) | sort | join(" ")')" = 'test5'
+    test "$(rbd perf image iostat --format json --rbd-default-pool rbd2 --namespace ns |
+        jq -r 'map(.image) | sort | join(" ")')" = 'test5'
+
+    # test omitting pool spec (-> GLOBAL_POOL_KEY)
+    test "$(rbd perf image iostat --format json |
+        jq -r 'map(.image) | sort | join(" ")')" = 'test1 test2 test3 test4 test5'
+
+    for pid in "${BENCH_PIDS[@]}"; do
+        kill $pid
+    done
+    wait
+
+    remove_images
+    ceph osd pool rm rbd2 rbd2 --yes-i-really-really-mean-it
+    ceph osd pool rm rbd1 rbd1 --yes-i-really-really-mean-it
+}
+
+test_perf_image_iostat_recovery() {
+    echo "testing recovery of perf handler after module's RADOS client is blocklisted..."
+    remove_images
+
+    ceph osd pool create rbd3 8
+    rbd pool init rbd3
+    rbd namespace create rbd3/ns
+
+    IMAGE_SPECS=("rbd3/test1" "rbd3/ns/test2")
+    for spec in "${IMAGE_SPECS[@]}"; do
+        # ensure all images are created without a separate data pool
+        # as we filter iostat by specific pool specs below
+        rbd create $RBD_CREATE_ARGS --size 10G --rbd-default-data-pool '' $spec
+    done
+
+    BENCH_PIDS=()
+    for spec in "${IMAGE_SPECS[@]}"; do
+        rbd bench --io-type write --io-pattern rand --io-total 10G --io-threads 1 \
+            --rbd-cache false $spec >/dev/null 2>&1 &
+        BENCH_PIDS+=($!)
+    done
+
+    test "$(rbd perf image iostat --format json rbd3 |
+        jq -r 'map(.image) | sort | join(" ")')" = 'test1'
+
+    # Fetch and blocklist the rbd_support module's RADOS client
+    CLIENT_ADDR=$(ceph mgr dump | jq .active_clients[] |
+	jq 'select(.name == "rbd_support")' |
+	jq -r '[.addrvec[0].addr, "/", .addrvec[0].nonce|tostring] | add')
+    ceph osd blocklist add $CLIENT_ADDR
+    ceph osd blocklist ls | grep $CLIENT_ADDR
+
+    expect_fail rbd perf image iostat --format json rbd3/ns
+    sleep 10
+    for i in `seq 24`; do
+        test "$(rbd perf image iostat --format json rbd3/ns |
+            jq -r 'map(.image) | sort | join(" ")')" = 'test2' && break
+	sleep 10
+    done
+
+    for pid in "${BENCH_PIDS[@]}"; do
+        kill $pid
+    done
+    wait
+
+    remove_images
+    ceph osd pool rm rbd3 rbd3 --yes-i-really-really-mean-it
+}
+
+test_mirror_pool_peer_bootstrap_create() {
+    echo "testing mirror pool peer bootstrap create..."
+    remove_images
+
+    ceph osd pool create rbd1 8
+    rbd pool init rbd1
+    rbd mirror pool enable rbd1 image
+    ceph osd pool create rbd2 8
+    rbd pool init rbd2
+    rbd mirror pool enable rbd2 pool
+
+    readarray -t MON_ADDRS < <(ceph mon dump |
+        sed -n 's/^[0-9]: \(.*\) mon\.[a-z]$/\1/p')
+
+    # check that all monitors make it to the token even if only one
+    # valid monitor is specified
+    BAD_MON_ADDR="1.2.3.4:6789"
+    MON_HOST="${MON_ADDRS[0]},$BAD_MON_ADDR"
+    TOKEN="$(rbd mirror pool peer bootstrap create \
+        --mon-host "$MON_HOST" rbd1 | base64 -d)"
+    TOKEN_FSID="$(jq -r '.fsid' <<< "$TOKEN")"
+    TOKEN_CLIENT_ID="$(jq -r '.client_id' <<< "$TOKEN")"
+    TOKEN_KEY="$(jq -r '.key' <<< "$TOKEN")"
+    TOKEN_MON_HOST="$(jq -r '.mon_host' <<< "$TOKEN")"
+
+    test "$TOKEN_FSID" = "$(ceph fsid)"
+    test "$TOKEN_KEY" = "$(ceph auth get-key client.$TOKEN_CLIENT_ID)"
+    for addr in "${MON_ADDRS[@]}"; do
+        fgrep "$addr" <<< "$TOKEN_MON_HOST"
+    done
+    expect_fail fgrep "$BAD_MON_ADDR" <<< "$TOKEN_MON_HOST"
+
+    # check that the token does not change, including across pools
+    test "$(rbd mirror pool peer bootstrap create \
+        --mon-host "$MON_HOST" rbd1 | base64 -d)" = "$TOKEN"
+    test "$(rbd mirror pool peer bootstrap create \
+        rbd1 | base64 -d)" = "$TOKEN"
+    test "$(rbd mirror pool peer bootstrap create \
+        --mon-host "$MON_HOST" rbd2 | base64 -d)" = "$TOKEN"
+    test "$(rbd mirror pool peer bootstrap create \
+        rbd2 | base64 -d)" = "$TOKEN"
+
+    ceph osd pool rm rbd2 rbd2 --yes-i-really-really-mean-it
+    ceph osd pool rm rbd1 rbd1 --yes-i-really-really-mean-it
+}
+
+test_tasks_removed_pool() {
+    echo "testing removing pool under running tasks..."
+    remove_images
+
+    ceph osd pool create rbd2 8
+    rbd pool init rbd2
+
+    rbd create $RBD_CREATE_ARGS --size 1G foo
+    rbd snap create foo@snap
+    rbd snap protect foo@snap
+    rbd clone foo@snap bar
+
+    rbd create $RBD_CREATE_ARGS --size 1G rbd2/dummy
+    rbd bench --io-type write --io-pattern seq --io-size 1M --io-total 1G rbd2/dummy
+    rbd snap create rbd2/dummy@snap
+    rbd snap protect rbd2/dummy@snap
+    for i in {1..5}; do
+        rbd clone rbd2/dummy@snap rbd2/dummy$i
+    done
+
+    # queue flattens on a few dummy images and remove that pool
+    test "$(ceph rbd task list)" = "[]"
+    for i in {1..5}; do
+        ceph rbd task add flatten rbd2/dummy$i
+    done
+    ceph osd pool delete rbd2 rbd2 --yes-i-really-really-mean-it
+    test "$(ceph rbd task list)" != "[]"
+
+    # queue flatten on another image and check that it completes
+    rbd info bar | grep 'parent: '
+    expect_fail rbd snap unprotect foo@snap
+    ceph rbd task add flatten bar
+    for i in {1..12}; do
+        rbd info bar | grep 'parent: ' || break
+        sleep 10
+    done
+    rbd info bar | expect_fail grep 'parent: '
+    rbd snap unprotect foo@snap
+
+    # check that flattens disrupted by pool removal are cleaned up
+    for i in {1..12}; do
+        test "$(ceph rbd task list)" = "[]" && break
+        sleep 10
+    done
+    test "$(ceph rbd task list)" = "[]"
+
+    remove_images
+}
+
+test_tasks_recovery() {
+    echo "testing task handler recovery after module's RADOS client is blocklisted..."
+    remove_images
+
+    ceph osd pool create rbd2 8
+    rbd pool init rbd2
+
+    rbd create $RBD_CREATE_ARGS --size 1G rbd2/img1
+    rbd bench --io-type write --io-pattern seq --io-size 1M --io-total 1G rbd2/img1
+    rbd snap create rbd2/img1@snap
+    rbd snap protect rbd2/img1@snap
+    rbd clone rbd2/img1@snap rbd2/clone1
+
+    # Fetch and blocklist rbd_support module's RADOS client
+    CLIENT_ADDR=$(ceph mgr dump | jq .active_clients[] |
+	jq 'select(.name == "rbd_support")' |
+	jq -r '[.addrvec[0].addr, "/", .addrvec[0].nonce|tostring] | add')
+    ceph osd blocklist add $CLIENT_ADDR
+    ceph osd blocklist ls | grep $CLIENT_ADDR
+
+    expect_fail ceph rbd task add flatten rbd2/clone1
+    sleep 10
+    for i in `seq 24`; do
+       ceph rbd task add flatten rbd2/clone1 && break
+       sleep 10
+    done
+    test "$(ceph rbd task list)" != "[]"
+
+    for i in {1..12}; do
+        rbd info rbd2/clone1 | grep 'parent: ' || break
+        sleep 10
+    done
+    rbd info rbd2/clone1 | expect_fail grep 'parent: '
+    rbd snap unprotect rbd2/img1@snap
+
+    test "$(ceph rbd task list)" = "[]"
     ceph osd pool rm rbd2 rbd2 --yes-i-really-really-mean-it
 }
 
@@ -1365,6 +1703,13 @@ test_clone_v2
 test_thick_provision
 test_namespace
 test_trash_purge_schedule
+test_trash_purge_schedule_recovery
 test_mirror_snapshot_schedule
+test_mirror_snapshot_schedule_recovery
+test_perf_image_iostat
+test_perf_image_iostat_recovery
+test_mirror_pool_peer_bootstrap_create
+test_tasks_removed_pool
+test_tasks_recovery
 
 echo OK

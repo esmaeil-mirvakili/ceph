@@ -785,6 +785,17 @@ def get_device_vgs(device, name_prefix=''):
     return [VolumeGroup(**vg) for vg in vgs if vg['vg_name'] and vg['vg_name'].startswith(name_prefix)]
 
 
+def get_all_devices_vgs(name_prefix=''):
+    vg_fields = f'pv_name,{VG_FIELDS}'
+    cmd = ['pvs'] + VG_CMD_OPTIONS + ['-o', vg_fields]
+    stdout, stderr, returncode = process.call(
+        cmd,
+        run_on_host=True,
+        verbose_on_failure=False
+    )
+    vgs = _output_parser(stdout, vg_fields)
+    return [VolumeGroup(**vg) for vg in vgs if vg['vg_name']]
+
 #################################
 #
 # Code for LVM Logical Volumes
@@ -1007,7 +1018,6 @@ def create_lv(name_prefix,
     # be so this function will set it after creation using the mapping
     # XXX add CEPH_VOLUME_LVM_DEBUG to enable -vvvv on lv operations
     type_path_tag = {
-        'journal': 'ceph.journal_device',
         'data': 'ceph.data_device',
         'block': 'ceph.block_device',
         'wal': 'ceph.wal_device',

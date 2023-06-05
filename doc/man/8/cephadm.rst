@@ -19,7 +19,7 @@ Synopsis
 
 | **cephadm** **pull**
 
-| **cephadm** **inspect-image**
+| **cephadm** --image IMAGE_NAME **inspect-image**
 
 | **cephadm** **ls** [-h] [--no-detail] [--legacy-dir LEGACY_DIR]
 
@@ -194,6 +194,17 @@ Arguments:
 * [--skip-firewalld]           Do not configure firewalld
 * [--skip-pull]                do not pull the latest image before adopting
 
+Configuration:
+
+When starting the shell, cephadm looks for configuration in the following order.
+Only the first values found are used:
+
+1. An explicit, user provided path to a config file (``-c/--config`` option)
+2. Config file for daemon specified with ``--name`` parameter (``/var/lib/ceph/<fsid>/<daemon-name>/config``)
+3. ``/var/lib/ceph/<fsid>/config/ceph.conf`` if it exists
+4. The config file for a ``mon`` daemon (``/var/lib/ceph/<fsid>/mon.<mon-id>/config``) if it exists
+5. Finally: fallback to the default file ``/etc/ceph/ceph.conf``
+
 
 bootstrap
 ---------
@@ -258,7 +269,7 @@ Positional arguments:
 Arguments:
 
 * [--fsid FSID]                    cluster FSID
-* [--config-json CONFIG_JSON]      JSON file with config and (client.bootrap-osd) key
+* [--config-json CONFIG_JSON]      JSON file with config and (client.bootstrap-osd) key
 * [--config CONFIG, -c CONFIG]     ceph conf file
 * [--keyring KEYRING, -k KEYRING]  ceph.keyring to pass through to the container
 
@@ -323,7 +334,10 @@ Positional arguments:
 inspect-image
 -------------
 
-inspect local ceph container image.
+Inspect local Ceph container image. From Reef onward, requires specifying
+the image to inspect with ``--image``::
+
+    cephadm --image IMAGE_NAME inspect-image
 
 list-networks
 -------------

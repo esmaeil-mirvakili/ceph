@@ -2,24 +2,25 @@
 
 import json
 import logging
+from typing import Any, Dict, List, NamedTuple, Optional, Union
 
 import cherrypy
 
+from .. import mgr
 from ..exceptions import DashboardException
 from ..rest_client import RequestException
 from ..security import Permission, Scope
 from ..services.auth import AuthManager, JwtManager
 from ..services.ceph_service import CephService
+from ..services.orchestrator import OrchClient
 from ..services.rgw_client import NoRgwDaemonsException, RgwClient
 from ..tools import json_str_to_object, str_to_bool
-from . import APIDoc, APIRouter, BaseController, Endpoint, EndpointDoc, \
-    ReadPermission, RESTController, allow_empty_body
+from . import APIDoc, APIRouter, BaseController, CreatePermission, \
+    CRUDCollectionMethod, CRUDEndpoint, Endpoint, EndpointDoc, ReadPermission, \
+    RESTController, UIRouter, allow_empty_body
+from ._crud import CRUDMeta, Form, FormField, FormTaskInfo, Icon, TableAction, \
+    Validator, VerticalContainer
 from ._version import APIVersion
-
-try:
-    from typing import Any, Dict, List, Optional, Union
-except ImportError:  # pragma: no cover
-    pass  # Just for type checking
 
 logger = logging.getLogger("controllers.rgw")
 
@@ -33,7 +34,8 @@ RGW_DAEMON_SCHEMA = {
     "version": (str, "Ceph Version"),
     "server_hostname": (str, ""),
     "zonegroup_name": (str, "Zone Group"),
-    "zone_name": (str, "Zone")
+    "zone_name": (str, "Zone"),
+    "port": (int, "Port"),
 }
 
 RGW_USER_SCHEMA = {
@@ -41,7 +43,7 @@ RGW_USER_SCHEMA = {
 }
 
 
-@APIRouter('/rgw', Scope.RGW)
+@UIRouter('/rgw', Scope.RGW)
 @APIDoc("RGW Management API", "Rgw")
 class Rgw(BaseController):
     @Endpoint()
@@ -79,6 +81,53 @@ class Rgw(BaseController):
         return status
 
 
+@UIRouter('/rgw/multisite')
+class RgwStatus(BaseController):
+    @Endpoint()
+    @ReadPermission
+    # pylint: disable=R0801
+    def status(self):
+        status = {'available': True, 'message': None}
+        try:
+            instance = RgwClient.admin_instance()
+            is_multisite_configured = instance.get_multisite_status()
+            if not is_multisite_configured:
+                status['available'] = False
+                status['message'] = 'Multi-site provides disaster recovery and may also \
+                    serve as a foundation for content delivery networks'  # type: ignore
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+        return status
+
+    @Endpoint()
+    @ReadPermission
+    # pylint: disable=R0801
+    def sync_status(self):
+        try:
+            instance = RgwClient.admin_instance()
+            result = instance.get_multisite_sync_status()
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')  # noqa: E501 pylint: disable=line-too-long
+        return result
+
+    @Endpoint(method='PUT')
+    # pylint: disable=W0102
+    def migrate(self, realm_name=None, zonegroup_name=None, zone_name=None,
+                zonegroup_endpoints: List[str] = [], zone_endpoints: List[str] = [],
+                user=None, daemon_name: Optional[str] = None):
+        try:
+            instance = RgwClient.admin_instance(daemon_name=daemon_name)
+            result = instance.migrate_to_multisite(realm_name, zonegroup_name, zone_name,
+                                                   zonegroup_endpoints, zone_endpoints, user)
+            orch = OrchClient.instance()
+            daemons = orch.services.list_daemons(service_name='rgw')
+            for daemon in daemons:
+                orch.daemons.action(action='reload', daemon_name=daemon.daemon_id)
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+        return result
+
+
 @APIRouter('/rgw/daemon', Scope.RGW)
 @APIDoc("RGW Daemon Management API", "RgwDaemon")
 class RgwDaemon(RESTController):
@@ -104,7 +153,8 @@ class RgwDaemon(RESTController):
                     'realm_name': metadata['realm_name'],
                     'zonegroup_name': metadata['zonegroup_name'],
                     'zone_name': metadata['zone_name'],
-                    'default': instance.daemon.name == metadata['id']
+                    'default': instance.daemon.name == metadata['id'],
+                    'port': int(metadata['frontend_config#0'].split('port=')[1])
                 }
 
                 daemons.append(daemon)
@@ -197,6 +247,28 @@ class RgwBucket(RgwRESTController):
             rgw_client.set_bucket_versioning(bucket_name, versioning_state, mfa_delete,
                                              mfa_token_serial, mfa_token_pin)
 
+    def _set_encryption(self, bid, encryption_type, key_id, daemon_name, owner):
+
+        rgw_client = RgwClient.instance(owner, daemon_name)
+        rgw_client.set_bucket_encryption(bid, key_id, encryption_type)
+
+    # pylint: disable=W0613
+    def _set_encryption_config(self, encryption_type, kms_provider, auth_method, secret_engine,
+                               secret_path, namespace, address, token, daemon_name, owner,
+                               ssl_cert, client_cert, client_key):
+
+        CephService.set_encryption_config(encryption_type, kms_provider, auth_method,
+                                          secret_engine, secret_path, namespace, address,
+                                          token, daemon_name, ssl_cert, client_cert, client_key)
+
+    def _get_encryption(self, bucket_name, daemon_name, owner):
+        rgw_client = RgwClient.instance(owner, daemon_name)
+        return rgw_client.get_bucket_encryption(bucket_name)
+
+    def _delete_encryption(self, bucket_name, daemon_name, owner):
+        rgw_client = RgwClient.instance(owner, daemon_name)
+        return rgw_client.delete_bucket_encryption(bucket_name)
+
     def _get_locking(self, owner, daemon_name, bucket_name):
         rgw_client = RgwClient.instance(owner, daemon_name)
         return rgw_client.get_bucket_locking(bucket_name)
@@ -256,6 +328,8 @@ class RgwBucket(RgwRESTController):
 
         # Append the versioning configuration.
         versioning = self._get_versioning(result['owner'], daemon_name, bucket_name)
+        encryption = self._get_encryption(bucket_name, daemon_name, result['owner'])
+        result['encryption'] = encryption['Status']
         result['versioning'] = versioning['Status']
         result['mfa_delete'] = versioning['MfaDelete']
 
@@ -269,8 +343,10 @@ class RgwBucket(RgwRESTController):
     def create(self, bucket, uid, zonegroup=None, placement_target=None,
                lock_enabled='false', lock_mode=None,
                lock_retention_period_days=None,
-               lock_retention_period_years=None, daemon_name=None):
+               lock_retention_period_years=None, encryption_state='false',
+               encryption_type=None, key_id=None, daemon_name=None):
         lock_enabled = str_to_bool(lock_enabled)
+        encryption_state = str_to_bool(encryption_state)
         try:
             rgw_client = RgwClient.instance(uid, daemon_name)
             result = rgw_client.create_bucket(bucket, zonegroup,
@@ -280,15 +356,21 @@ class RgwBucket(RgwRESTController):
                 self._set_locking(uid, daemon_name, bucket, lock_mode,
                                   lock_retention_period_days,
                                   lock_retention_period_years)
+
+            if encryption_state:
+                self._set_encryption(bucket, encryption_type, key_id, daemon_name, uid)
+
             return result
         except RequestException as e:  # pragma: no cover - handling is too obvious
             raise DashboardException(e, http_status_code=500, component='rgw')
 
     @allow_empty_body
     def set(self, bucket, bucket_id, uid, versioning_state=None,
+            encryption_state='false', encryption_type=None, key_id=None,
             mfa_delete=None, mfa_token_serial=None, mfa_token_pin=None,
             lock_mode=None, lock_retention_period_days=None,
             lock_retention_period_years=None, daemon_name=None):
+        encryption_state = str_to_bool(encryption_state)
         # When linking a non-tenant-user owned bucket to a tenanted user, we
         # need to prefix bucket name with '/'. e.g. photos -> /photos
         if '$' in uid and '/' not in bucket:
@@ -322,6 +404,11 @@ class RgwBucket(RgwRESTController):
                               lock_retention_period_days,
                               lock_retention_period_years)
 
+        encryption_status = self._get_encryption(bucket_name, daemon_name, uid)
+        if encryption_state and encryption_status['Status'] != 'Enabled':
+            self._set_encryption(bucket_name, encryption_type, key_id, daemon_name, uid)
+        if encryption_status['Status'] == 'Enabled' and (not encryption_state):
+            self._delete_encryption(bucket_name, daemon_name, uid)
         return self._append_bid(result)
 
     def delete(self, bucket, purge_objects='true', daemon_name=None):
@@ -329,6 +416,32 @@ class RgwBucket(RgwRESTController):
             'bucket': bucket,
             'purge-objects': purge_objects
         }, json_response=False)
+
+    @RESTController.Collection(method='PUT', path='/setEncryptionConfig')
+    @allow_empty_body
+    def set_encryption_config(self, encryption_type=None, kms_provider=None, auth_method=None,
+                              secret_engine=None, secret_path='', namespace='', address=None,
+                              token=None, daemon_name=None, owner=None, ssl_cert=None,
+                              client_cert=None, client_key=None):
+        return self._set_encryption_config(encryption_type, kms_provider, auth_method,
+                                           secret_engine, secret_path, namespace,
+                                           address, token, daemon_name, owner, ssl_cert,
+                                           client_cert, client_key)
+
+    @RESTController.Collection(method='GET', path='/getEncryption')
+    @allow_empty_body
+    def get_encryption(self, bucket_name, daemon_name=None, owner=None):
+        return self._get_encryption(bucket_name, daemon_name, owner)
+
+    @RESTController.Collection(method='DELETE', path='/deleteEncryption')
+    @allow_empty_body
+    def delete_encryption(self, bucket_name, daemon_name=None, owner=None):
+        return self._delete_encryption(bucket_name, daemon_name, owner)
+
+    @RESTController.Collection(method='GET', path='/getEncryptionConfig')
+    @allow_empty_body
+    def get_encryption_config(self, daemon_name=None, owner=None):
+        return CephService.get_encryption_config(daemon_name)
 
 
 @APIRouter('/rgw/user', Scope.RGW)
@@ -506,15 +619,32 @@ class RgwUser(RgwRESTController):
     def create_subuser(self, uid, subuser, access, key_type='s3',
                        generate_secret='true', access_key=None,
                        secret_key=None, daemon_name=None):
-        return self.proxy(daemon_name, 'PUT', 'user', {
-            'uid': uid,
-            'subuser': subuser,
-            'key-type': key_type,
-            'access': access,
-            'generate-secret': generate_secret,
-            'access-key': access_key,
-            'secret-key': secret_key
-        })
+        # pylint: disable=R1705
+        subusr_array = []
+        user = json.loads(self.get(uid, daemon_name))  # type: ignore
+        subusers = user["subusers"]
+        for sub_usr in subusers:
+            subusr_array.append(sub_usr["id"])
+        if subuser in subusr_array:
+            return self.proxy(daemon_name, 'POST', 'user', {
+                'uid': uid,
+                'subuser': subuser,
+                'key-type': key_type,
+                'access': access,
+                'generate-secret': generate_secret,
+                'access-key': access_key,
+                'secret-key': secret_key
+            })
+        else:
+            return self.proxy(daemon_name, 'PUT', 'user', {
+                'uid': uid,
+                'subuser': subuser,
+                'key-type': key_type,
+                'access': access,
+                'generate-secret': generate_secret,
+                'access-key': access_key,
+                'secret-key': secret_key
+            })
 
     @RESTController.Resource(method='DELETE', path='/subuser/{subuser}', status=204)
     def delete_subuser(self, uid, subuser, purge_keys='true', daemon_name=None):
@@ -527,3 +657,311 @@ class RgwUser(RgwRESTController):
             'subuser': subuser,
             'purge-keys': purge_keys
         }, json_response=False)
+
+
+class RGWRoleEndpoints:
+    @staticmethod
+    def role_list(_):
+        rgw_client = RgwClient.admin_instance()
+        roles = rgw_client.list_roles()
+        return roles
+
+    @staticmethod
+    def role_create(_, role_name: str = '', role_path: str = '', role_assume_policy_doc: str = ''):
+        assert role_name
+        assert role_path
+        rgw_client = RgwClient.admin_instance()
+        rgw_client.create_role(role_name, role_path, role_assume_policy_doc)
+        return f'Role {role_name} created successfully'
+
+
+# pylint: disable=C0301
+assume_role_policy_help = (
+    'Paste a json assume role policy document, to find more information on how to get this document, <a '  # noqa: E501
+    'href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-role.html#cfn-iam-role-assumerolepolicydocument"'  # noqa: E501
+    'target="_blank">click here.</a>'
+)
+
+create_container = VerticalContainer('Create Role', 'create_role', fields=[
+    FormField('Role name', 'role_name', validators=[Validator.RGW_ROLE_NAME]),
+    FormField('Path', 'role_path', validators=[Validator.RGW_ROLE_PATH]),
+    FormField('Assume Role Policy Document',
+              'role_assume_policy_doc',
+              help=assume_role_policy_help,
+              field_type='textarea',
+              validators=[Validator.JSON]),
+])
+create_role_form = Form(path='/rgw/user/roles/create',
+                        root_container=create_container,
+                        task_info=FormTaskInfo("IAM RGW Role '{role_name}' created successfully",
+                                               ['role_name']))
+
+
+@CRUDEndpoint(
+    router=APIRouter('/rgw/user/roles', Scope.RGW),
+    doc=APIDoc("List of RGW roles", "RGW"),
+    actions=[
+        TableAction(name='Create', permission='create', icon=Icon.ADD.value,
+                    routerLink='/rgw/user/roles/create')
+    ],
+    forms=[create_role_form],
+    permissions=[Scope.CONFIG_OPT],
+    get_all=CRUDCollectionMethod(
+        func=RGWRoleEndpoints.role_list,
+        doc=EndpointDoc("List RGW roles")
+    ),
+    create=CRUDCollectionMethod(
+        func=RGWRoleEndpoints.role_create,
+        doc=EndpointDoc("Create Ceph User")
+    ),
+    set_column={
+        "CreateDate": {'cellTemplate': 'date'},
+        "MaxSessionDuration": {'cellTemplate': 'duration'},
+        "RoleId": {'isHidden': True},
+        "AssumeRolePolicyDocument": {'isHidden': True}
+    },
+    detail_columns=['RoleId', 'AssumeRolePolicyDocument'],
+    meta=CRUDMeta()
+)
+class RgwUserRole(NamedTuple):
+    RoleId: int
+    RoleName: str
+    Path: str
+    Arn: str
+    CreateDate: str
+    MaxSessionDuration: int
+    AssumeRolePolicyDocument: str
+
+
+@APIRouter('/rgw/realm', Scope.RGW)
+class RgwRealm(RESTController):
+    @allow_empty_body
+    # pylint: disable=W0613
+    def create(self, realm_name, default, daemon_name=None):
+        try:
+            instance = RgwClient.admin_instance(daemon_name=daemon_name)
+            result = instance.create_realm(realm_name, default)
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+
+    @allow_empty_body
+    # pylint: disable=W0613
+    def list(self, daemon_name=None):
+        try:
+            instance = RgwClient.admin_instance(daemon_name=daemon_name)
+            result = instance.list_realms()
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+
+    @allow_empty_body
+    # pylint: disable=W0613
+    def get(self, realm_name, daemon_name=None):
+        try:
+            instance = RgwClient.admin_instance(daemon_name=daemon_name)
+            result = instance.get_realm(realm_name)
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+
+    @Endpoint()
+    @ReadPermission
+    def get_all_realms_info(self):
+        try:
+            instance = RgwClient.admin_instance()
+            result = instance.get_all_realms_info()
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+
+    @allow_empty_body
+    # pylint: disable=W0613
+    def set(self, realm_name: str, new_realm_name: str, default: str = '', daemon_name=None):
+        try:
+            instance = RgwClient.admin_instance(daemon_name=daemon_name)
+            result = instance.edit_realm(realm_name, new_realm_name, default)
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+
+    def delete(self, realm_name, daemon_name=None):
+        try:
+            instance = RgwClient.admin_instance(daemon_name)
+            result = instance.delete_realm(realm_name)
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+
+
+@APIRouter('/rgw/zonegroup', Scope.RGW)
+class RgwZonegroup(RESTController):
+    @allow_empty_body
+    # pylint: disable=W0613
+    def create(self, realm_name, zonegroup_name, default=None, master=None,
+               zonegroup_endpoints=None, daemon_name=None):
+        try:
+            instance = RgwClient.admin_instance(daemon_name=daemon_name)
+            result = instance.create_zonegroup(realm_name, zonegroup_name, default,
+                                               master, zonegroup_endpoints)
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+
+    @allow_empty_body
+    # pylint: disable=W0613
+    def list(self, daemon_name=None):
+        try:
+            instance = RgwClient.admin_instance(daemon_name=daemon_name)
+            result = instance.list_zonegroups()
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+
+    @allow_empty_body
+    # pylint: disable=W0613
+    def get(self, zonegroup_name, daemon_name=None):
+        try:
+            instance = RgwClient.admin_instance(daemon_name=daemon_name)
+            result = instance.get_zonegroup(zonegroup_name)
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+
+    @Endpoint()
+    @ReadPermission
+    def get_all_zonegroups_info(self):
+        try:
+            instance = RgwClient.admin_instance()
+            result = instance.get_all_zonegroups_info()
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+
+    def delete(self, zonegroup_name, delete_pools, daemon_name=None):
+        try:
+            instance = RgwClient.admin_instance(daemon_name)
+            result = instance.delete_zonegroup(zonegroup_name, delete_pools)
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+
+    @allow_empty_body
+    # pylint: disable=W0613,W0102
+    def set(self, zonegroup_name: str, realm_name: str, new_zonegroup_name: str, default: str = '',
+            master: str = '', zonegroup_endpoints: List[str] = [], add_zones: List[str] = [],
+            remove_zones: List[str] = [], placement_targets: List[Dict[str, str]] = [],
+            daemon_name=None):
+        try:
+            instance = RgwClient.admin_instance()
+            result = instance.edit_zonegroup(realm_name, zonegroup_name, new_zonegroup_name,
+                                             default, master, zonegroup_endpoints, add_zones,
+                                             remove_zones, placement_targets)
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+
+
+@APIRouter('/rgw/zone', Scope.RGW)
+class RgwZone(RESTController):
+    @allow_empty_body
+    # pylint: disable=W0613
+    def create(self, zone_name, zonegroup_name=None, default=False, master=False,
+               zone_endpoints=None, user=None, createSystemUser=False, daemon_name=None,
+               master_zone_of_master_zonegroup=None):
+        try:
+            instance = RgwClient.admin_instance(daemon_name=daemon_name)
+            result = instance.create_zone(zone_name, zonegroup_name, default,
+                                          master, zone_endpoints, user, createSystemUser,
+                                          master_zone_of_master_zonegroup)
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+
+    @allow_empty_body
+    # pylint: disable=W0613
+    def list(self, daemon_name=None):
+        try:
+            instance = RgwClient.admin_instance(daemon_name=daemon_name)
+            result = instance.list_zones()
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+
+    @allow_empty_body
+    # pylint: disable=W0613
+    def get(self, zone_name, daemon_name=None):
+        try:
+            instance = RgwClient.admin_instance(daemon_name=daemon_name)
+            result = instance.get_zone(zone_name)
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+
+    @Endpoint()
+    @ReadPermission
+    def get_all_zones_info(self):
+        try:
+            instance = RgwClient.admin_instance()
+            result = instance.get_all_zones_info()
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+
+    def delete(self, zonegroup_name, zone_name, delete_pools, daemon_name=None):
+        try:
+            instance = RgwClient.admin_instance(daemon_name)
+            result = instance.delete_zone(zonegroup_name, zone_name, delete_pools)
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+
+    @allow_empty_body
+    # pylint: disable=W0613,W0102
+    def set(self, zone_name: str, new_zone_name: str, zonegroup_name: str, default: str = '',
+            master: str = '', zone_endpoints: List[str] = [], user: str = '',
+            placement_target: str = '', data_pool: str = '', index_pool: str = '',
+            data_extra_pool: str = '', storage_class: str = '', data_pool_class: str = '',
+            compression: str = '', daemon_name=None, master_zone_of_master_zonegroup=None):
+        try:
+            instance = RgwClient.admin_instance(daemon_name=daemon_name)
+            result = instance.edit_zone(zone_name, new_zone_name, zonegroup_name, default,
+                                        master, zone_endpoints, user, placement_target,
+                                        data_pool, index_pool, data_extra_pool, storage_class,
+                                        data_pool_class, compression,
+                                        master_zone_of_master_zonegroup)
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+
+    @Endpoint()
+    @ReadPermission
+    def get_pool_names(self):
+        pool_names = []
+        ret, out, _ = mgr.check_mon_command({
+            'prefix': 'osd lspools',
+            'format': 'json',
+        })
+        if ret == 0 and out is not None:
+            pool_names = json.loads(out)
+        return pool_names
+
+    @Endpoint('PUT')
+    @CreatePermission
+    def create_system_user(self, userName: str, zoneName: str, daemon_name=None):
+        try:
+            instance = RgwClient.admin_instance(daemon_name=daemon_name)
+            result = instance.create_system_user(userName, zoneName)
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')
+
+    @Endpoint()
+    @ReadPermission
+    def get_user_list(self, daemon_name=None, zoneName=None):
+        try:
+            instance = RgwClient.admin_instance(daemon_name=daemon_name)
+            result = instance.get_user_list(zoneName)
+            return result
+        except NoRgwDaemonsException as e:
+            raise DashboardException(e, http_status_code=404, component='rgw')

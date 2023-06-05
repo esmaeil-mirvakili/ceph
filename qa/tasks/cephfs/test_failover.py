@@ -76,7 +76,8 @@ class TestClusterAffinity(CephFSTestCase):
         self._change_target_state(target, names[0], {'join_fscid': self.fs.id})
         self._change_target_state(target, names[1], {'join_fscid': self.fs.id})
         self._reach_target(target)
-        status = self.fs.status()
+        time.sleep(5) # MDSMonitor tick
+        status = self.fs.wait_for_daemons()
         active = self.fs.get_active_names(status=status)[0]
         self.assertIn(active, names)
         self.config_rm('mds.'+active, 'mds_join_fs')
@@ -601,6 +602,25 @@ class TestStandbyReplay(CephFSTestCase):
             victim = self.fs.get_replay(status=status)
             self.fs.mds_restart(mds_id=victim['name'])
             status = self._confirm_single_replay(status=status)
+
+    def test_standby_replay_prepare_beacon(self):
+        """
+        That a MDSMonitor::prepare_beacon handles standby-replay daemons
+        correctly without removing the standby. (Note, usually a standby-replay
+        beacon will just be replied to by MDSMonitor::preprocess_beacon.)
+        """
+
+        status = self._confirm_no_replay()
+        self.fs.set_max_mds(1)
+        self.fs.set_allow_standby_replay(True)
+        status = self._confirm_single_replay()
+        replays = list(status.get_replays(self.fs.id))
+        self.assertEqual(len(replays), 1)
+        self.config_set('mds.'+replays[0]['name'], 'mds_inject_health_dummy', True)
+        time.sleep(10) # for something not to happen...
+        status = self._confirm_single_replay()
+        replays2 = list(status.get_replays(self.fs.id))
+        self.assertEqual(replays[0]['gid'], replays2[0]['gid'])
 
     def test_rank_stopped(self):
         """

@@ -1163,7 +1163,7 @@ void EMetaBlob::generate_test_instances(std::list<EMetaBlob*>& ls)
   ls.push_back(new EMetaBlob());
 }
 
-void EMetaBlob::replay(MDSRank *mds, LogSegment *logseg, MDPeerUpdate *peerup)
+void EMetaBlob::replay(MDSRank *mds, LogSegment *logseg, int type, MDPeerUpdate *peerup)
 {
   dout(10) << "EMetaBlob.replay " << lump_map.size() << " dirlumps by " << client_name << dendl;
 
@@ -1362,7 +1362,18 @@ void EMetaBlob::replay(MDSRank *mds, LogSegment *logseg, MDPeerUpdate *peerup)
 	in->state_clear(CInode::STATE_AUTH);
       ceph_assert(g_conf()->mds_kill_journal_replay_at != 2);
 
-      if (!(++count % 1000))
+      {
+        auto do_corruption = mds->get_inject_journal_corrupt_dentry_first();
+        if (unlikely(do_corruption > 0.0)) {
+          auto r = ceph::util::generate_random_number(0.0, 1.0);
+          if (r < do_corruption) {
+            dout(0) << "corrupting dn: " << *dn << dendl;
+            dn->first = -10;
+          }
+        }
+      }
+
+      if (!(++count % mds->heartbeat_reset_grace()))
         mds->heartbeat_reset();
     }
 
@@ -1397,7 +1408,7 @@ void EMetaBlob::replay(MDSRank *mds, LogSegment *logseg, MDPeerUpdate *peerup)
       if (lump.is_importing())
 	dn->mark_auth();
 
-      if (!(++count % 1000))
+      if (!(++count % mds->heartbeat_reset_grace()))
         mds->heartbeat_reset();
     }
 
@@ -1435,7 +1446,7 @@ void EMetaBlob::replay(MDSRank *mds, LogSegment *logseg, MDPeerUpdate *peerup)
       // Make null dentries the first things we trim
       dout(10) << "EMetaBlob.replay pushing to bottom of lru " << *dn << dendl;
 
-      if (!(++count % 1000))
+      if (!(++count % mds->heartbeat_reset_grace()))
         mds->heartbeat_reset();
     }
   }
@@ -1468,7 +1479,7 @@ void EMetaBlob::replay(MDSRank *mds, LogSegment *logseg, MDPeerUpdate *peerup)
 	  else
 	    dir->state_set(CDir::STATE_AUTH);
 
-          if (!(++count % 1000))
+          if (!(++count % mds->heartbeat_reset_grace()))
             mds->heartbeat_reset();
 	}
       }
@@ -1500,7 +1511,7 @@ void EMetaBlob::replay(MDSRank *mds, LogSegment *logseg, MDPeerUpdate *peerup)
 	dir->state_clear(CDir::STATE_AUTH);
 	mds->mdcache->adjust_subtree_auth(dir, CDIR_AUTH_UNDEF);
 
-        if (!(++count % 1000))
+        if (!(++count % mds->heartbeat_reset_grace()))
           mds->heartbeat_reset();
       }
     }
@@ -1513,7 +1524,7 @@ void EMetaBlob::replay(MDSRank *mds, LogSegment *logseg, MDPeerUpdate *peerup)
       ceph_assert(p->first->is_dir());
       mds->mdcache->adjust_subtree_after_rename(p->first, p->second, false);
 
-      if (!(++count % 1000))
+      if (!(++count % mds->heartbeat_reset_grace()))
         mds->heartbeat_reset();
     }
   }
@@ -1531,7 +1542,7 @@ void EMetaBlob::replay(MDSRank *mds, LogSegment *logseg, MDPeerUpdate *peerup)
       } else
 	mds->mdcache->remove_inode_recursive(in);
 
-      if (!(++count % 1000))
+      if (!(++count % mds->heartbeat_reset_grace()))
         mds->heartbeat_reset();
     }
   }
@@ -1544,7 +1555,7 @@ void EMetaBlob::replay(MDSRank *mds, LogSegment *logseg, MDPeerUpdate *peerup)
     if (client)
       client->got_journaled_agree(p.second, logseg);
 
-    if (!(++count % 1000))
+    if (!(++count % mds->heartbeat_reset_grace()))
       mds->heartbeat_reset();
   }
 
@@ -1556,11 +1567,16 @@ void EMetaBlob::replay(MDSRank *mds, LogSegment *logseg, MDPeerUpdate *peerup)
     logseg->open_files.push_back(&in->item_open_file);
   }
 
+  bool skip_replaying_inotable = g_conf()->mds_inject_skip_replaying_inotable;
+
   // allocated_inos
   if (inotablev) {
-    if (mds->inotable->get_version() >= inotablev) {
+    if (mds->inotable->get_version() >= inotablev ||
+	unlikely(type == EVENT_UPDATE && skip_replaying_inotable)) {
       dout(10) << "EMetaBlob.replay inotable tablev " << inotablev
 	       << " <= table " << mds->inotable->get_version() << dendl;
+      if (allocated_ino)
+        mds->mdcache->insert_taken_inos(allocated_ino);
     } else {
       dout(10) << "EMetaBlob.replay inotable v " << inotablev
 	       << " - 1 == table " << mds->inotable->get_version()
@@ -1572,24 +1588,27 @@ void EMetaBlob::replay(MDSRank *mds, LogSegment *logseg, MDPeerUpdate *peerup)
       if (preallocated_inos.size())
 	mds->inotable->replay_alloc_ids(preallocated_inos);
 
-      // [repair bad inotable updates]
+      // repair inotable updates in case inotable wasn't persist in time
       if (inotablev > mds->inotable->get_version()) {
-	mds->clog->error() << "journal replay inotablev mismatch "
-	    << mds->inotable->get_version() << " -> " << inotablev;
-	mds->inotable->force_replay_version(inotablev);
+        mds->clog->error() << "journal replay inotablev mismatch "
+            << mds->inotable->get_version() << " -> " << inotablev
+            << ", will force replay it.";
+        mds->inotable->force_replay_version(inotablev);
       }
 
       ceph_assert(inotablev == mds->inotable->get_version());
     }
   }
   if (sessionmapv) {
-    unsigned diff = (used_preallocated_ino && !preallocated_inos.empty()) ? 2 : 1;
-    if (mds->sessionmap.get_version() >= sessionmapv) {
+    if (mds->sessionmap.get_version() >= sessionmapv ||
+	unlikely(type == EVENT_UPDATE && skip_replaying_inotable)) {
       dout(10) << "EMetaBlob.replay sessionmap v " << sessionmapv
 	       << " <= table " << mds->sessionmap.get_version() << dendl;
-    } else if (mds->sessionmap.get_version() + diff == sessionmapv) {
+      if (used_preallocated_ino)
+        mds->mdcache->insert_taken_inos(used_preallocated_ino);
+    } else {
       dout(10) << "EMetaBlob.replay sessionmap v " << sessionmapv
-	       << " - " << diff << " == table " << mds->sessionmap.get_version()
+	       << ", table " << mds->sessionmap.get_version()
 	       << " prealloc " << preallocated_inos
 	       << " used " << used_preallocated_ino
 	       << dendl;
@@ -1609,7 +1628,6 @@ void EMetaBlob::replay(MDSRank *mds, LogSegment *logseg, MDPeerUpdate *peerup)
 	  session->info.prealloc_inos.insert(preallocated_inos);
           mds->sessionmap.replay_dirty_session(session);
 	}
-
       } else {
 	dout(10) << "EMetaBlob.replay no session for " << client_name << dendl;
 	if (used_preallocated_ino)
@@ -1618,13 +1636,19 @@ void EMetaBlob::replay(MDSRank *mds, LogSegment *logseg, MDPeerUpdate *peerup)
 	if (!preallocated_inos.empty())
 	  mds->sessionmap.replay_advance_version();
       }
+
+      // repair sessionmap updates in case sessionmap wasn't persist in time
+      if (sessionmapv > mds->sessionmap.get_version()) {
+        mds->clog->error() << "EMetaBlob.replay sessionmapv mismatch "
+            << sessionmapv << " -> " << mds->sessionmap.get_version()
+            << ", will force replay it.";
+        if (g_conf()->mds_wipe_sessions) {
+          mds->sessionmap.wipe();
+        }
+        // force replay sessionmap version
+        mds->sessionmap.set_version(sessionmapv);
+      }
       ceph_assert(sessionmapv == mds->sessionmap.get_version());
-    } else {
-      mds->clog->error() << "EMetaBlob.replay sessionmap v " << sessionmapv
-			 << " - " << diff << " > table " << mds->sessionmap.get_version();
-      ceph_assert(g_conf()->mds_wipe_sessions);
-      mds->sessionmap.wipe();
-      mds->sessionmap.set_version(sessionmapv);
     }
   }
 
@@ -1634,7 +1658,7 @@ void EMetaBlob::replay(MDSRank *mds, LogSegment *logseg, MDPeerUpdate *peerup)
     ceph_assert(in);
     mds->mdcache->add_recovered_truncate(in, logseg);
 
-    if (!(++count % 1000))
+    if (!(++count % mds->heartbeat_reset_grace()))
       mds->heartbeat_reset();
   }
   for (const auto& p : truncate_finish) {
@@ -1645,7 +1669,7 @@ void EMetaBlob::replay(MDSRank *mds, LogSegment *logseg, MDPeerUpdate *peerup)
       mds->mdcache->remove_recovered_truncate(in, ls);
     }
 
-    if (!(++count % 1000))
+    if (!(++count % mds->heartbeat_reset_grace()))
       mds->heartbeat_reset();
   }
 
@@ -1667,7 +1691,7 @@ void EMetaBlob::replay(MDSRank *mds, LogSegment *logseg, MDPeerUpdate *peerup)
 	dout(10) << "EMetaBlob.replay destroyed " << *p << ", not in cache" << dendl;
       }
 
-      if (!(++count % 1000))
+      if (!(++count % mds->heartbeat_reset_grace()))
         mds->heartbeat_reset();
     }
     mds->mdcache->open_file_table.note_destroyed_inos(logseg->seq, destroyed_inodes);
@@ -1689,7 +1713,7 @@ void EMetaBlob::replay(MDSRank *mds, LogSegment *logseg, MDPeerUpdate *peerup)
       }
     }
 
-    if (!(++count % 1000))
+    if (!(++count % mds->heartbeat_reset_grace()))
       mds->heartbeat_reset();
   }
 
@@ -1705,7 +1729,7 @@ void EMetaBlob::replay(MDSRank *mds, LogSegment *logseg, MDPeerUpdate *peerup)
       }
     }
 
-    if (!(++count % 1000))
+    if (!(++count % mds->heartbeat_reset_grace()))
       mds->heartbeat_reset();
   }
 
@@ -2221,7 +2245,8 @@ void EUpdate::update_segment()
 void EUpdate::replay(MDSRank *mds)
 {
   auto&& segment = get_segment();
-  metablob.replay(mds, segment);
+  dout(10) << "EUpdate::replay" << dendl;
+  metablob.replay(mds, segment, EVENT_UPDATE);
   
   if (had_peers) {
     dout(10) << "EUpdate.replay " << reqid << " had peers, expecting a matching ECommitted" << dendl;
@@ -2304,7 +2329,7 @@ void EOpen::replay(MDSRank *mds)
 {
   dout(10) << "EOpen.replay " << dendl;
   auto&& segment = get_segment();
-  metablob.replay(mds, segment);
+  metablob.replay(mds, segment, EVENT_OPEN);
 
   // note which segments inodes belong to, so we don't have to start rejournaling them
   for (const auto &ino : inos) {
@@ -2620,7 +2645,7 @@ void EPeerUpdate::replay(MDSRank *mds)
     dout(10) << "EPeerUpdate.replay prepare " << reqid << " for mds." << leader
 	     << ": applying commit, saving rollback info" << dendl;
     su = new MDPeerUpdate(origop, rollback);
-    commit.replay(mds, segment, su);
+    commit.replay(mds, segment, EVENT_PEERUPDATE, su);
     mds->mdcache->add_uncommitted_peer(reqid, segment, leader, su);
     break;
 
@@ -2632,7 +2657,7 @@ void EPeerUpdate::replay(MDSRank *mds)
   case EPeerUpdate::OP_ROLLBACK:
     dout(10) << "EPeerUpdate.replay abort " << reqid << " for mds." << leader
 	     << ": applying rollback commit blob" << dendl;
-    commit.replay(mds, segment);
+    commit.replay(mds, segment, EVENT_PEERUPDATE);
     mds->mdcache->finish_uncommitted_peer(reqid, false);
     break;
 
@@ -2811,7 +2836,7 @@ void ESubtreeMap::replay(MDSRank *mds)
   
   // first, stick the spanning tree in my cache
   //metablob.print(*_dout);
-  metablob.replay(mds, get_segment());
+  metablob.replay(mds, get_segment(), EVENT_SUBTREEMAP);
   
   // restore import/export maps
   for (map<dirfrag_t, vector<dirfrag_t> >::iterator p = subtrees.begin();
@@ -2886,7 +2911,7 @@ void EFragment::replay(MDSRank *mds)
     ceph_abort();
   }
 
-  metablob.replay(mds, segment);
+  metablob.replay(mds, segment, EVENT_FRAGMENT);
   if (in && g_conf()->mds_debug_frag)
     in->verify_dirfrags();
 }
@@ -2970,7 +2995,7 @@ void EExport::replay(MDSRank *mds)
 {
   dout(10) << "EExport.replay " << base << dendl;
   auto&& segment = get_segment();
-  metablob.replay(mds, segment);
+  metablob.replay(mds, segment, EVENT_EXPORT);
   
   CDir *dir = mds->mdcache->get_dirfrag(base);
   ceph_assert(dir);
@@ -3049,7 +3074,7 @@ void EImportStart::replay(MDSRank *mds)
   dout(10) << "EImportStart.replay " << base << " bounds " << bounds << dendl;
   //metablob.print(*_dout);
   auto&& segment = get_segment();
-  metablob.replay(mds, segment);
+  metablob.replay(mds, segment, EVENT_IMPORTSTART);
 
   // put in ambiguous import list
   mds->mdcache->add_ambiguous_import(base, bounds);

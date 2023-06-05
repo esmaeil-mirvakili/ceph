@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <fcntl.h>
+#include <dirent.h>
 
 #include "ceph_ll_client.h"
 
@@ -112,6 +113,11 @@ struct snap_info {
   struct snap_metadata *snap_metadata;
 };
 
+struct ceph_snapdiff_entry_t {
+  struct dirent dir_entry;
+  uint64_t snapid; //should be snapid_t but prefer not to exposure it
+};
+
 /* setattr mask bits (up to an int in size) */
 #ifndef CEPH_SETATTR_MODE
 #define CEPH_SETATTR_MODE		(1 << 0)
@@ -127,6 +133,8 @@ struct snap_info {
 #define CEPH_SETATTR_KILL_SGUID		(1 << 10)
 #define CEPH_SETATTR_FSCRYPT_AUTH	(1 << 11)
 #define CEPH_SETATTR_FSCRYPT_FILE	(1 << 12)
+#define CEPH_SETATTR_KILL_SUID		(1 << 13)
+#define CEPH_SETATTR_KILL_SGID		(1 << 14)
 #endif
 
 /* define error codes for the mount function*/
@@ -607,6 +615,53 @@ int ceph_readdir_r(struct ceph_mount_info *cmount, struct ceph_dir_result *dirp,
 int ceph_readdirplus_r(struct ceph_mount_info *cmount, struct ceph_dir_result *dirp, struct dirent *de,
 		       struct ceph_statx *stx, unsigned want, unsigned flags, struct Inode **out);
 
+struct ceph_snapdiff_info
+{
+  struct ceph_mount_info* cmount;
+  struct ceph_dir_result* dir1;    // primary dir entry to build snapdiff for.
+  struct ceph_dir_result* dir_aux; // aux dir entry to identify the second snapshot.
+                                   // Can point to the parent dir entry if entry-in-question
+                                   // doesn't exist in the second snapshot
+};
+
+/**
+ * Opens snapdiff stream to get snapshots delta (aka snapdiff).
+ *
+ * @param cmount the ceph mount handle to use for snapdiff retrieval.
+ * @param root_path  root path for snapshots-in-question
+ * @param rel_path subpath under the root to build delta for
+ * @param snap1 the first snapshot name
+ * @param snap2 the second snapshot name
+ * @param out resulting snapdiff stream handle to be used for snapdiff results
+              retrieval via ceph_readdir_snapdiff
+ * @returns 0 on success and negative error code otherwise
+ */
+int ceph_open_snapdiff(struct ceph_mount_info* cmount,
+                       const char* root_path,
+                       const char* rel_path,
+                       const char* snap1,
+                       const char* snap2,
+                       struct ceph_snapdiff_info* out);
+/**
+ * Get the next snapshot delta entry.
+ *
+ * @param info snapdiff stream handle opened via ceph_open_snapdiff()
+ * @param out  the next snapdiff entry which includes directory entry and the
+ *             entry's snapshot id - later one for emerged/existing entry or
+ *             former snapshot id for the removed entry.
+ * @returns >0 on success, 0 if no more entries in the stream and negative
+ *          error code otherwise
+ */
+int ceph_readdir_snapdiff(struct ceph_snapdiff_info* snapdiff,
+                          struct ceph_snapdiff_entry_t* out);
+/**
+ * Close snapdiff stream.
+ *
+ * @param info snapdiff stream handle opened via ceph_open_snapdiff()
+ * @returns 0 on success and negative error code otherwise
+ */
+int ceph_close_snapdiff(struct ceph_snapdiff_info* snapdiff);
+
 /**
  * Gets multiple directory entries.
  *
@@ -855,7 +910,7 @@ int ceph_rename(struct ceph_mount_info *cmount, const char *from, const char *to
  * @param fd the file descriptor of the file to get statistics of.
  * @param stx the ceph_statx struct that will be filled in with the file's statistics.
  * @param want bitfield of CEPH_STATX_* flags showing designed attributes
- * @param flags bitfield that can be used to set AT_* modifier flags (only AT_NO_ATTR_SYNC and AT_SYMLINK_NOFOLLOW)
+ * @param flags bitfield that can be used to set AT_* modifier flags (AT_STATX_SYNC_AS_STAT, AT_STATX_FORCE_SYNC, AT_STATX_DONT_SYNC and AT_SYMLINK_NOFOLLOW)
  * @returns 0 on success or negative error code on failure.
  */
 int ceph_fstatx(struct ceph_mount_info *cmount, int fd, struct ceph_statx *stx,
@@ -869,7 +924,7 @@ int ceph_fstatx(struct ceph_mount_info *cmount, int fd, struct ceph_statx *stx,
  * @param relpath to the file/directory to get statistics of
  * @param stx the ceph_statx struct that will be filled in with the file's statistics.
  * @param want bitfield of CEPH_STATX_* flags showing designed attributes
- * @param flags bitfield that can be used to set AT_* modifier flags (only AT_NO_ATTR_SYNC and AT_SYMLINK_NOFOLLOW)
+ * @param flags bitfield that can be used to set AT_* modifier flags (AT_STATX_SYNC_AS_STAT, AT_STATX_FORCE_SYNC, AT_STATX_DONT_SYNC and AT_SYMLINK_NOFOLLOW)
  * @returns 0 on success or negative error code on failure.
  */
 int ceph_statxat(struct ceph_mount_info *cmount, int dirfd, const char *relpath,
@@ -882,7 +937,7 @@ int ceph_statxat(struct ceph_mount_info *cmount, int dirfd, const char *relpath,
  * @param path the file or directory to get the statistics of.
  * @param stx the ceph_statx struct that will be filled in with the file's statistics.
  * @param want bitfield of CEPH_STATX_* flags showing designed attributes
- * @param flags bitfield that can be used to set AT_* modifier flags (only AT_NO_ATTR_SYNC and AT_SYMLINK_NOFOLLOW)
+ * @param flags bitfield that can be used to set AT_* modifier flags (AT_STATX_SYNC_AS_STAT, AT_STATX_FORCE_SYNC, AT_STATX_DONT_SYNC and AT_SYMLINK_NOFOLLOW)
  * @returns 0 on success or negative error code on failure.
  */
 int ceph_statx(struct ceph_mount_info *cmount, const char *path, struct ceph_statx *stx,

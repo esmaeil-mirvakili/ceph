@@ -149,10 +149,10 @@ ImageSpecT = Tuple[str, str, str]
 PoolSpecT = Tuple[str, str]
 MigrationStatusT = Dict[str, str]
 
+
 class TaskHandler:
     lock = Lock()
     condition = Condition(lock)
-    thread = None
 
     in_progress_task = None
     tasks_by_sequence: Dict[int, Task] = dict()
@@ -166,10 +166,12 @@ class TaskHandler:
         self.module = module
         self.log = module.log
 
+        self.stop_thread = False
+        self.thread = Thread(target=self.run)
+
+    def setup(self) -> None:
         with self.lock:
             self.init_task_queue()
-
-        self.thread = Thread(target=self.run)
         self.thread.start()
 
     @property
@@ -190,10 +192,18 @@ class TaskHandler:
         return (match.group(1) or self.default_pool_name, match.group(2) or '',
                 match.group(3))
 
+    def shutdown(self) -> None:
+        self.log.info("TaskHandler: shutting down")
+        self.stop_thread = True
+        if self.thread.is_alive():
+            self.log.debug("TaskHandler: joining thread")
+            self.thread.join()
+        self.log.info("TaskHandler: shut down")
+
     def run(self) -> None:
         try:
             self.log.info("TaskHandler: starting")
-            while True:
+            while not self.stop_thread:
                 with self.lock:
                     now = datetime.now()
                     for sequence in sorted([sequence for sequence, task
@@ -204,6 +214,9 @@ class TaskHandler:
                     self.condition.wait(5)
                     self.log.debug("TaskHandler: tick")
 
+        except (rados.ConnectionShutdown, rbd.ConnectionShutdown):
+            self.log.exception("TaskHandler: client blocklisted")
+            self.module.client_blocklisted.set()
         except Exception as ex:
             self.log.fatal("Fatal runtime error: {}\n{}".format(
                 ex, traceback.format_exc()))
@@ -348,17 +361,18 @@ class TaskHandler:
         return task_json
 
     def remove_task(self,
-                    ioctx: rados.Ioctx,
+                    ioctx: Optional[rados.Ioctx],
                     task: Task,
                     remove_in_memory: bool = True) -> None:
         self.log.info("remove_task: task={}".format(str(task)))
-        omap_keys = (task.sequence_key, )
-        try:
-            with rados.WriteOpCtx() as write_op:
-                ioctx.remove_omap_keys(write_op, omap_keys)
-                ioctx.operate_write_op(write_op, RBD_TASK_OID)
-        except rados.ObjectNotFound:
-            pass
+        if ioctx:
+            try:
+                with rados.WriteOpCtx() as write_op:
+                    omap_keys = (task.sequence_key, )
+                    ioctx.remove_omap_keys(write_op, omap_keys)
+                    ioctx.operate_write_op(write_op, RBD_TASK_OID)
+            except rados.ObjectNotFound:
+                pass
 
         if remove_in_memory:
             try:
@@ -422,9 +436,12 @@ class TaskHandler:
                 task.retry_message = "{}".format(e)
                 self.update_progress(task, 0)
             else:
-                # pool DNE -- remove the task
+                # pool DNE -- remove in-memory task
                 self.complete_progress(task)
-                self.remove_task(ioctx, task)
+                self.remove_task(None, task)
+
+        except (rados.ConnectionShutdown, rbd.ConnectionShutdown):
+            raise
 
         except (rados.Error, rbd.Error) as e:
             self.log.error("execute_task: {}".format(e))

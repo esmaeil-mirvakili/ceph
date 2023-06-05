@@ -1,17 +1,21 @@
 # {{ cephadm_managed }}
 [users]
   default_theme = light
+{% if anonymous_access %}
 [auth.anonymous]
   enabled = true
   org_name = 'Main Org.'
   org_role = 'Viewer'
+{% endif %}
 [server]
   domain = 'bootstrap.storage.lab'
-  protocol = https
+  protocol = {{ protocol }}
   cert_file = /etc/grafana/certs/cert_file
   cert_key = /etc/grafana/certs/cert_key
   http_port = {{ http_port }}
   http_addr = {{ http_addr }}
+[snapshots]
+  external_enabled = false
 [security]
 {% if not initial_admin_password %}
   disable_initial_admin_creation = true

@@ -24,12 +24,14 @@ see :ref:`nfs-ganesha-config`.
 NFS Cluster management
 ======================
 
+.. _nfs-module-cluster-create:
+
 Create NFS Ganesha Cluster
 --------------------------
 
 .. code:: bash
 
-    $ ceph nfs cluster create <cluster_id> [<placement>] [--port <port>] [--ingress --virtual-ip <ip>]
+    $ nfs cluster create <cluster_id> [<placement>] [--ingress] [--virtual_ip <value>] [--ingress-mode {default|keepalive-only}] [--port <int>]
 
 This creates a common recovery pool for all NFS Ganesha daemons, new user based on
 ``cluster_id``, and a common NFS Ganesha config RADOS object.
@@ -76,6 +78,17 @@ service.
 For more details, refer :ref:`orchestrator-cli-placement-spec` but keep
 in mind that specifying the placement via a YAML file is not supported.
 
+Deployment of NFS daemons and the ingress service is asynchronous: the
+command may return before the services have completely started. You may
+wish to check that these services do successfully start and stay running.
+When using cephadm orchestration, these commands check service status:
+
+.. code:: bash
+
+    $ ceph orch ls --service_name=nfs.<cluster_id>
+    $ ceph orch ls --service_name=ingress.nfs.<cluster_id>
+
+
 Ingress
 -------
 
@@ -93,6 +106,18 @@ NFS endpoint that all clients can use to mount.  Ceph will take care
 of the details of NFS redirecting traffic on the virtual IP to the
 appropriate backend NFS servers, and redeploying NFS servers when they
 fail.
+
+If a user additionally supplies ``--ingress-mode keepalive-only`` a
+partial *ingress* service will be deployed that still provides a virtual
+IP, but has nfs directly binding to that virtual IP and leaves out any
+sort of load balancing or traffic redirection. This setup will restrict
+users to deploying only 1 nfs daemon as multiple cannot bind to the same
+port on the virtual IP.
+
+Instead providing ``--ingress-mode default`` will result in the same setup
+as not providing the ``--ingress-mode`` flag. In this setup keepalived will be
+deployed to handle forming the virtual IP and haproxy will be deployed
+to handle load balancing and traffic redirection.
 
 Enabling ingress via the ``ceph nfs cluster create`` command deploys a
 simple ingress configuration with the most common configuration
@@ -127,6 +152,18 @@ Delete NFS Ganesha Cluster
     $ ceph nfs cluster rm <cluster_id>
 
 This deletes the deployed cluster.
+
+
+Removal of NFS daemons and the ingress service is asynchronous: the
+command may return before the services have been completely deleted. You may
+wish to check that these services are no longer reported. When using cephadm
+orchestration, these commands check service status:
+
+.. code:: bash
+
+    $ ceph orch ls --service_name=nfs.<cluster_id>
+    $ ceph orch ls --service_name=ingress.nfs.<cluster_id>
+
 
 Updating an NFS Cluster
 -----------------------
@@ -239,7 +276,7 @@ Create CephFS Export
 
 .. code:: bash
 
-    $ ceph nfs export create cephfs --cluster-id <cluster_id> --pseudo-path <pseudo_path> --fsname <fsname> [--readonly] [--path=/path/in/cephfs] [--client_addr <value>...] [--squash <value>]
+    $ ceph nfs export create cephfs --cluster-id <cluster_id> --pseudo-path <pseudo_path> --fsname <fsname> [--readonly] [--path=/path/in/cephfs] [--client_addr <value>...] [--squash <value>] [--sectype <value>...]
 
 This creates export RADOS objects containing the export block, where
 
@@ -266,6 +303,18 @@ for permissible values.
 value is `no_root_squash`. See the `NFS-Ganesha Export Sample`_ for
 permissible values.
 
+``<sectype>`` specifies which authentication methods will be used when
+connecting to the export. Valid values include "krb5p", "krb5i", "krb5", "sys",
+and "none". More than one value can be supplied. The flag may be specified
+multiple times (example: ``--sectype=krb5p --sectype=krb5i``) or multiple
+values may be separated by a comma (example: ``--sectype krb5p,krb5i``). The
+server will negotatiate a supported security type with the client preferring
+the supplied methods left-to-right.
+
+.. note:: Specifying values for sectype that require Kerberos will only function on servers
+          that are configured to support Kerberos. Setting up NFS-Ganesha to support Kerberos
+          is outside the scope of this document.
+
 .. note:: Export creation is supported only for NFS Ganesha clusters deployed using nfs interface.
 
 Create RGW Export
@@ -285,7 +334,7 @@ To export a *bucket*:
 
 .. code::
 
-   $ ceph nfs export create rgw --cluster-id <cluster_id> --pseudo-path <pseudo_path> --bucket <bucket_name> [--user-id <user-id>] [--readonly] [--client_addr <value>...] [--squash <value>]
+   $ ceph nfs export create rgw --cluster-id <cluster_id> --pseudo-path <pseudo_path> --bucket <bucket_name> [--user-id <user-id>] [--readonly] [--client_addr <value>...] [--squash <value>] [--sectype <value>...]
 
 For example, to export *mybucket* via NFS cluster *mynfs* at the pseudo-path */bucketdata* to any host in the ``192.168.10.0/24`` network
 
@@ -315,6 +364,18 @@ for permissible values.
 ``<squash>`` defines the kind of user id squashing to be performed. The default
 value is `no_root_squash`. See the `NFS-Ganesha Export Sample`_ for
 permissible values.
+
+``<sectype>`` specifies which authentication methods will be used when
+connecting to the export. Valid values include "krb5p", "krb5i", "krb5", "sys",
+and "none". More than one value can be supplied. The flag may be specified
+multiple times (example: ``--sectype=krb5p --sectype=krb5i``) or multiple
+values may be separated by a comma (example: ``--sectype krb5p,krb5i``). The
+server will negotatiate a supported security type with the client preferring
+the supplied methods left-to-right.
+
+.. note:: Specifying values for sectype that require Kerberos will only function on servers
+          that are configured to support Kerberos. Setting up NFS-Ganesha to support Kerberos
+          is outside the scope of this document.
 
 RGW user export
 ^^^^^^^^^^^^^^^

@@ -115,6 +115,26 @@ int remove_peer_config_key(librados::IoCtx& io_ctx,
   return 0;
 }
 
+std::string get_mon_host(CephContext* cct) {
+  std::string mon_host;
+  if (auto mon_addrs = cct->get_mon_addrs();
+      mon_addrs != nullptr && !mon_addrs->empty()) {
+    CachedStackStringStream css;
+    for (auto it = mon_addrs->begin(); it != mon_addrs->end(); ++it) {
+      if (it != mon_addrs->begin()) {
+        *css << ",";
+      }
+      *css << *it;
+    }
+    mon_host = css->str();
+  } else {
+    ldout(cct, 20) << "falling back to mon_host in conf" << dendl;
+    mon_host = cct->_conf.get_val<std::string>("mon_host");
+  }
+  ldout(cct, 20) << "mon_host=" << mon_host << dendl;
+  return mon_host;
+}
+
 int create_bootstrap_user(CephContext* cct, librados::Rados& rados,
                           std::string* peer_client_id, std::string* cephx_key) {
   ldout(cct, 20) << dendl;
@@ -279,6 +299,15 @@ int list_mirror_images(librados::IoCtx& io_ctx,
   return 0;
 }
 
+template <typename I>
+const char *pool_or_namespace(I *ictx) {
+  if (!ictx->md_ctx.get_namespace().empty()) {
+    return "namespace";
+  } else {
+    return "pool";
+  }
+}
+
 struct C_ImageGetInfo : public Context {
   mirror_image_info_t *mirror_image_info;
   mirror_image_mode_t *mirror_image_mode;
@@ -414,9 +443,15 @@ int Mirror<I>::image_enable(I *ictx, mirror_image_mode_t mode,
     return r;
   }
 
+  if (mirror_mode == cls::rbd::MIRROR_MODE_DISABLED) {
+    lderr(cct) << "cannot enable mirroring: mirroring is not enabled on a "
+               << pool_or_namespace(ictx) << dendl;
+    return -EINVAL;
+  }
+
   if (mirror_mode != cls::rbd::MIRROR_MODE_IMAGE) {
-    lderr(cct) << "cannot enable mirroring in the current pool mirroring mode"
-               << dendl;
+    lderr(cct) << "cannot enable mirroring: " << pool_or_namespace(ictx)
+               << " is not in image mirror mode" << dendl;
     return -EINVAL;
   }
 
@@ -1298,8 +1333,7 @@ int Mirror<I>::peer_bootstrap_create(librados::IoCtx& io_ctx,
     return r;
   }
 
-  std::string mon_host = cct->_conf.get_val<std::string>("mon_host");
-  ldout(cct, 20) << "mon_host=" << mon_host << dendl;
+  std::string mon_host = get_mon_host(cct);
 
   // format the token response
   bufferlist token_bl;
@@ -1471,7 +1505,7 @@ int Mirror<I>::peer_bootstrap_import(librados::IoCtx& io_ctx,
       return r;
     }
 
-    std::string local_mon_host = cct->_conf.get_val<std::string>("mon_host");
+    std::string local_mon_host = get_mon_host(cct);
 
     // create local cluster peer in remote cluster
     r = create_bootstrap_peer(cct, remote_io_ctx,
@@ -1620,7 +1654,7 @@ int Mirror<I>::peer_site_remove(librados::IoCtx& io_ctx,
       for (auto snap_id : snap_ids) {
         C_SaferCond cond;
         auto req = mirror::snapshot::UnlinkPeerRequest<I>::create(
-          img_ctx, snap_id, uuid, &cond);
+          img_ctx, snap_id, uuid, true, &cond);
         req->send();
         r = cond.wait();
         if (r == -ENOENT) {

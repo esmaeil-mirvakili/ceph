@@ -57,8 +57,11 @@
 .. confval:: mds_kill_import_at
 .. confval:: mds_kill_link_at
 .. confval:: mds_kill_rename_at
+.. confval:: mds_inject_skip_replaying_inotable
+.. confval:: mds_kill_skip_replaying_inotable
 .. confval:: mds_wipe_sessions
 .. confval:: mds_wipe_ino_prealloc
 .. confval:: mds_skip_ino
 .. confval:: mds_min_caps_per_client
 .. confval:: mds_symlink_recovery
+.. confval:: mds_extraordinary_events_dump_interval

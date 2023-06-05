@@ -68,6 +68,7 @@ enum {
   l_mdss_req_readdir_latency,
   l_mdss_req_rename_latency,
   l_mdss_req_renamesnap_latency,
+  l_mdss_req_snapdiff_latency,
   l_mdss_req_rmdir_latency,
   l_mdss_req_rmsnap_latency,
   l_mdss_req_rmxattr_latency,
@@ -134,7 +135,7 @@ public:
   void find_idle_sessions();
 
   void kill_session(Session *session, Context *on_safe);
-  size_t apply_blocklist(const std::set<entity_addr_t> &blocklist);
+  size_t apply_blocklist();
   void journal_close_session(Session *session, int state, Context *on_safe);
 
   size_t get_num_pending_reclaim() const { return client_reclaim_gather.size(); }
@@ -187,10 +188,12 @@ public:
   void journal_allocated_inos(MDRequestRef& mdr, EMetaBlob *blob);
   void apply_allocated_inos(MDRequestRef& mdr, Session *session);
 
+  void _try_open_ino(MDRequestRef& mdr, int r, inodeno_t ino);
   CInode* rdlock_path_pin_ref(MDRequestRef& mdr, bool want_auth,
 			      bool no_want_auth=false);
   CDentry* rdlock_path_xlock_dentry(MDRequestRef& mdr, bool create,
-				    bool okexist=false, bool want_layout=false);
+				    bool okexist=false, bool authexist=false,
+				    bool want_layout=false);
   std::pair<CDentry*, CDentry*>
 	    rdlock_two_paths_xlock_destdn(MDRequestRef& mdr, bool xlock_srcdn);
 
@@ -232,6 +235,9 @@ public:
   void handle_client_removexattr(MDRequestRef& mdr);
 
   void handle_client_fsync(MDRequestRef& mdr);
+
+  bool is_unlink_pending(CDentry *dn);
+  void wait_for_pending_unlink(CDentry *dn, MDRequestRef& mdr);
 
   // open
   void handle_client_open(MDRequestRef& mdr);
@@ -290,6 +296,7 @@ public:
   void _rmsnap_finish(MDRequestRef& mdr, CInode *diri, snapid_t snapid);
   void handle_client_renamesnap(MDRequestRef& mdr);
   void _renamesnap_finish(MDRequestRef& mdr, CInode *diri, snapid_t snapid);
+  void handle_client_readdir_snapdiff(MDRequestRef& mdr);
 
   // helpers
   bool _rename_prepare_witness(MDRequestRef& mdr, mds_rank_t who, std::set<mds_rank_t> &witnesse,
@@ -323,6 +330,9 @@ public:
   bool terminating_sessions = false;
 
   std::set<client_t> client_reclaim_gather;
+
+  const bufferlist& get_snap_trace(Session *session, SnapRealm *realm) const;
+  const bufferlist& get_snap_trace(client_t client, SnapRealm *realm) const;
 
 private:
   friend class MDSContinuation;
@@ -468,6 +478,37 @@ private:
   void reply_client_request(MDRequestRef& mdr, const ref_t<MClientReply> &reply);
   void flush_session(Session *session, MDSGatherBuilder& gather);
 
+  void _finalize_readdir(MDRequestRef& mdr,
+                         CInode *diri,
+                         CDir* dir,
+                         bool start,
+                         bool end,
+                         __u16 flags,
+                         __u32 numfiles,
+                         bufferlist& dirbl,
+                         bufferlist& dnbl);
+  void _readdir_diff(
+    utime_t now,
+    MDRequestRef& mdr,
+    CInode* diri,
+    CDir* dir,
+    SnapRealm* realm,
+    unsigned max_entries,
+    int bytes_left,
+    const std::string& offset_str,
+    uint32_t offset_hash,
+    unsigned req_flags,
+    bufferlist& dirbl);
+  bool build_snap_diff(
+    MDRequestRef& mdr,
+    CDir* dir,
+    int bytes_left,
+    dentry_key_t* skip_key,
+    snapid_t snapid_before,
+    snapid_t snapid,
+    const bufferlist& dnbl,
+    std::function<bool(CDentry*, CInode*, bool)> add_result_cb);
+
   MDSRank *mds;
   MDCache *mdcache;
   MDLog *mdlog;
@@ -487,15 +528,20 @@ private:
   std::set<client_t> client_reconnect_denied;  // clients whose reconnect msg have been denied .
 
   feature_bitset_t supported_features;
+  feature_bitset_t supported_metric_spec;
   feature_bitset_t required_client_features;
 
   bool forward_all_requests_to_auth = false;
   bool replay_unsafe_with_closed_session = false;
   double cap_revoke_eviction_timeout = 0;
   uint64_t max_snaps_per_dir = 100;
+  // long snapshot names have the following format: "_<SNAPSHOT-NAME>_<INODE-NUMBER>"
+  uint64_t snapshot_name_max = NAME_MAX - 1 - 1 - 13;
   unsigned delegate_inos_pct = 0;
   uint64_t dir_max_entries = 0;
   int64_t bal_fragment_size_max = 0;
+
+  double inject_rename_corrupt_dentry_first = 0.0;
 
   DecayCounter recall_throttle;
   time last_recall_state;

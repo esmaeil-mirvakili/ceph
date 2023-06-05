@@ -375,15 +375,45 @@ int TokenEnvelope::parse(const DoutPrefixProvider *dpp,
   return 0;
 }
 
+/*
+ * Maybe one day we'll have the parser find this in Keystone replies.
+ * But for now, we use the confguration to augment the list of roles.
+ */
+void TokenEnvelope::update_roles(const std::vector<std::string> & admin,
+                                 const std::vector<std::string> & reader)
+{
+  for (auto& iter: roles) {
+    for (const auto& r : admin) {
+      if (fnmatch(r.c_str(), iter.name.c_str(), 0) == 0) {
+        iter.is_admin = true;
+        break;
+      }
+    }
+    for (const auto& r : reader) {
+      if (fnmatch(r.c_str(), iter.name.c_str(), 0) == 0) {
+        iter.is_reader = true;
+        break;
+      }
+    }
+  }
+}
+
 bool TokenCache::find(const std::string& token_id,
                       rgw::keystone::TokenEnvelope& token)
 {
   std::lock_guard l{lock};
-  return find_locked(token_id, token);
+  return find_locked(token_id, token, tokens, tokens_lru);
 }
 
-bool TokenCache::find_locked(const std::string& token_id,
-                             rgw::keystone::TokenEnvelope& token)
+bool TokenCache::find_service(const std::string& token_id,
+                              rgw::keystone::TokenEnvelope& token)
+{
+  std::lock_guard l{lock};
+  return find_locked(token_id, token, service_tokens, service_tokens_lru);
+}
+
+bool TokenCache::find_locked(const std::string& token_id, rgw::keystone::TokenEnvelope& token,
+                             std::map<std::string, token_entry>& tokens, std::list<std::string>& tokens_lru)
 {
   ceph_assert(ceph_mutex_is_locked_by_me(lock));
   map<string, token_entry>::iterator iter = tokens.find(token_id);
@@ -414,25 +444,32 @@ bool TokenCache::find_admin(rgw::keystone::TokenEnvelope& token)
 {
   std::lock_guard l{lock};
 
-  return find_locked(admin_token_id, token);
+  return find_locked(admin_token_id, token, tokens, tokens_lru);
 }
 
 bool TokenCache::find_barbican(rgw::keystone::TokenEnvelope& token)
 {
   std::lock_guard l{lock};
 
-  return find_locked(barbican_token_id, token);
+  return find_locked(barbican_token_id, token, tokens, tokens_lru);
 }
 
 void TokenCache::add(const std::string& token_id,
                      const rgw::keystone::TokenEnvelope& token)
 {
   std::lock_guard l{lock};
-  add_locked(token_id, token);
+  add_locked(token_id, token, tokens, tokens_lru);
 }
 
-void TokenCache::add_locked(const std::string& token_id,
-                            const rgw::keystone::TokenEnvelope& token)
+void TokenCache::add_service(const std::string& token_id,
+                             const rgw::keystone::TokenEnvelope& token)
+{
+  std::lock_guard l{lock};
+  add_locked(token_id, token, service_tokens, service_tokens_lru);
+}
+
+void TokenCache::add_locked(const std::string& token_id, const rgw::keystone::TokenEnvelope& token,
+                            std::map<std::string, token_entry>& tokens, std::list<std::string>& tokens_lru)
 {
   ceph_assert(ceph_mutex_is_locked_by_me(lock));
   map<string, token_entry>::iterator iter = tokens.find(token_id);
@@ -460,7 +497,7 @@ void TokenCache::add_admin(const rgw::keystone::TokenEnvelope& token)
   std::lock_guard l{lock};
 
   rgw_get_token_id(token.token.id, admin_token_id);
-  add_locked(admin_token_id, token);
+  add_locked(admin_token_id, token, tokens, tokens_lru);
 }
 
 void TokenCache::add_barbican(const rgw::keystone::TokenEnvelope& token)
@@ -468,7 +505,7 @@ void TokenCache::add_barbican(const rgw::keystone::TokenEnvelope& token)
   std::lock_guard l{lock};
 
   rgw_get_token_id(token.token.id, barbican_token_id);
-  add_locked(barbican_token_id, token);
+  add_locked(barbican_token_id, token, tokens, tokens_lru);
 }
 
 void TokenCache::invalidate(const DoutPrefixProvider *dpp, const std::string& token_id)

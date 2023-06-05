@@ -87,11 +87,6 @@ private:
    * @endverbatim
    */
 
-  enum WriteOpType {
-    WRITE_OP_TYPE_WRITE,
-    WRITE_OP_TYPE_ZERO
-  };
-
   struct ReadOp {
     interval_set<uint64_t> image_interval;
     io::Extents image_extent_map;
@@ -116,6 +111,7 @@ private:
   std::string m_dst_oid;
 
   io::Extents m_image_extents;
+  io::ImageArea m_image_area = io::ImageArea::DATA;
 
   io::SnapshotDelta m_snapshot_delta;
 

@@ -12,8 +12,8 @@ same code path. All ``batch`` does is to calculate the appropriate sizes of all
 volumes and skip over already created volumes.
 
 All the features that ``ceph-volume lvm create`` supports, like ``dmcrypt``,
-avoiding ``systemd`` units from starting, defining bluestore or filestore,
-are supported.
+avoiding ``systemd`` units from starting, defining bluestore,
+is supported.
 
 
 .. _ceph-volume-lvm-batch_auto:
@@ -131,7 +131,7 @@ If one requires a different sizing policy for wal, db or journal devices,
 
 Implicit sizing
 ---------------
-Scenarios in which either devices are under-comitted or not all data devices are
+Scenarios in which either devices are under-committed or not all data devices are
 currently ready for use (due to a broken disk for example), one can still rely
 on `ceph-volume` automatic sizing.
 Users can provide hints to `ceph-volume` as to how many data devices should have
