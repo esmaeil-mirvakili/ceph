@@ -4648,6 +4648,48 @@ BlueStore::BlueStore(CephContext *cct,
                 return this->throttle.get_kv_throttle_current();
             });
   }
+  asok_hook = CoDelSocketHook::create([this]() mutable {
+                                          this->dump_log();
+                                      },
+                                      [this]() mutable {
+                                          this->clear_log();
+                                      }, cct);
+}
+
+void BlueStore::clear_log(){
+  log_time_vec.clear();
+  log_admitted_time_vec.clear();
+  log_lat_vec.clear();
+  log_budget_vec.clear();
+  log_bytes_vec.clear();
+  log_target_vec.clear();
+  log_current_vec.clear();
+}
+
+void BlueStore::dump_log(){
+  std::string prefix = "/users/esmaeil/codel_log_";
+  std::string index = "";
+
+  std::ofstream txc_file(prefix + "txc" + index + ".csv");
+  // add column names
+  txc_file << "time, lat, size, budget, target, current, admitted" << "\n";
+  for (unsigned int i = 0; i < log_time_vec.size(); i++) {
+    txc_file << std::fixed << log_time_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << log_lat_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << log_bytes_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << log_budget_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << log_target_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << log_current_vec[i];
+    txc_file << ",";
+    txc_file << std::fixed << log_admitted_time_vec[i];
+    txc_file << "\n";
+  }
+  txc_file.close();
 }
 
 BlueStore::~BlueStore()
@@ -4667,6 +4709,51 @@ BlueStore::~BlueStore()
   }
   onode_cache_shards.clear();
   buffer_cache_shards.clear();
+}
+
+
+BlueStore::CoDelSocketHook::CoDelSocketHook(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log, CephContext *_cct) : dump_log(_dump_log), clear_log(_clear_log), cct(_cct) {}
+
+BlueStore::CoDelSocketHook::~CoDelSocketHook() {
+  AdminSocket *admin_socket = cct->get_admin_socket();
+  if (admin_socket)
+    admin_socket->unregister_commands(this);
+}
+
+BlueStore::CoDelSocketHook *BlueStore::CoDelSocketHook::create(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log, CephContext *_cct) {
+  CoDelSocketHook *hook = nullptr;
+  AdminSocket *admin_socket = _cct->get_admin_socket();
+  if (admin_socket)
+  {
+    hook = new CoDelSocketHook(_dump_log, _clear_log, _cct);
+    int r = admin_socket->register_command("dump log vector",
+                                           hook,
+                                           "dump vectors contains logs");
+    r = admin_socket->register_command("reset log vector",
+                                       hook,
+                                       "reset vectors contains logs");
+    if (r != 0)
+    {
+      delete hook;
+      hook = nullptr;
+    }
+  }
+  return hook;
+}
+
+int BlueStore::CoDelSocketHook::call(std::string_view command, const cmdmap_t &cmdmap,
+                                     Formatter *f,
+                                     std::ostream &ss,
+                                     bufferlist &out) {
+  if (command == "dump log vector")
+  {
+    dump_log();
+  }
+  else if (command == "reset log vector")
+  {
+    clear_log();
+  }
+  return 0;
 }
 
 const char **BlueStore::get_tracked_conf_keys() const
@@ -12629,6 +12716,12 @@ void BlueStore::_txc_state_proc(TransContext *txc)
   while (true) {
     dout(10) << __func__ << " txc " << txc
 	     << " " << txc->get_state_name() << dendl;
+    int64_t latency = 0;
+    int64_t now_nano = 0;
+    int64_t adm_nano = 0;
+    int64_t target = 0;
+    int64_t budget = 0;
+    ceph::mono_clock::time_point now = ceph::mono_clock::now();
     switch (txc->get_state()) {
     case TransContext::STATE_PREPARE:
       throttle.log_state_latency(*txc, logger, l_bluestore_state_prepare_lat);
@@ -12716,6 +12809,21 @@ void BlueStore::_txc_state_proc(TransContext *txc)
       if (codel) {
         codel->update_from_txc_info(txc->txc_state_proc_start, txc->bytes);
       }
+        now = ceph::mono_clock::now();
+        latency = std::chrono::nanoseconds(now - txc->txc_state_proc_start).count();
+        log_lat_vec.push_back(latency);
+        now_nano = std::chrono::nanoseconds(now - mono_clock::zero()).count();
+        adm_nano = std::chrono::nanoseconds(txc->txc_state_proc_start - mono_clock::zero()).count();
+        log_admitted_time_vec.push_back(adm_nano);
+        log_time_vec.push_back(now_nano);
+        log_current_vec.push_back(this->throttle.get_kv_throttle_current());
+        if(codel)
+          target = codel->get_target_latency();
+        log_target_vec.push_back(target);
+        if(codel)
+          budget = codel->get_bluestore_budget();
+        log_budget_vec.push_back(budget);
+        log_bytes_vec.push_back(txc->bytes);
       if (txc->deferred_txn) {
 	txc->set_state(TransContext::STATE_DEFERRED_QUEUED);
 	_deferred_queue(txc);

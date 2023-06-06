@@ -1988,6 +1988,31 @@ private:
 
     std::unique_ptr<BlueStoreSlowFastCoDel> codel;
 
+    class CoDelSocketHook : public AdminSocketHook{
+    public:
+        std::function<void(void)> dump_log;
+        std::function<void(void)> clear_log;
+        CephContext *cct;
+        static CoDelSocketHook *create(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log, CephContext *_cct);
+        ~CoDelSocketHook();
+        CoDelSocketHook(std::function<void(void)> _dump_log, std::function<void(void)> _clear_log, CephContext *_cct);
+        int call(std::string_view command, const cmdmap_t &cmdmap,
+                 Formatter *f,
+                 std::ostream &ss,
+                 bufferlist &out) override;
+    };
+    // log data
+    std::vector<int64_t> log_time_vec;
+    std::vector<int64_t> log_admitted_time_vec;
+    std::vector<int64_t> log_lat_vec;
+    std::vector<uint64_t> log_bytes_vec;
+    std::vector<int64_t> log_target_vec;
+    std::vector<int64_t> log_budget_vec;
+    std::vector<int64_t> log_current_vec;
+    void dump_log();
+    void clear_log();
+    CoDelSocketHook *asok_hook = nullptr;
+
     typedef boost::intrusive::list<
     TransContext,
     boost::intrusive::member_hook<
