@@ -22,6 +22,8 @@
 #include "include/spinlock.h"
 #include "msg/Message.h"
 
+#include "common/DataCollectionService.h"
+
 #define OPTRACKER_PREALLOC_EVENTS 20
 
 class TrackedOp;
@@ -112,7 +114,7 @@ class OpTracker {
 public:
   CephContext *cct;
   OpTracker(CephContext *cct_, bool tracking, uint32_t num_shards);
-      
+
   void set_complaint_and_threshold(float time, int threshold) {
     complaint_time = time;
     log_threshold = threshold;
@@ -387,6 +389,15 @@ public:
   friend void intrusive_ptr_release(TrackedOp *o) {
     o->put();
   }
+
+  // data collection
+public:
+    std::unique_ptr<DataEntry> dataEntry;
+    void initializeDataEntry() {
+      if (!dataEntry) {
+        dataEntry = std::make_unique<DataEntry>();
+      }
+    }
 };
 
 

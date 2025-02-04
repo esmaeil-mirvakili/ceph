@@ -52,6 +52,8 @@
 #include "BlueFS.h"
 #include "common/EventTrace.h"
 
+#include "common/DataCollectionService.h"
+
 #ifdef WITH_BLKIN
 #include "common/zipkin_trace.h"
 #endif
@@ -1884,6 +1886,12 @@ public:
     void release_kv_throttle(uint64_t cost) {
       throttle_bytes.put(cost);
     }
+        int64_t get_current() {
+          return throttle_bytes.get_current();
+        }
+        int64_t get_max() {
+          return throttle_bytes.get_max();
+        }
     void release_deferred_throttle(uint64_t cost) {
       throttle_deferred_bytes.put(cost);
     }
@@ -1902,7 +1910,10 @@ public:
     }
   } throttle;
 
-  typedef boost::intrusive::list<
+    // data collection
+    DataCollectionServiceThread dataCollectionService{"~/data/", 1000, 5};
+
+    typedef boost::intrusive::list<
     TransContext,
     boost::intrusive::member_hook<
       TransContext,

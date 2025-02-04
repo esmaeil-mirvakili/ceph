@@ -7633,6 +7633,8 @@ int BlueStore::_mount()
     }
   });
 
+  dataCollectionService.create("bluestore_data_collection");
+
   r = _deferred_replay();
   if (r < 0) {
     return r;
@@ -7705,6 +7707,7 @@ int BlueStore::umount()
       return -EIO;
     }
   }
+  dataCollectionService.shutdown();
   return 0;
 }
 
@@ -14034,6 +14037,14 @@ int BlueStore::queue_transactions(
   // execute (start)
   _txc_state_proc(txc);
 
+  // data collection
+  op->initializeDataEntry();
+  op->dataEntry->getReqInfo.bluestore_bytes = txc->bytes;
+  op->dataEntry->getReqInfo.bluestore_ios = txc->ios;
+  op->dataEntry->getReqInfo.bluestore_cost = txc->cost;
+  op->dataEntry->getReqInfo.throttle_current = throttle.get_current();
+  op->dataEntry->getReqInfo.throttle_max = throttle.get_max();
+
   if (bdev->is_smr()) {
     atomic_alloc_and_submit_lock.unlock();
   }
@@ -14064,6 +14075,11 @@ int BlueStore::queue_transactions(
     l_bluestore_throttle_lat,
     tend - tstart,
     cct->_conf->bluestore_log_op_age);
+
+  // data collection
+  op->initializeDataEntry();
+  op->dataEntry->getReqInfo.commit_stamp = ceph_clock_now().to_nsec();
+
   return 0;
 }
 
@@ -14090,6 +14106,11 @@ void BlueStore::_txc_add_transaction(TransContext *txc, Transaction *t)
 
   for (int pos = 0; i.have_op(); ++pos) {
     Transaction::Op *op = i.decode_op();
+
+    // data collection
+    op->initializeDataEntry();
+    op->dataEntry->addOp(op->op, op->cid, op->oid, op->off, op->len);
+
     int r = 0;
 
     // no coll or obj
