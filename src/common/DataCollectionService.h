@@ -15,6 +15,10 @@
 #include "common/Thread.h"
 #include "common/Clock.h"
 
+#include <fstream>
+#include <string>
+#include <iostream>
+
 struct RequestInfo {
     uint64_t recv_stamp;
     uint64_t enqueue_stamp;
