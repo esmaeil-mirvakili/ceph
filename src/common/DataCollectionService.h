@@ -101,7 +101,7 @@ struct OpInfo {
 };
 
 class DataEntry {
-protected:
+public:
     std::string id;
     RequestInfo reqInfo;
     std::vector <OpInfo> ops;
@@ -110,11 +110,11 @@ protected:
       entryStream << id;
       reqInfo.print(entryStream);
       entryStream << std::endl;
-      std::for_each(ops.begin(), ops.end(), [&](OpInfo &opInfo) {
-          opsStream << id;
-          opInfo.print(opsStream);
-          opsStream << std::endl;
-      });
+      for (auto &opInfo: ops) {
+        opsStream << id;
+        opInfo.print(opsStream);
+        opsStream << std::endl;
+      }
     }
 
 public:
@@ -137,9 +137,9 @@ public:
         id = other.id;
         reqInfo = other.reqInfo;
         ops.clear();
-        std::for_each(other.ops.begin(), other.ops.end(), [this](OpInfo &op) {
-            this->addOp(op.type, op.cid, op.oid, op.off, op.len);
-        });
+        for (auto &op: other.ops) {
+          addOp(op.type, op.cid, op.oid, op.off, op.len);
+        }
       }
       return *this;
     }
