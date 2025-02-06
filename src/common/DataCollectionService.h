@@ -10,6 +10,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <boost/thread/shared_mutex.hpp>
 
 #include "common/ceph_mutex.h"
 #include "common/Thread.h"
