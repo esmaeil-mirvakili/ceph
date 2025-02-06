@@ -160,8 +160,8 @@ protected:
     std::atomic<bool> shutdown_thread = false;
 
     void logEntries() {
-      std::ofstream entryFile(log_path + "entries_" + idx + ".csv");
-      std::ofstream opsFile(log_path + "ops_" + idx + ".csv");
+      std::ofstream entryFile(log_path + "entries_" + std::to_string(idx) + ".csv");
+      std::ofstream opsFile(log_path + "ops_" + std::to_string(idx) + ".csv");
 
       if (!entryFile.is_open() || !opsFile.is_open()) {
         std::cerr << "Error: Failed to open log files at " << log_path << std::endl;
