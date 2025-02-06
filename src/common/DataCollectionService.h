@@ -20,7 +20,7 @@
 #include <string>
 #include <iostream>
 
-struct RequestInfo {
+struct DataCollectionRequestInfo {
     uint64_t recv_stamp;
     uint64_t enqueue_stamp;
     uint64_t dequeue_stamp;
@@ -35,7 +35,7 @@ struct RequestInfo {
     int64_t throttle_current;
     int64_t throttle_max;
 
-    RequestInfo &operator=(const RequestInfo &other) {
+    DataCollectionRequestInfo &operator=(const DataCollectionRequestInfo &other) {
       if (this != &other) {
         recv_stamp = other.recv_stamp;
         enqueue_stamp = other.enqueue_stamp;
@@ -75,14 +75,14 @@ struct RequestInfo {
     }
 };
 
-struct OpInfo {
+struct DataCollectionOpInfo {
     uint32_t type;
     uint32_t cid;
     uint32_t oid;
     uint64_t off;
     uint64_t len;
 
-    OpInfo(uint32_t _type, uint32_t _cid, uint32_t _oid, uint64_t _off,
+    DataCollectionOpInfo(uint32_t _type, uint32_t _cid, uint32_t _oid, uint64_t _off,
            uint64_t _len) : type(_type), cid(_cid), oid(_oid), off(_off),
                             len(_len) {}
 
@@ -103,14 +103,14 @@ struct OpInfo {
 class DataEntry {
 public:
     std::string id;
-    RequestInfo reqInfo;
-    std::vector <OpInfo> ops;
+    DataCollectionRequestInfo reqInfo;
+    std::vector <DataCollectionOpInfo> ops;
 
     void log(std::ofstream &entryStream, std::ofstream &opsStream) {
       entryStream << id;
       reqInfo.print(entryStream);
       entryStream << std::endl;
-      for (auto &opInfo: ops) {
+      for (DataCollectionOpInfo &opInfo: ops) {
         opsStream << id;
         opInfo.print(opsStream);
         opsStream << std::endl;
@@ -123,13 +123,13 @@ public:
       id = boost::uuids::to_string(u);
     }
 
-    const RequestInfo &getReqInfo() {
+    const DataCollectionRequestInfo &getReqInfo() {
       return reqInfo;
     }
 
     void addOp(uint32_t type, uint32_t cid, uint32_t oid, uint64_t off,
                uint64_t len) {
-      ops.push_back(OpInfo(type, cid, oid, off, len));
+      ops.push_back(DataCollectionOpInfo(type, cid, oid, off, len));
     }
 
     DataEntry &operator=(const DataEntry &other) {
