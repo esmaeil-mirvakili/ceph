@@ -106,9 +106,11 @@ protected:
     std::vector <OpInfo> ops;
 
     void log(std::ofstream &entryStream, std::ofstream &opsStream) {
-      entryStream << id << ", " << reqInfo.toString() << std::endl;
+      std::string req_line = id + ", " + reqInfo.toString();
+      entryStream << req_line << std::endl;
       std::for_each(ops.begin(), ops.end(), [&](OpInfo &opInfo) {
-          opsStream << id << ", " << opInfo.toString() << std::endl;
+          std::string op_line = id + ", " + opInfo.toString();
+          opsStream << op_line << std::endl;
       });
     }
 
