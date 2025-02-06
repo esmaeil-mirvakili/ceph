@@ -123,7 +123,7 @@ public:
       id = boost::uuids::to_string(u);
     }
 
-    const DataCollectionRequestInfo &getReqInfo() {
+    DataCollectionRequestInfo &getReqInfo() {
       return reqInfo;
     }
 
