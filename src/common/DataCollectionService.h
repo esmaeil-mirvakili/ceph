@@ -57,8 +57,7 @@ struct RequestInfo {
       return "recv_stamp, enqueue_stamp, dequeue_stamp, commit_stamp, owner, type, cost, priority, bluestore_bytes, bluestore_ios, bluestore_cost, throttle_current, throttle_max";
     }
 
-    std::string toString() const {
-      std::stringstream ss;
+    void print(std::ofstream &ss) const {
       ss << recv_stamp << ", ";
       ss << enqueue_stamp << ", ";
       ss << dequeue_stamp << ", ";
@@ -72,7 +71,6 @@ struct RequestInfo {
       ss << bluestore_cost << ", ";
       ss << throttle_current << ", ";
       ss << throttle_max;
-      return ss.str();
     }
 };
 
@@ -91,14 +89,12 @@ struct OpInfo {
       return "type, cid, oid, off, len";
     }
 
-    std::string toString() const {
-      std::stringstream ss;
+    void print(std::ofstream &ss) const {
       ss << type << ", ";
       ss << cid << ", ";
       ss << oid << ", ";
       ss << off << ", ";
       ss << len;
-      return ss.str();
     }
 
 };
@@ -110,11 +106,13 @@ protected:
     std::vector <OpInfo> ops;
 
     void log(std::ofstream &entryStream, std::ofstream &opsStream) {
-      std::string req_line = id + ", " + reqInfo.toString();
-      entryStream << req_line << std::endl;
+      entryStream << id;
+      reqInfo.print(entryStream);
+      entryStream << std::endl;
       std::for_each(ops.begin(), ops.end(), [&](OpInfo &opInfo) {
-          std::string op_line = id + ", " + opInfo.toString();
-          opsStream << op_line << std::endl;
+          opsStream << id;
+          opInfo.print(opsStream);
+          opsStream << std::endl;
       });
     }
 
