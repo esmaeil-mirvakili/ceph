@@ -1794,6 +1794,8 @@ public:
     }
   private:
     state_t state = STATE_PREPARE;
+  public:
+      TrackedOpRef osd_op;
   };
 
   class BlueStoreThrottle {

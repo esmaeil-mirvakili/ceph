@@ -210,7 +210,7 @@ protected:
       if (writer_waiting.load() || post_write_delay.load())
         return false;
 
-      return entries.size() >= log_cap;
+      return entries.size() >= static_cast<size_t>(log_cap);
     }
 
 public:

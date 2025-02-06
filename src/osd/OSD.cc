@@ -9753,12 +9753,12 @@ void OSD::enqueue_op(spg_t pg, OpRequestRef&& op, epoch_t epoch)
 
   // data collection
   op->initializeDataEntry();
-  op->dataEntry->getReqInfo.recv_stamp = op->get_req()->get_recv_stamp().to_nsec();
-  op->dataEntry->getReqInfo.enqueue_stamp = ceph_clock_now().to_nsec();
-  op->dataEntry->getReqInfo.owner = op->get_req()->get_source().num();
-  op->dataEntry->getReqInfo.type = op->get_req()->get_type();
-  op->dataEntry->getReqInfo.cost = op->get_req()->get_cost();
-  op->dataEntry->getReqInfo.priority = op->get_req()->get_priority();
+  op->dataEntry->getReqInfo().recv_stamp = op->get_req()->get_recv_stamp().to_nsec();
+  op->dataEntry->getReqInfo().enqueue_stamp = ceph_clock_now().to_nsec();
+  op->dataEntry->getReqInfo().owner = op->get_req()->get_source().num();
+  op->dataEntry->getReqInfo().type = op->get_req()->get_type();
+  op->dataEntry->getReqInfo().cost = op->get_req()->get_cost();
+  op->dataEntry->getReqInfo().priority = op->get_req()->get_priority();
 
   dout(15) << "enqueue_op " << op << " prio " << priority
            << " type " << type
@@ -9825,7 +9825,7 @@ void OSD::dequeue_op(
 
   // data collection
   op->initializeDataEntry();
-  op->dataEntry->getReqInfo.dequeue_stamp = ceph_clock_now().to_nsec();
+  op->dataEntry->getReqInfo().dequeue_stamp = ceph_clock_now().to_nsec();
 
   utime_t latency = now - m->get_recv_stamp();
   dout(10) << "dequeue_op " << op << " prio " << m->get_priority()

@@ -12427,6 +12427,7 @@ BlueStore::TransContext *BlueStore::_txc_create(
   osr->queue_new(txc);
   dout(20) << __func__ << " osr " << osr << " = " << txc
 	   << " seq " << txc->seq << dendl;
+  txc->osd_op = osd_op;
   return txc;
 }
 
@@ -14039,11 +14040,11 @@ int BlueStore::queue_transactions(
 
   // data collection
   op->initializeDataEntry();
-  op->dataEntry->getReqInfo.bluestore_bytes = txc->bytes;
-  op->dataEntry->getReqInfo.bluestore_ios = txc->ios;
-  op->dataEntry->getReqInfo.bluestore_cost = txc->cost;
-  op->dataEntry->getReqInfo.throttle_current = throttle.get_current();
-  op->dataEntry->getReqInfo.throttle_max = throttle.get_max();
+  op->dataEntry->getReqInfo().bluestore_bytes = txc->bytes;
+  op->dataEntry->getReqInfo().bluestore_ios = txc->ios;
+  op->dataEntry->getReqInfo().bluestore_cost = txc->cost;
+  op->dataEntry->getReqInfo().throttle_current = throttle.get_current();
+  op->dataEntry->getReqInfo().throttle_max = throttle.get_max();
 
   if (bdev->is_smr()) {
     atomic_alloc_and_submit_lock.unlock();
@@ -14078,7 +14079,7 @@ int BlueStore::queue_transactions(
 
   // data collection
   op->initializeDataEntry();
-  op->dataEntry->getReqInfo.commit_stamp = ceph_clock_now().to_nsec();
+  op->dataEntry->getReqInfo().commit_stamp = ceph_clock_now().to_nsec();
 
   return 0;
 }
@@ -14108,8 +14109,8 @@ void BlueStore::_txc_add_transaction(TransContext *txc, Transaction *t)
     Transaction::Op *op = i.decode_op();
 
     // data collection
-    op->initializeDataEntry();
-    op->dataEntry->addOp(op->op, op->cid, op->oid, op->off, op->len);
+    txc->osd_op->initializeDataEntry();
+    txc->osd_op->dataEntry->addOp(op->op, op->cid, op->oid, op->off, op->len);
 
     int r = 0;
 
