@@ -14046,6 +14046,8 @@ int BlueStore::queue_transactions(
   op->dataEntry->getReqInfo().throttle_current = throttle.get_current();
   op->dataEntry->getReqInfo().throttle_max = throttle.get_max();
 
+  dataCollectionService.newEntry(*op->dataEntry);
+
   if (bdev->is_smr()) {
     atomic_alloc_and_submit_lock.unlock();
   }
