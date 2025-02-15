@@ -2145,9 +2145,6 @@ public:
       throttle_bytes.put(cost);
       transactions -= txcs;
     }
-    int64_t get_current() {
-      return throttle_bytes.get_current();
-    }
     int64_t get_max() {
       return throttle_bytes.get_max();
     }
