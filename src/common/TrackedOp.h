@@ -23,6 +23,7 @@
 #include "common/Clock.h"
 #include "include/spinlock.h"
 #include "msg/Message.h"
+#include "common/DataCollectionService.h"
 
 #if defined(WITH_SEASTAR) && !defined(WITH_ALIEN)
 #include "crimson/common/perf_counters_collection.h"
@@ -456,6 +457,15 @@ protected:
   virtual std::string _get_state_string() const {
     return events.empty() ? std::string() : std::string(events.rbegin()->str);
   }
+
+    // data collection
+public:
+    std::unique_ptr<DataEntry> dataEntry;
+    void initializeDataEntry() {
+      if (!dataEntry) {
+        dataEntry = std::make_unique<DataEntry>();
+      }
+    }
 };
 
 inline void OpTracker::default_dumper(const TrackedOp& op, Formatter* f) {

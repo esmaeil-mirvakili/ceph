@@ -9299,6 +9299,8 @@ int BlueStore::_mount()
     }
   });
 
+  dataCollectionService.create("bluestore_data_collection");
+
   r = _deferred_replay();
   if (r < 0) {
     return r;
@@ -9345,6 +9347,7 @@ int BlueStore::umount()
     dout(20) << __func__ << " closing" << dendl;
   }
   _close_db_and_around();
+  dataCollectionService.shutdown();
   // disable fsck on fast-shutdown
   if (cct->_conf->bluestore_fsck_on_umount && !m_fast_shutdown) {
     int rc = fsck(cct->_conf->bluestore_fsck_on_umount_deep);
@@ -14078,6 +14081,7 @@ BlueStore::TransContext *BlueStore::_txc_create(
   dout(20) << __func__ << " osr " << osr << " = " << txc
 	  // << " seq " << txc->seq
            << dendl;
+  txc->osd_op = osd_op;
   return txc;
 }
 
@@ -15554,6 +15558,14 @@ int BlueStore::queue_transactions(
   // execute (start)
   _txc_state_proc(txc);
 
+  // data collection
+  op->initializeDataEntry();
+  op->dataEntry->getReqInfo().bluestore_bytes = txc->bytes;
+  op->dataEntry->getReqInfo().bluestore_ios = txc->ios;
+  op->dataEntry->getReqInfo().bluestore_cost = txc->cost;
+  op->dataEntry->getReqInfo().throttle_current = throttle.get_current();
+  op->dataEntry->getReqInfo().throttle_max = throttle.get_max();
+
   // we're immediately readable (unlike FileStore)
   for (auto c : on_applied_sync) {
     c->complete(0);
@@ -15580,6 +15592,10 @@ int BlueStore::queue_transactions(
     l_bluestore_throttle_lat,
     tend - tstart,
     cct->_conf->bluestore_log_op_age);
+  // data collection
+  op->initializeDataEntry();
+  op->dataEntry->getReqInfo().commit_stamp = ceph_clock_now().to_nsec();
+  dataCollectionService.newEntry(*op->dataEntry);
   return 0;
 }
 
@@ -15606,6 +15622,11 @@ void BlueStore::_txc_add_transaction(TransContext *txc, Transaction *t)
 
   for (int pos = 0; i.have_op(); ++pos) {
     Transaction::Op *op = i.decode_op();
+
+    // data collection
+    txc->osd_op->initializeDataEntry();
+    txc->osd_op->dataEntry->addOp(op->op, op->cid, op->oid, op->off, op->len);
+
     int r = 0;
 
     // no coll or obj

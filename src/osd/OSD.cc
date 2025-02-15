@@ -9848,6 +9848,15 @@ void OSD::enqueue_op(spg_t pg, OpRequestRef&& op, epoch_t epoch)
   const uint64_t owner = op->get_req()->get_source().num();
   const int type = op->get_req()->get_type();
 
+  // data collection
+  op->initializeDataEntry();
+  op->dataEntry->getReqInfo().recv_stamp = op->get_req()->get_recv_stamp().to_nsec();
+  op->dataEntry->getReqInfo().enqueue_stamp = ceph_clock_now().to_nsec();
+  op->dataEntry->getReqInfo().owner = op->get_req()->get_source().num();
+  op->dataEntry->getReqInfo().type = op->get_req()->get_type();
+  op->dataEntry->getReqInfo().cost = op->get_req()->get_cost();
+  op->dataEntry->getReqInfo().priority = op->get_req()->get_priority();
+
   dout(15) << "enqueue_op " << *op->get_req() << " prio " << priority
            << " type " << type
 	   << " cost " << cost
@@ -9909,6 +9918,10 @@ void OSD::dequeue_op(
 
   utime_t now = ceph_clock_now();
   op->set_dequeued_time(now);
+
+  // data collection
+  op->initializeDataEntry();
+  op->dataEntry->getReqInfo().dequeue_stamp = ceph_clock_now().to_nsec();
 
   utime_t latency = now - m->get_recv_stamp();
   dout(10) << "dequeue_op " << *op->get_req()
