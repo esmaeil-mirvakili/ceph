@@ -5704,6 +5704,56 @@ void BlueStore::handle_discard(interval_set<uint64_t>& to_release)
   alloc->release(to_release);
 }
 
+class BlueStore::SocketHook : public AdminSocketHook
+{
+    BlueStore *store;
+
+public:
+    static BlueStore::SocketHook *create(BlueStore *store)
+    {
+      BlueStore::SocketHook *hook = nullptr;
+      AdminSocket *admin_socket = store->cct->get_admin_socket();
+      if (admin_socket)
+      {
+        hook = new BlueStore::SocketHook(store);
+        int r = admin_socket->register_command("start data collection",
+                                               hook,
+                                               "start collecting data");
+        r = admin_socket->register_command("stop data collection",
+                                           hook,
+                                           "stop and reset data collection");
+        if (r != 0)
+        {
+          delete hook;
+          hook = nullptr;
+        }
+      }
+      return hook;
+    }
+    ~SocketHook()
+    {
+      AdminSocket *admin_socket = store->cct->get_admin_socket();
+      admin_socket->unregister_commands(this);
+    }
+
+private:
+    SocketHook(BlueStore *store) : store(store) {}
+    int call(std::string_view command, const cmdmap_t &cmdmap,
+             Formatter *f,
+             std::ostream &ss,
+             bufferlist &out) override
+    {
+      if (command == "start data collection")
+      {
+        store->dataCollectionService.active = true;
+      } else if (command == "stop data collection") {
+        store->dataCollectionService.active = false;
+        store->dataCollectionService.dump();
+      }
+      return 0;
+    }
+};
+
 BlueStore::BlueStore(CephContext *cct, const string& path)
   : BlueStore(cct, path, 0) {}
 
@@ -5722,6 +5772,7 @@ BlueStore::BlueStore(CephContext *cct,
   _init_logger();
   cct->_conf.add_observer(this);
   set_cache_shards(1);
+  asok_hook = SocketHook::create(this);
   bluestore_bdev_label_require_all = cct->_conf.get_val<bool>("bluestore_bdev_label_require_all");
 }
 
@@ -9299,8 +9350,6 @@ int BlueStore::_mount()
     }
   });
 
-  dataCollectionService.create("bluestore_data_collection");
-
   r = _deferred_replay();
   if (r < 0) {
     return r;
@@ -9347,7 +9396,6 @@ int BlueStore::umount()
     dout(20) << __func__ << " closing" << dendl;
   }
   _close_db_and_around();
-  dataCollectionService.shutdown();
   // disable fsck on fast-shutdown
   if (cct->_conf->bluestore_fsck_on_umount && !m_fast_shutdown) {
     int rc = fsck(cct->_conf->bluestore_fsck_on_umount_deep);

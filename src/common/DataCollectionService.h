@@ -147,21 +147,16 @@ public:
     friend class DataCollectionService;
 };
 
-class DataCollectionServiceThread : public Thread {
+class DataCollectionService{
 protected:
     std::string log_path;
-    int log_cap;
-    int dumpDelay;
     std::vector <DataEntry> entries;
-    int idx = 0;
-    boost::shared_mutex rw_mutex;
-    std::atomic<bool> writer_waiting = false;
-    std::atomic<bool> post_write_delay = false;
-    std::atomic<bool> shutdown_thread = false;
 
     void logEntries() {
-      std::ofstream entryFile(log_path + "entries_" + std::to_string(idx) + ".csv");
-      std::ofstream opsFile(log_path + "ops_" + std::to_string(idx) + ".csv");
+      boost::uuids::uuid u = boost::uuids::random_generator()();
+      std::string uid = boost::uuids::to_string(u);
+      std::ofstream entryFile(log_path + "entries_" + uid + ".csv");
+      std::ofstream opsFile(log_path + "ops_" + uid + ".csv");
 
       if (!entryFile.is_open() || !opsFile.is_open()) {
         std::cerr << "Error: Failed to open log files at " << log_path << std::endl;
@@ -175,86 +170,21 @@ protected:
       entryFile.close();
       opsFile.close();
     }
-
+public:
+    bool active = false;
     void dump() {
-      // Indicate that a writer is waiting
-      writer_waiting.store(true);
-
-      // Acquire exclusive lock
-      boost::unique_lock <boost::shared_mutex> lock(rw_mutex);
-
-      // Now writer has the lock
       logEntries();
       entries.clear();
-
-      // Activate post-write delay
-      post_write_delay.store(true);
-      writer_waiting.store(false);
-
-      // Hold readers for dumpDelay seconds
-      usleep(dumpDelay * 1000000);
-
-      // Remove post-write delay
-      post_write_delay.store(false);
     }
 
-    bool needDump() {
-      // If a writer is waiting or post-write delay is active, return NULL
-      if (writer_waiting.load() || post_write_delay.load())
-        return false;
-
-      // Acquire shared lock for reading
-      boost::shared_lock <boost::shared_mutex> lock(rw_mutex);
-
-      // Re-check after acquiring lock (for safety)
-      if (writer_waiting.load() || post_write_delay.load())
-        return false;
-
-      return entries.size() >= static_cast<size_t>(log_cap);
-    }
-
-public:
-    DataCollectionServiceThread(std::string path, int cap, int delay)
-            : log_path(path),
-              log_cap(cap), dumpDelay(delay) {}
+    DataCollectionService(std::string path)
+            : log_path(path) {}
 
     void newEntry(DataEntry &entry) {
-      // If a writer is waiting or post-write delay is active, return
-      if (writer_waiting.load() || post_write_delay.load())
+      if(!active)
         return;
-
-      // Acquire lock for adding entries
-      boost::shared_lock<boost::shared_mutex> lock(rw_mutex);
-
-      // Re-check after acquiring lock (for safety)
-      if (writer_waiting.load() || post_write_delay.load())
-        return;
-
-      // Upgrade to a unique lock only when necessary (single writer allowed)
-      boost::upgrade_lock<boost::shared_mutex> upgradeLock(rw_mutex);
-      boost::upgrade_to_unique_lock<boost::shared_mutex> writeLock(upgradeLock);
-
       DataEntry newEntry = entry;
       entries.push_back(newEntry);
-    }
-
-    void *entry() override {
-      int sleep_time = 1000000;
-      while (1) {
-        if (shutdown_thread.load()) {
-          dump();
-          break;
-        }
-        if (needDump()) {
-          dump();
-        }
-        usleep(sleep_time);
-      }
-      return nullptr;
-    }
-
-    void shutdown() {
-      shutdown_thread.store(true);
     }
 };
 
