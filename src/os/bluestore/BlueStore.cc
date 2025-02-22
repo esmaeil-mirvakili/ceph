@@ -56,6 +56,7 @@
 #include "common/WorkQueue.h"
 #include "kv/KeyValueHistogram.h"
 #include "Writer.h"
+#include "common/admin_socket.h"
 
 #if defined(WITH_LTTNG)
 #define TRACEPOINT_DEFINE
