@@ -163,7 +163,6 @@ protected:
         return;
       }
 
-      idx++;
       for (auto &entry: entries) {
         entry.log(entryFile, opsFile);
       }
