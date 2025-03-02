@@ -5774,9 +5774,9 @@ BlueStore::BlueStore(CephContext *cct,
   _init_logger();
   cct->_conf.add_observer(this);
   set_cache_shards(1);
-  std::cout << "1" << std::endl;
+  derr << "hook: $$1" << dendl;
   asok_hook = SocketHook::create(this);
-  std::cout << "2" << std::endl;
+  derr << "hook: $$2" << dendl;
   bluestore_bdev_label_require_all = cct->_conf.get_val<bool>("bluestore_bdev_label_require_all");
 }
 
