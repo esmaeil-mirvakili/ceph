@@ -9849,6 +9849,7 @@ void OSD::enqueue_op(spg_t pg, OpRequestRef&& op, epoch_t epoch)
   const int type = op->get_req()->get_type();
 
   // data collection
+  derr << "osd 1: $$ start" << dendl;
   op->initializeDataEntry();
   op->dataEntry->getReqInfo().recv_stamp = op->get_req()->get_recv_stamp().to_nsec();
   op->dataEntry->getReqInfo().enqueue_stamp = ceph_clock_now().to_nsec();
@@ -9856,6 +9857,7 @@ void OSD::enqueue_op(spg_t pg, OpRequestRef&& op, epoch_t epoch)
   op->dataEntry->getReqInfo().type = op->get_req()->get_type();
   op->dataEntry->getReqInfo().cost = op->get_req()->get_cost();
   op->dataEntry->getReqInfo().priority = op->get_req()->get_priority();
+  derr << "osd 1: $$ end" << dendl;
 
   dout(15) << "enqueue_op " << *op->get_req() << " prio " << priority
            << " type " << type
@@ -9920,8 +9922,10 @@ void OSD::dequeue_op(
   op->set_dequeued_time(now);
 
   // data collection
+  derr << "osd 2: $$ start" << dendl;
   op->initializeDataEntry();
   op->dataEntry->getReqInfo().dequeue_stamp = ceph_clock_now().to_nsec();
+  derr << "osd 2: $$ end" << dendl;
 
   utime_t latency = now - m->get_recv_stamp();
   dout(10) << "dequeue_op " << *op->get_req()

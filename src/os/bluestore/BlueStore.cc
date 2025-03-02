@@ -15611,12 +15611,14 @@ int BlueStore::queue_transactions(
   _txc_state_proc(txc);
 
   // data collection
+  derr << "blue 2: $$ start" << dendl;
   op->initializeDataEntry();
   op->dataEntry->getReqInfo().bluestore_bytes = txc->bytes;
   op->dataEntry->getReqInfo().bluestore_ios = txc->ios;
   op->dataEntry->getReqInfo().bluestore_cost = txc->cost;
   op->dataEntry->getReqInfo().throttle_current = throttle.get_current();
   op->dataEntry->getReqInfo().throttle_max = throttle.get_max();
+  derr << "blue 2: $$ end" << dendl;
 
   // we're immediately readable (unlike FileStore)
   for (auto c : on_applied_sync) {
@@ -15645,9 +15647,15 @@ int BlueStore::queue_transactions(
     tend - tstart,
     cct->_conf->bluestore_log_op_age);
   // data collection
+  derr << "init 1: $$ start" << dendl;
   op->initializeDataEntry();
+  derr << "init 1: $$ end" << dendl;
+  derr << "commit time: $$ start" << dendl;
   op->dataEntry->getReqInfo().commit_stamp = ceph_clock_now().to_nsec();
+  derr << "commit time: $$ end" << dendl;
+  derr << "new entry 1: $$ start" << dendl;
   dataCollectionService.newEntry(*op->dataEntry);
+  derr << "new entry 1: $$ end" << dendl;
   return 0;
 }
 
@@ -15676,9 +15684,10 @@ void BlueStore::_txc_add_transaction(TransContext *txc, Transaction *t)
     Transaction::Op *op = i.decode_op();
 
     // data collection
+    derr << "blue 1: $$ start" << dendl;
     txc->osd_op->initializeDataEntry();
     txc->osd_op->dataEntry->addOp(op->op, op->cid, op->oid, op->off, op->len);
-
+    derr << "blue 1: $$ end" << dendl;
     int r = 0;
 
     // no coll or obj
