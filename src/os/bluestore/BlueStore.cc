@@ -15649,15 +15649,17 @@ int BlueStore::queue_transactions(
     tend - tstart,
     cct->_conf->bluestore_log_op_age);
   // data collection
-  derr << "init 1: $$ start" << dendl;
-  op->initializeDataEntry();
-  derr << "init 1: $$ end" << dendl;
-  derr << "commit time: $$ start" << dendl;
-  op->dataEntry->getReqInfo().commit_stamp = ceph_clock_now().to_nsec();
-  derr << "commit time: $$ end" << dendl;
-  derr << "new entry 1: $$ start" << dendl;
-  dataCollectionService.newEntry(*op->dataEntry);
-  derr << "new entry 1: $$ end" << dendl;
+  if(op) {
+    derr << "init 1: $$ start" << dendl;
+    op->initializeDataEntry();
+    derr << "init 1: $$ end" << dendl;
+    derr << "commit time: $$ start" << dendl;
+    op->dataEntry->getReqInfo().commit_stamp = ceph_clock_now().to_nsec();
+    derr << "commit time: $$ end" << dendl;
+    derr << "new entry 1: $$ start" << dendl;
+    dataCollectionService.newEntry(*op->dataEntry);
+    derr << "new entry 1: $$ end" << dendl;
+  }
   return 0;
 }
 
