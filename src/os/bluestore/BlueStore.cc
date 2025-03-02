@@ -15685,7 +15685,13 @@ void BlueStore::_txc_add_transaction(TransContext *txc, Transaction *t)
 
     // data collection
     derr << "blue 1: $$ start" << dendl;
+    if(txc->osd_op){
+      derr << "osd op: $$ " << typeid(*txc->osd_op).name() << dendl;
+    }else{
+      derr << "osd op is null $$" << dendl;
+    }
     txc->osd_op->initializeDataEntry();
+    derr << "init done: $$" << dendl;
     txc->osd_op->dataEntry->addOp(op->op, op->cid, op->oid, op->off, op->len);
     derr << "blue 1: $$ end" << dendl;
     int r = 0;
