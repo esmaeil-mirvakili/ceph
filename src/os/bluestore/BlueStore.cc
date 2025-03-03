@@ -5774,9 +5774,7 @@ BlueStore::BlueStore(CephContext *cct,
   _init_logger();
   cct->_conf.add_observer(this);
   set_cache_shards(1);
-  derr << "hook: $$1" << dendl;
   asok_hook = SocketHook::create(this);
-  derr << "hook: $$2" << dendl;
   bluestore_bdev_label_require_all = cct->_conf.get_val<bool>("bluestore_bdev_label_require_all");
 }
 
@@ -15612,14 +15610,12 @@ int BlueStore::queue_transactions(
 
   // data collection
   if(op) {
-    derr << "blue 2: $$ start" << dendl;
     op->initializeDataEntry();
     op->dataEntry->getReqInfo().bluestore_bytes = txc->bytes;
     op->dataEntry->getReqInfo().bluestore_ios = txc->ios;
     op->dataEntry->getReqInfo().bluestore_cost = txc->cost;
     op->dataEntry->getReqInfo().throttle_current = throttle.get_current();
     op->dataEntry->getReqInfo().throttle_max = throttle.get_max();
-    derr << "blue 2: $$ end" << dendl;
   }
 
   // we're immediately readable (unlike FileStore)
@@ -15650,15 +15646,9 @@ int BlueStore::queue_transactions(
     cct->_conf->bluestore_log_op_age);
   // data collection
   if(op) {
-    derr << "init 1: $$ start" << dendl;
     op->initializeDataEntry();
-    derr << "init 1: $$ end" << dendl;
-    derr << "commit time: $$ start" << dendl;
     op->dataEntry->getReqInfo().commit_stamp = ceph_clock_now().to_nsec();
-    derr << "commit time: $$ end" << dendl;
-    derr << "new entry 1: $$ start" << dendl;
     dataCollectionService.newEntry(*op->dataEntry);
-    derr << "new entry 1: $$ end" << dendl;
   }
   return 0;
 }
@@ -15689,12 +15679,8 @@ void BlueStore::_txc_add_transaction(TransContext *txc, Transaction *t)
 
     // data collection
     if(txc->osd_op) {
-      derr << "blue 1: $$ start" << dendl;
-      derr << "osd op: $$ " << typeid(*txc->osd_op).name() << dendl;
       txc->osd_op->initializeDataEntry();
-      derr << "init done: $$" << dendl;
       txc->osd_op->dataEntry->addOp(op->op, op->cid, op->oid, op->off, op->len);
-      derr << "blue 1: $$ end" << dendl;
     }
     int r = 0;
 
