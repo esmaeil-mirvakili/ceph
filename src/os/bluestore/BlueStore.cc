@@ -5747,9 +5747,9 @@ private:
     {
       if (command == "start data collection")
       {
-        store->dataCollectionService.active = true;
+        store->dataCollectionService.start();
       } else if (command == "stop data collection") {
-        store->dataCollectionService.active = false;
+        store->dataCollectionService.stop();
         store->dataCollectionService.dump();
       }
       return 0;

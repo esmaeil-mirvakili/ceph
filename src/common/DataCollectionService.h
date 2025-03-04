@@ -12,13 +12,15 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/thread/shared_mutex.hpp>
 
-#include "common/ceph_mutex.h"
 #include "common/Thread.h"
 #include "common/Clock.h"
 
 #include <fstream>
 #include <string>
 #include <iostream>
+#include <map>
+#include <thread>
+#include <filesystem>
 
 struct DataCollectionRequestInfo {
     uint64_t recv_stamp;
@@ -151,6 +153,22 @@ class DataCollectionService{
 protected:
     std::string log_path;
     std::vector <DataEntry> entries;
+    std::atomic<bool> active(false);
+    std::atomic<bool> shutdown_flag(false);
+
+    bool load_disk_paths(const std::string &file_path, std::string &ssd_disk, std::string &hdd_disk) {
+      std::ifstream file(file_path);
+      if (!file) {
+        std::cerr << "Error opening disk info file: " << file_path << std::endl;
+        return false;
+      }
+      if (!std::getline(file, ssd_disk) || !std::getline(file, hdd_disk)) {
+        std::cerr << "Invalid disk info file format." << std::endl;
+        return false;
+      }
+      file.close();
+      return true;
+    }
 
     void logEntries() {
       boost::uuids::uuid u = boost::uuids::random_generator()();
@@ -169,21 +187,60 @@ protected:
       entryFile.close();
       opsFile.close();
     }
+
+    void copy_file(const std::string &file_path, fs::path &destination_folder, const std::string &name){
+      fs::path dest_path = destination_folder / name;
+      try {
+        fs::copy_file(file_path, dest_path, fs::copy_options::overwrite_existing);
+      } catch (const std::exception &e) {
+        std::cerr << "Error copying file: " << e.what() << std::endl;
+      }
+    }
+
+    void capture_system_state() {
+      uint64_t now = ceph_clock_now().to_nsec();
+      fs::path destination_folder = fs::path(log_path) / (std::to_string(now) + "/");
+      if (!fs::exists(destination_folder)) {
+        fs::create_directories(destination_folder);
+      }
+      copy_file("/proc/diskstats", destination_folder, "disk_stats.txt");
+      copy_file("/proc/meminfo", destination_folder, "mem.txt");
+      copy_file("/proc/stat", destination_folder, "cpu.txt");
+    }
+
+    void system_state_loop(){
+      while (!shutdown_flag.load()) {
+        if(active.load())
+          capture_system_state();
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+      }
+    }
 public:
-    bool active = false;
+    DataCollectionService(std::string path)
+            : log_path(path) {}
+
+    void newEntry(DataEntry &entry) {
+      if(!active.load())
+        return;
+      DataEntry newEntry = entry;
+      entries.push_back(newEntry);
+    }
+
+    void stop(){
+      shutdown_flag.store(true);
+      active.store(false);
+    }
+
     void dump() {
       logEntries();
       entries.clear();
     }
 
-    DataCollectionService(std::string path)
-            : log_path(path) {}
-
-    void newEntry(DataEntry &entry) {
-      if(!active)
-        return;
-      DataEntry newEntry = entry;
-      entries.push_back(newEntry);
+    void start(){
+      shutdown_flag.store(false);
+      active.store(true);
+      std::thread sys_state_thread(&DataCollectionService::system_state_loop, this);
+      sys_state_thread.detach();
     }
 };
 
