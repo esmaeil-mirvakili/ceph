@@ -22,6 +22,8 @@
 #include <thread>
 #include <filesystem>
 
+namespace fs = std::filesystem;
+
 struct DataCollectionRequestInfo {
     uint64_t recv_stamp;
     uint64_t enqueue_stamp;
@@ -153,8 +155,8 @@ class DataCollectionService{
 protected:
     std::string log_path;
     std::vector <DataEntry> entries;
-    std::atomic<bool> active(false);
-    std::atomic<bool> shutdown_flag(false);
+    std::atomic<bool> active{false};
+    std::atomic<bool> shutdown_flag{false};
 
     bool load_disk_paths(const std::string &file_path, std::string &ssd_disk, std::string &hdd_disk) {
       std::ifstream file(file_path);
