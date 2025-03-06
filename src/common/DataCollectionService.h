@@ -185,6 +185,9 @@ protected:
         return;
       }
 
+      opsFile << "id, type, cid, oid, off, len" << std::endl;
+      entryFile << "id, recv_stamp, enqueue_stamp, dequeue_stamp, commit_stamp, owner, type, cost, priority, bluestore_bytes, bluestore_ios, bluestore_cost, throttle_current, throttle_max" << std::endl;
+
       for (auto &entry: entries) {
         entry.log(entryFile, opsFile);
       }
