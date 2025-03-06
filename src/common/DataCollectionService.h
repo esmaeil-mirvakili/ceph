@@ -112,10 +112,12 @@ public:
 
     void log(std::ofstream &entryStream, std::ofstream &opsStream) {
       entryStream << id;
+      entryStream << ", ";
       reqInfo.print(entryStream);
       entryStream << std::endl;
       for (DataCollectionOpInfo &opInfo: ops) {
         opsStream << id;
+        opsStream << ", ";
         opInfo.print(opsStream);
         opsStream << std::endl;
       }
