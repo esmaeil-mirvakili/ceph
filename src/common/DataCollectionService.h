@@ -25,19 +25,22 @@
 namespace fs = std::filesystem;
 
 struct DataCollectionRequestInfo {
-    uint64_t recv_stamp;
-    uint64_t enqueue_stamp;
-    uint64_t dequeue_stamp;
-    uint64_t commit_stamp;
-    uint64_t owner;
-    int type;
-    int cost;
-    unsigned priority;
-    uint64_t bluestore_bytes;
-    uint64_t bluestore_ios;
-    uint64_t bluestore_cost;
-    int64_t throttle_current;
-    int64_t throttle_max;
+    uint64_t recv_stamp = 0;
+    uint64_t enqueue_stamp = 0;
+    uint64_t dequeue_stamp = 0;
+    uint64_t commit_stamp = 0;
+    uint64_t dequeue_end_stamp = 0;
+    uint64_t data_len = 0;
+    uint64_t data_off = 0;
+    uint64_t owner = 0;
+    int type = 0;
+    int cost = 0;
+    unsigned priority = 0;
+    uint64_t bluestore_bytes = 0;
+    uint64_t bluestore_ios = 0;
+    uint64_t bluestore_cost = 0;
+    int64_t throttle_current = 0;
+    int64_t throttle_max = 0;
 
     DataCollectionRequestInfo &operator=(const DataCollectionRequestInfo &other) {
       if (this != &other) {
@@ -45,6 +48,9 @@ struct DataCollectionRequestInfo {
         enqueue_stamp = other.enqueue_stamp;
         dequeue_stamp = other.dequeue_stamp;
         commit_stamp = other.commit_stamp;
+        dequeue_end_stamp = other.dequeue_end_stamp;
+        data_len = other.data_len;
+        data_off = other.data_off;
         owner = other.owner;
         type = other.type;
         cost = other.cost;
@@ -59,7 +65,7 @@ struct DataCollectionRequestInfo {
     }
 
     std::string getHeader() {
-      return "recv_stamp, enqueue_stamp, dequeue_stamp, commit_stamp, owner, type, cost, priority, bluestore_bytes, bluestore_ios, bluestore_cost, throttle_current, throttle_max";
+      return "recv_stamp, enqueue_stamp, dequeue_stamp, commit_stamp, dequeue_end_stamp, data_len, data_off, owner, type, cost, priority, bluestore_bytes, bluestore_ios, bluestore_cost, throttle_current, throttle_max";
     }
 
     void print(std::ofstream &ss) const {
@@ -67,6 +73,9 @@ struct DataCollectionRequestInfo {
       ss << enqueue_stamp << ", ";
       ss << dequeue_stamp << ", ";
       ss << commit_stamp << ", ";
+      ss << dequeue_end_stamp << ", ";
+      ss << data_len << ", ";
+      ss << data_off << ", ";
       ss << owner << ", ";
       ss << type << ", ";
       ss << cost << ", ";

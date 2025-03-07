@@ -9853,6 +9853,8 @@ void OSD::enqueue_op(spg_t pg, OpRequestRef&& op, epoch_t epoch)
     op->initializeDataEntry();
     op->dataEntry->getReqInfo().recv_stamp = op->get_req()->get_recv_stamp().to_nsec();
     op->dataEntry->getReqInfo().enqueue_stamp = ceph_clock_now().to_nsec();
+    op->dataEntry->getReqInfo().data_len = op->get_req()->get_header().data_len;
+    op->dataEntry->getReqInfo().data_off = op->get_req()->get_header().data_off;
     op->dataEntry->getReqInfo().owner = op->get_req()->get_source().num();
     op->dataEntry->getReqInfo().type = op->get_req()->get_type();
     op->dataEntry->getReqInfo().cost = op->get_req()->get_cost();
@@ -9948,6 +9950,11 @@ void OSD::dequeue_op(
   op->osd_trace.event("dequeue_op");
 
   pg->do_request(op, handle);
+
+  if(op) {
+    op->initializeDataEntry();
+    op->dataEntry->getReqInfo().dequeue_end_stamp = ceph_clock_now().to_nsec();
+  }
 
   // finish
   dout(10) << "dequeue_op " << *op->get_req() << " finish" << dendl;
