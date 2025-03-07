@@ -64,10 +64,6 @@ struct DataCollectionRequestInfo {
       return *this;
     }
 
-    std::string getHeader() {
-      return "recv_stamp, enqueue_stamp, dequeue_stamp, commit_stamp, dequeue_end_stamp, data_len, data_off, owner, type, cost, priority, bluestore_bytes, bluestore_ios, bluestore_cost, throttle_current, throttle_max";
-    }
-
     void print(std::ofstream &ss) const {
       ss << recv_stamp << ", ";
       ss << enqueue_stamp << ", ";
@@ -98,10 +94,6 @@ struct DataCollectionOpInfo {
     DataCollectionOpInfo(uint32_t _type, uint32_t _cid, uint32_t _oid, uint64_t _off,
                          uint64_t _len) : type(_type), cid(_cid), oid(_oid), off(_off),
                                           len(_len) {}
-
-    std::string getHeader() {
-      return "type, cid, oid, off, len";
-    }
 
     void print(std::ofstream &ss) const {
       ss << type << ", ";
@@ -195,7 +187,7 @@ protected:
       }
 
       opsFile << "id, type, cid, oid, off, len" << std::endl;
-      entryFile << "id, recv_stamp, enqueue_stamp, dequeue_stamp, commit_stamp, owner, type, cost, priority, bluestore_bytes, bluestore_ios, bluestore_cost, throttle_current, throttle_max" << std::endl;
+      entryFile << "id, recv_stamp, enqueue_stamp, dequeue_stamp, commit_stamp, dequeue_end_stamp, data_len, data_off, owner, type, cost, priority, bluestore_bytes, bluestore_ios, bluestore_cost, throttle_current, throttle_max" << std::endl;
 
       for (auto &entry: entries) {
         entry.log(entryFile, opsFile);
