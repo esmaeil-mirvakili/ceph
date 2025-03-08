@@ -2413,6 +2413,8 @@ OSD::OSD(CephContext *cct_,
     ceph_assert(set_result == 0);
   }
 
+  asok_hook = SocketHook::create(cct_, this);
+
   monc->set_messenger(client_messenger);
   op_tracker.set_complaint_and_threshold(cct->_conf->osd_op_complaint_time,
                                          cct->_conf->osd_op_log_threshold);
@@ -2605,6 +2607,58 @@ int OSD::set_numa_affinity()
 }
 
 // asok
+
+class OSD::SocketHook : public AdminSocketHook
+{
+    CephContext *cct;
+    OSD *osd;
+
+public:
+    static OSD::SocketHook *create(CephContext *cct_, OSD *osd)
+    {
+      OSD::SocketHook *hook = nullptr;
+      AdminSocket *admin_socket = cct_->get_admin_socket();
+      if (admin_socket)
+      {
+        hook = new OSD::SocketHook(cct_, osd);
+        int r = admin_socket->register_command("start data collection",
+                                               hook,
+                                               "start collecting data");
+        r = admin_socket->register_command("stop data collection",
+                                           hook,
+                                           "stop and reset data collection");
+        if (r != 0)
+        {
+          delete hook;
+          hook = nullptr;
+        }
+      }
+      return hook;
+    }
+    ~SocketHook()
+    {
+      AdminSocket *admin_socket = cct->get_admin_socket();
+      admin_socket->unregister_commands(this);
+    }
+
+private:
+    SocketHook(CephContext *cct_, OSD *osd) : cct(cct_), osd(osd) {}
+    int call(std::string_view command, const cmdmap_t &cmdmap,
+             const bufferlist &in,
+             Formatter *f,
+             std::ostream &ss,
+             bufferlist &out) override
+    {
+      if (command == "start data collection")
+      {
+        osd->dataCollectionService.start();
+      } else if (command == "stop data collection") {
+        osd->dataCollectionService.stop();
+        osd->dataCollectionService.dump();
+      }
+      return 0;
+    }
+};
 
 class OSDSocketHook : public AdminSocketHook {
   OSD *osd;
@@ -9954,6 +10008,7 @@ void OSD::dequeue_op(
   if(op) {
     op->initializeDataEntry();
     op->dataEntry->getReqInfo().dequeue_end_stamp = ceph_clock_now().to_nsec();
+    dataCollectionService.newEntry(*op->dataEntry);
   }
 
   // finish

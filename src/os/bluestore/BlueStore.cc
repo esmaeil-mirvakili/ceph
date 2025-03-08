@@ -5705,57 +5705,6 @@ void BlueStore::handle_discard(interval_set<uint64_t>& to_release)
   alloc->release(to_release);
 }
 
-class BlueStore::SocketHook : public AdminSocketHook
-{
-    BlueStore *store;
-
-public:
-    static BlueStore::SocketHook *create(BlueStore *store)
-    {
-      BlueStore::SocketHook *hook = nullptr;
-      AdminSocket *admin_socket = store->cct->get_admin_socket();
-      if (admin_socket)
-      {
-        hook = new BlueStore::SocketHook(store);
-        int r = admin_socket->register_command("start data collection",
-                                               hook,
-                                               "start collecting data");
-        r = admin_socket->register_command("stop data collection",
-                                           hook,
-                                           "stop and reset data collection");
-        if (r != 0)
-        {
-          delete hook;
-          hook = nullptr;
-        }
-      }
-      return hook;
-    }
-    ~SocketHook()
-    {
-      AdminSocket *admin_socket = store->cct->get_admin_socket();
-      admin_socket->unregister_commands(this);
-    }
-
-private:
-    SocketHook(BlueStore *store) : store(store) {}
-    int call(std::string_view command, const cmdmap_t &cmdmap,
-             const bufferlist &in,
-             Formatter *f,
-             std::ostream &ss,
-             bufferlist &out) override
-    {
-      if (command == "start data collection")
-      {
-        store->dataCollectionService.start();
-      } else if (command == "stop data collection") {
-        store->dataCollectionService.stop();
-        store->dataCollectionService.dump();
-      }
-      return 0;
-    }
-};
-
 BlueStore::BlueStore(CephContext *cct, const string& path)
   : BlueStore(cct, path, 0) {}
 
@@ -5774,7 +5723,6 @@ BlueStore::BlueStore(CephContext *cct,
   _init_logger();
   cct->_conf.add_observer(this);
   set_cache_shards(1);
-  asok_hook = SocketHook::create(this);
   bluestore_bdev_label_require_all = cct->_conf.get_val<bool>("bluestore_bdev_label_require_all");
 }
 
@@ -15608,16 +15556,6 @@ int BlueStore::queue_transactions(
   // execute (start)
   _txc_state_proc(txc);
 
-  // data collection
-  if(op) {
-    op->initializeDataEntry();
-    op->dataEntry->getReqInfo().bluestore_bytes = txc->bytes;
-    op->dataEntry->getReqInfo().bluestore_ios = txc->ios;
-    op->dataEntry->getReqInfo().bluestore_cost = txc->cost;
-    op->dataEntry->getReqInfo().throttle_current = throttle.get_current();
-    op->dataEntry->getReqInfo().throttle_max = throttle.get_max();
-  }
-
   // we're immediately readable (unlike FileStore)
   for (auto c : on_applied_sync) {
     c->complete(0);
@@ -15644,12 +15582,7 @@ int BlueStore::queue_transactions(
     l_bluestore_throttle_lat,
     tend - tstart,
     cct->_conf->bluestore_log_op_age);
-  // data collection
-  if(op) {
-    op->initializeDataEntry();
-    op->dataEntry->getReqInfo().commit_stamp = ceph_clock_now().to_nsec();
-    dataCollectionService.newEntry(*op->dataEntry);
-  }
+
   return 0;
 }
 
@@ -15677,11 +15610,6 @@ void BlueStore::_txc_add_transaction(TransContext *txc, Transaction *t)
   for (int pos = 0; i.have_op(); ++pos) {
     Transaction::Op *op = i.decode_op();
 
-    // data collection
-    if(txc->osd_op) {
-      txc->osd_op->initializeDataEntry();
-      txc->osd_op->dataEntry->addOp(op->op, op->cid, op->oid, op->off, op->len);
-    }
     int r = 0;
 
     // no coll or obj

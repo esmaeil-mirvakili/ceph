@@ -57,8 +57,6 @@
 #include "BlueFS.h"
 #include "common/EventTrace.h"
 
-#include "common/DataCollectionService.h"
-
 #ifdef WITH_BLKIN
 #include "common/zipkin_trace.h"
 #endif
@@ -244,8 +242,6 @@ class BlueStore : public ObjectStore,
   // -----------------------------------------------------
   // types
 public:
-  // data collection
-  DataCollectionService dataCollectionService{"/users/esmaeil/data/"};
   // config observer
   const char** get_tracked_conf_keys() const override;
   void handle_conf_change(const ConfigProxy& conf,
@@ -2402,9 +2398,6 @@ private:
   int path_fd = -1;  ///< open handle to $path
   int fsid_fd = -1;  ///< open handle (locked) to $path/fsid
   bool mounted = false;
-
-  class SocketHook;
-  SocketHook *asok_hook = nullptr;
 
   // store open_db options:
   bool db_was_opened_read_only = true;

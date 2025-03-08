@@ -56,6 +56,7 @@
 #include "osd/osd_perf_counters.h"
 #include "common/Finisher.h"
 #include "scrubber/osd_scrub.h"
+#include "common/DataCollectionService.h"
 
 #define CEPH_OSD_PROTOCOL    10 /* cluster internal */
 
@@ -1076,6 +1077,9 @@ class OSD : public Dispatcher,
   std::string gss_ktfile_client{};
 
 public:
+  class SocketHook;
+  SocketHook *asok_hook = nullptr;
+  DataCollectionService dataCollectionService{"/users/esmaeil/data/"};
   // config observer bits
   std::vector<std::string> get_tracked_keys() const noexcept override;
   void handle_conf_change(const ConfigProxy& conf,
