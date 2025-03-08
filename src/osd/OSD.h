@@ -1078,7 +1078,7 @@ class OSD : public Dispatcher,
 
 public:
   class SocketHook;
-  SocketHook *asok_hook = nullptr;
+  SocketHook *data_asok_hook = nullptr;
   DataCollectionService dataCollectionService{"/users/esmaeil/data/"};
   // config observer bits
   std::vector<std::string> get_tracked_keys() const noexcept override;
