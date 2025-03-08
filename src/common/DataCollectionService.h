@@ -198,6 +198,10 @@ public:
       std::thread sys_state_thread(&DataCollectionService::system_state_loop, this);
       sys_state_thread.detach();
     }
+
+    bool isActive(){
+      return active.load();
+    }
 };
 
 
