@@ -1077,8 +1077,6 @@ class OSD : public Dispatcher,
   std::string gss_ktfile_client{};
 
 public:
-  friend class DataSocketHook;
-  DataSocketHook *data_asok_hook = nullptr;
   DataCollectionService dataCollectionService{"/users/esmaeil/data/"};
   // config observer bits
   std::vector<std::string> get_tracked_keys() const noexcept override;
@@ -1130,6 +1128,8 @@ protected:
   // asok
   friend class OSDSocketHook;
   class OSDSocketHook *asok_hook;
+  friend class DataSocketHook;
+  DataSocketHook *data_asok_hook = nullptr;
   using PGRefOrError = std::tuple<std::optional<PGRef>, int>;
     PGRefOrError locate_asok_target(const cmdmap_t& cmdmap,
 				    std::stringstream& ss, bool only_primary);
