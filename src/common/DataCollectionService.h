@@ -196,7 +196,7 @@ public:
       shutdown_flag.store(false);
       active.store(true);
       std::thread sys_state_thread(&DataCollectionService::system_state_loop, this);
-      sys_state_thread.detach();
+//      sys_state_thread.detach();
     }
 
     bool isActive(){
