@@ -2335,58 +2335,6 @@ int OSD::peek_meta(ObjectStore *store,
 
 // cons/des
 
-class OSD::SocketHook : public AdminSocketHook
-{
-    CephContext *cct;
-    OSD *osd;
-
-public:
-    static OSD::SocketHook *create(CephContext *cct_, OSD *osd)
-    {
-      OSD::SocketHook *hook = nullptr;
-      AdminSocket *admin_socket = cct_->get_admin_socket();
-      if (admin_socket)
-      {
-        hook = new OSD::SocketHook(cct_, osd);
-        int r = admin_socket->register_command("start data collection",
-                                               hook,
-                                               "start collecting data");
-        r = admin_socket->register_command("stop data collection",
-                                           hook,
-                                           "stop and reset data collection");
-        if (r != 0)
-        {
-          delete hook;
-          hook = nullptr;
-        }
-      }
-      return hook;
-    }
-    ~SocketHook()
-    {
-      AdminSocket *admin_socket = cct->get_admin_socket();
-      admin_socket->unregister_commands(this);
-    }
-
-private:
-    SocketHook(CephContext *cct_, OSD *osd) : cct(cct_), osd(osd) {}
-    int call(std::string_view command, const cmdmap_t &cmdmap,
-             const bufferlist &in,
-             Formatter *f,
-             std::ostream &ss,
-             bufferlist &out) override
-    {
-      if (command == "start data collection")
-      {
-        osd->dataCollectionService.start();
-      } else if (command == "stop data collection") {
-        osd->dataCollectionService.stop();
-        osd->dataCollectionService.dump();
-      }
-      return 0;
-    }
-};
-
 OSD::OSD(CephContext *cct_,
 	 std::unique_ptr<ObjectStore> store_,
 	 int id,
@@ -2465,7 +2413,7 @@ OSD::OSD(CephContext *cct_,
     ceph_assert(set_result == 0);
   }
 
-  data_asok_hook = SocketHook::create(cct_, this);
+  data_asok_hook = DataSocketHook::create(cct_, this);
 
   monc->set_messenger(client_messenger);
   op_tracker.set_complaint_and_threshold(cct->_conf->osd_op_complaint_time,
@@ -2659,6 +2607,58 @@ int OSD::set_numa_affinity()
 }
 
 // asok
+
+class DataSocketHook : public AdminSocketHook
+{
+    CephContext *cct;
+    OSD *osd;
+
+public:
+    static DataSocketHook *create(CephContext *cct_, OSD *osd)
+    {
+      DataSocketHook *hook = nullptr;
+      AdminSocket *admin_socket = cct_->get_admin_socket();
+      if (admin_socket)
+      {
+        hook = new SocketHook(cct_, osd);
+        int r = admin_socket->register_command("start data collection",
+                                               hook,
+                                               "start collecting data");
+        r = admin_socket->register_command("stop data collection",
+                                           hook,
+                                           "stop and reset data collection");
+        if (r != 0)
+        {
+          delete hook;
+          hook = nullptr;
+        }
+      }
+      return hook;
+    }
+    ~DataSocketHook()
+    {
+      AdminSocket *admin_socket = cct->get_admin_socket();
+      admin_socket->unregister_commands(this);
+    }
+
+private:
+    DataSocketHook(CephContext *cct_, OSD *osd) : cct(cct_), osd(osd) {}
+    int call(std::string_view command, const cmdmap_t &cmdmap,
+             const bufferlist &in,
+             Formatter *f,
+             std::ostream &ss,
+             bufferlist &out) override
+    {
+      if (command == "start data collection")
+      {
+        osd->dataCollectionService.start();
+      } else if (command == "stop data collection") {
+        osd->dataCollectionService.stop();
+        osd->dataCollectionService.dump();
+      }
+      return 0;
+    }
+};
 
 class OSDSocketHook : public AdminSocketHook {
   OSD *osd;

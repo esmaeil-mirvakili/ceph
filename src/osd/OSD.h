@@ -1077,8 +1077,8 @@ class OSD : public Dispatcher,
   std::string gss_ktfile_client{};
 
 public:
-  class SocketHook;
-  SocketHook *data_asok_hook = nullptr;
+  friend class DataSocketHook;
+  DataSocketHook *data_asok_hook = nullptr;
   DataCollectionService dataCollectionService{"/users/esmaeil/data/"};
   // config observer bits
   std::vector<std::string> get_tracked_keys() const noexcept override;
