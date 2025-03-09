@@ -2620,7 +2620,7 @@ public:
       AdminSocket *admin_socket = cct_->get_admin_socket();
       if (admin_socket)
       {
-        hook = new SocketHook(cct_, osd);
+        hook = new DataSocketHook(cct_, osd);
         int r = admin_socket->register_command("start data collection",
                                                hook,
                                                "start collecting data");
