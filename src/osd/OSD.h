@@ -1066,16 +1066,16 @@ struct OSDShard {
 class DataSocketHook : public AdminSocketHook
 {
     CephContext *cct;
-    OSD *osd;
+    DataCollectionService *dataCollectionService;
 
 public:
-    static DataSocketHook *create(CephContext *cct_, OSD *osd)
+    static DataSocketHook *create(CephContext *cct_, DataCollectionService *dataCollectionService)
     {
       DataSocketHook *hook = nullptr;
       AdminSocket *admin_socket = cct_->get_admin_socket();
       if (admin_socket)
       {
-        hook = new DataSocketHook(cct_, osd);
+        hook = new DataSocketHook(cct_, dataCollectionService);
         int r = admin_socket->register_command("start data collection",
                                                hook,
                                                "start collecting data");
@@ -1097,7 +1097,7 @@ public:
     }
 
 private:
-    DataSocketHook(CephContext *cct_, OSD *osd) : cct(cct_), osd(osd) {}
+    DataSocketHook(CephContext *cct_, DataCollectionService *_dataCollectionService) : cct(cct_), dataCollectionService(_dataCollectionService) {}
     int call(std::string_view command, const cmdmap_t &cmdmap,
              const bufferlist &in,
              Formatter *f,
@@ -1106,10 +1106,10 @@ private:
     {
       if (command == "start data collection")
       {
-        osd->dataCollectionService.start();
+        dataCollectionService->start();
       } else if (command == "stop data collection") {
-        osd->dataCollectionService.stop();
-        osd->dataCollectionService.dump();
+        dataCollectionService->stop();
+        dataCollectionService->dump();
       }
       return 0;
     }
