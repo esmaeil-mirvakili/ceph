@@ -2412,7 +2412,7 @@ OSD::OSD(CephContext *cct_,
     ceph_assert(set_result == 0);
   }
 
-  data_asok_hook = DataSocketHook::create(cct_, &dataCollectionService);
+  data_asok_hook = DataSocketHook::create(cct_, this);
 
   monc->set_messenger(client_messenger);
   op_tracker.set_complaint_and_threshold(cct->_conf->osd_op_complaint_time,
