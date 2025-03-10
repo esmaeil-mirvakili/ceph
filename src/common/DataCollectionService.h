@@ -111,6 +111,7 @@ protected:
     std::vector <DataEntry> entries;
     std::atomic<bool> active{false};
     std::atomic<bool> shutdown_flag{false};
+    std::thread sys_state_thread;
 
     bool load_disk_paths(const std::string &file_path, std::string &ssd_disk, std::string &hdd_disk) {
       std::ifstream file(file_path);
@@ -185,6 +186,9 @@ public:
     void stop(){
       shutdown_flag.store(true);
       active.store(false);
+      if (sys_state_thread.joinable()) {
+        sys_state_thread.join();
+      }
     }
 
     void dump() {
@@ -193,15 +197,16 @@ public:
     }
 
     void start(){
-      std::cerr << "$$$$$$$$$$ start thread" << std::endl;
-      shutdown_flag.store(false);
-      std::cerr << "$$$$$$$$$$ shutdown false" << std::endl;
-      active.store(true);
-      std::cerr << "$$$$$$$$$$ active true" << std::endl;
-      std::thread sys_state_thread(&DataCollectionService::system_state_loop, this);
-      std::cerr << "$$$$$$$$$$ thread start" << std::endl;
-      sys_state_thread.detach();
-      std::cerr << "$$$$$$$$$$ thread detach" << std::endl;
+      if(!active.load()) {
+        std::cerr << "$$$$$$$$$$ start thread" << std::endl;
+        shutdown_flag.store(false);
+        std::cerr << "$$$$$$$$$$ shutdown false" << std::endl;
+        active.store(true);
+        std::cerr << "$$$$$$$$$$ active true" << std::endl;
+        sys_state_thread = std::thread(&DataCollectionService::system_state_loop,
+                                     this);
+        std::cerr << "$$$$$$$$$$ thread start" << std::endl;
+      }
     }
 
     bool isActive(){

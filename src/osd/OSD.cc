@@ -2632,6 +2632,11 @@ public:
     Formatter *f,
     const bufferlist& inbl,
     asok_finisher on_finish) override {
+    #define dout_context osd->cct
+    #define dout_prefix _prefix(_dout, osd->whoami, osd->get_osdmap_epoch())
+    derr << "$$$$$$$$$$$$$$ Checking OSD: " << (osd ? "OK" : "NULL") << dendl;
+    derr << "$$$$$$$$$$$$$$ Checking Data Collection Service: "
+         << (osd && osd->dataCollectionService ? "OK" : "NULL") << dendl;
     derr << "$$$$$$$$$$$$$$ " << prefix << dendl;
     bufferlist outbl;
     stringstream ss;
