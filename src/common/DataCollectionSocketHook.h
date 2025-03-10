@@ -7,7 +7,7 @@
 
 #include "common/admin_socket.h"
 #include "common/ceph_context.h"
-#include "OSD.h"
+#include "osd/OSD.h"
 
 class DataSocketHook : public AdminSocketHook
 {
