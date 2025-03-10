@@ -7,7 +7,9 @@
 
 #include "common/admin_socket.h"
 #include "common/ceph_context.h"
-#include "osd/OSD.h"
+
+
+class OSD;
 
 class DataSocketHook : public AdminSocketHook
 {
@@ -15,27 +17,7 @@ class DataSocketHook : public AdminSocketHook
     OSD *osd;
 
 public:
-    static DataSocketHook *create(CephContext *cct_, OSD *osd)
-    {
-      DataSocketHook *hook = nullptr;
-      AdminSocket *admin_socket = cct_->get_admin_socket();
-      if (admin_socket)
-      {
-        hook = new DataSocketHook(cct_, osd);
-        int r = admin_socket->register_command("start data collection",
-                                               hook,
-                                               "start collecting data");
-        r = admin_socket->register_command("stop data collection",
-                                           hook,
-                                           "stop and reset data collection");
-        if (r != 0)
-        {
-          delete hook;
-          hook = nullptr;
-        }
-      }
-      return hook;
-    }
+    static DataSocketHook *create(CephContext *cct_, OSD *osd);
     ~DataSocketHook()
     {
       AdminSocket *admin_socket = cct->get_admin_socket();
@@ -48,17 +30,7 @@ private:
              const bufferlist &in,
              Formatter *f,
              std::ostream &ss,
-             bufferlist &out) override
-    {
-      if (command == "start data collection")
-      {
-        osd->dataCollectionService.start();
-      } else if (command == "stop data collection") {
-        osd->dataCollectionService.stop();
-        osd->dataCollectionService.dump();
-      }
-      return 0;
-    }
+             bufferlist &out) override;
 };
 
 #endif //CEPH_DATACOLLECTIONSOCKETHOOK_H
