@@ -58,7 +58,7 @@
 #include "scrubber/osd_scrub.h"
 #include "common/admin_socket.h"
 #include "common/DataCollectionService.h"
-#include "common/DataSocketHook.h"
+#include "common/DataCollectionSocketHook.h"
 
 #define CEPH_OSD_PROTOCOL    10 /* cluster internal */
 
