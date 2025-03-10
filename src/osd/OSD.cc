@@ -2616,14 +2616,7 @@ public:
 	   Formatter *f,
 	   std::ostream& ss,
 	   bufferlist& out) override {
-//    ceph_abort("should use async hook");
-    if (prefix == "start data collection")
-    {
-      osd->dataCollectionService.start();
-    } else if (prefix == "stop data collection") {
-      osd->dataCollectionService.stop();
-      osd->dataCollectionService.dump();
-    }
+    ceph_abort("should use async hook");
     return 0;
   }
   void call_async(
