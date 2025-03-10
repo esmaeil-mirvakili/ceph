@@ -2617,10 +2617,10 @@ public:
 	   std::ostream& ss,
 	   bufferlist& out) override {
 //    ceph_abort("should use async hook");
-    if (command == "start data collection")
+    if (prefix == "start data collection")
     {
       osd->dataCollectionService.start();
-    } else if (command == "stop data collection") {
+    } else if (prefix == "stop data collection") {
       osd->dataCollectionService.stop();
       osd->dataCollectionService.dump();
     }
@@ -2632,12 +2632,12 @@ public:
     Formatter *f,
     const bufferlist& inbl,
     asok_finisher on_finish) override {
-    if (command == "start data collection")
+    if (prefix == "start data collection")
     {
       osd->dataCollectionService.start();
 
       return;
-    } else if (command == "stop data collection") {
+    } else if (prefix == "stop data collection") {
       osd->dataCollectionService.stop();
       osd->dataCollectionService.dump();
       return;
