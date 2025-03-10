@@ -104,6 +104,7 @@ set(common_srcs
   pretty_binary.cc
   utf8.c
   util.cc
+  DataCollectionSocketHook.cc
   version.cc)
 
 if(WITH_SYSTEMD)
