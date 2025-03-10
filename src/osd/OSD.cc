@@ -2632,19 +2632,19 @@ public:
     Formatter *f,
     const bufferlist& inbl,
     asok_finisher on_finish) override {
-    #define dout_context osd->cct
-    #define dout_prefix _prefix(_dout, osd->whoami, osd->get_osdmap_epoch())
-    derr << "$$$$$$$$$$$$$$ Checking OSD: " << (osd ? "OK" : "NULL") << dendl;
-    derr << "$$$$$$$$$$$$$$ Checking Data Collection Service: "
-         << (osd && osd->dataCollectionService ? "OK" : "NULL") << dendl;
-    derr << "$$$$$$$$$$$$$$ " << prefix << dendl;
     bufferlist outbl;
     stringstream ss;
+    if(!osd){
+      ss << "$$$$$$$$$$$$ OSD not found."
+      on_finish(-1, ss.str(), outbl);
+      return;
+    }
+    osd->log_errors_hook(std::string(prefix));
     if (prefix == "start data collection")
     {
-      derr << "$$$$$$$$$$$$$$ service starting" << dendl;
+      osd->log_errors_hook( "service starting");
       osd->dataCollectionService.start();
-      derr << "$$$$$$$$$$$$$$ service started" << dendl;
+      osd->log_errors_hook( "service started");
       on_finish(0, ss.str(), outbl);
       return;
     } else if (prefix == "stop data collection") {
@@ -3631,6 +3631,10 @@ class OSD::C_Tick_WithoutOSDLock : public Context {
     osd->tick_without_osd_lock();
   }
 };
+
+void OSD::log_errors_hook(std::string msg){
+  derr << "$$$$$$$$$$$ " << msg << dendl;
+}
 
 int OSD::enable_disable_fuse(bool stop)
 {

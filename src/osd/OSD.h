@@ -1079,6 +1079,7 @@ class OSD : public Dispatcher,
 
 public:
   DataCollectionService dataCollectionService{"/users/esmaeil/data/"};
+  void log_errors_hook(std::string msg);
   // config observer bits
   std::vector<std::string> get_tracked_keys() const noexcept override;
   void handle_conf_change(const ConfigProxy& conf,
