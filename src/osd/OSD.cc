@@ -2635,7 +2635,7 @@ public:
     bufferlist outbl;
     stringstream ss;
     if(!osd){
-      ss << "$$$$$$$$$$$$ OSD not found."
+      ss << "$$$$$$$$$$$$ OSD not found.";
       on_finish(-1, ss.str(), outbl);
       return;
     }
