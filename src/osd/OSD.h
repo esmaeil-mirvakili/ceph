@@ -58,7 +58,6 @@
 #include "scrubber/osd_scrub.h"
 #include "common/admin_socket.h"
 #include "common/DataCollectionService.h"
-#include "common/DataCollectionSocketHook.h"
 
 #define CEPH_OSD_PROTOCOL    10 /* cluster internal */
 
@@ -1130,7 +1129,7 @@ protected:
   // asok
   friend class OSDSocketHook;
   class OSDSocketHook *asok_hook;
-  DataSocketHook *data_asok_hook = nullptr;
+//  DataSocketHook *data_asok_hook = nullptr;
   using PGRefOrError = std::tuple<std::optional<PGRef>, int>;
     PGRefOrError locate_asok_target(const cmdmap_t& cmdmap,
 				    std::stringstream& ss, bool only_primary);

@@ -2412,7 +2412,7 @@ OSD::OSD(CephContext *cct_,
     ceph_assert(set_result == 0);
   }
 
-  data_asok_hook = DataSocketHook::create(cct_, this);
+//  data_asok_hook = DataSocketHook::create(cct_, this);
 
   monc->set_messenger(client_messenger);
   op_tracker.set_complaint_and_threshold(cct->_conf->osd_op_complaint_time,
@@ -2616,7 +2616,15 @@ public:
 	   Formatter *f,
 	   std::ostream& ss,
 	   bufferlist& out) override {
-    ceph_abort("should use async hook");
+//    ceph_abort("should use async hook");
+    if (command == "start data collection")
+    {
+      osd->dataCollectionService.start();
+    } else if (command == "stop data collection") {
+      osd->dataCollectionService.stop();
+      osd->dataCollectionService.dump();
+    }
+    return 0;
   }
   void call_async(
     std::string_view prefix,
@@ -2624,6 +2632,16 @@ public:
     Formatter *f,
     const bufferlist& inbl,
     asok_finisher on_finish) override {
+    if (command == "start data collection")
+    {
+      osd->dataCollectionService.start();
+
+      return;
+    } else if (command == "stop data collection") {
+      osd->dataCollectionService.stop();
+      osd->dataCollectionService.dump();
+      return;
+    }
     try {
       osd->asok_command(prefix, cmdmap, f, inbl, on_finish);
     } catch (const TOPNSPC::common::bad_cmd_get& e) {
@@ -4139,6 +4157,14 @@ void OSD::final_init()
   asok_hook = new OSDSocketHook(this);
   int r = admin_socket->register_command("status", asok_hook,
 					 "high-level status of OSD");
+  ceph_assert(r == 0);
+  r = admin_socket->register_command("stop data collection",
+                                     asok_hook,
+                                     "Stop collecting data");
+  ceph_assert(r == 0);
+  r = admin_socket->register_command("start data collection",
+                                     asok_hook,
+                                     "Start collecting data");
   ceph_assert(r == 0);
   r = admin_socket->register_command("flush_journal",
                                      asok_hook,
