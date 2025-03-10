@@ -2643,7 +2643,9 @@ public:
     if (prefix == "start data collection")
     {
       osd->log_errors_hook( "service starting");
-      osd->dataCollectionService.start();
+      osd->dataCollectionService.start(
+              std::bind(&OSD::log_errors_hook, osd, std::placeholders::_1)
+              );
       osd->log_errors_hook( "service started");
       on_finish(0, ss.str(), outbl);
       return;

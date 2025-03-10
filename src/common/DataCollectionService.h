@@ -21,6 +21,7 @@
 #include <map>
 #include <thread>
 #include <filesystem>
+#include <functional>
 
 namespace fs = std::filesystem;
 
@@ -196,16 +197,16 @@ public:
       entries.clear();
     }
 
-    void start(){
+    void start(std::function<void(std::string)> log_err){
       if(!active.load()) {
-        std::cerr << "$$$$$$$$$$ start thread" << std::endl;
+        log_err("start");
         shutdown_flag.store(false);
-        std::cerr << "$$$$$$$$$$ shutdown false" << std::endl;
+        log_err("shutdown false");
         active.store(true);
-        std::cerr << "$$$$$$$$$$ active true" << std::endl;
+        log_err("active true");
         sys_state_thread = std::thread(&DataCollectionService::system_state_loop,
                                      this);
-        std::cerr << "$$$$$$$$$$ thread start" << std::endl;
+        log_err("thread start");
       }
     }
 
