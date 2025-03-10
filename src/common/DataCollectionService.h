@@ -193,10 +193,15 @@ public:
     }
 
     void start(){
+      std::cerr << "$$$$$$$$$$ start thread" << std::endl;
       shutdown_flag.store(false);
+      std::cerr << "$$$$$$$$$$ shutdown false" << std::endl;
       active.store(true);
+      std::cerr << "$$$$$$$$$$ active true" << std::endl;
       std::thread sys_state_thread(&DataCollectionService::system_state_loop, this);
-//      sys_state_thread.detach();
+      std::cerr << "$$$$$$$$$$ thread start" << std::endl;
+      sys_state_thread.detach();
+      std::cerr << "$$$$$$$$$$ thread detach" << std::endl;
     }
 
     bool isActive(){

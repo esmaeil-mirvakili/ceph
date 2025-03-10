@@ -2632,14 +2632,20 @@ public:
     Formatter *f,
     const bufferlist& inbl,
     asok_finisher on_finish) override {
+    derr << "$$$$$$$$$$$$$$ " << prefix << dendl;
+    bufferlist outbl;
+    stringstream ss;
     if (prefix == "start data collection")
     {
+      derr << "$$$$$$$$$$$$$$ service starting" << dendl;
       osd->dataCollectionService.start();
-
+      derr << "$$$$$$$$$$$$$$ service started" << dendl;
+      on_finish(0, ss.str(), outbl);
       return;
     } else if (prefix == "stop data collection") {
       osd->dataCollectionService.stop();
       osd->dataCollectionService.dump();
+      on_finish(0, ss.str(), outbl);
       return;
     }
     try {
