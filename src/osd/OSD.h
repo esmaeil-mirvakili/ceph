@@ -58,6 +58,7 @@
 #include "scrubber/osd_scrub.h"
 #include "common/admin_socket.h"
 #include "common/DataCollectionService.h"
+#include "common/DataSocketHook.h"
 
 #define CEPH_OSD_PROTOCOL    10 /* cluster internal */
 
@@ -1063,8 +1064,6 @@ struct OSDShard {
     unsigned osd_op_queue_cut_off);
 };
 
-class DataSocketHook;
-
 class OSD : public Dispatcher,
 	    public md_config_obs_t {
   using OpSchedulerItem = ceph::osd::scheduler::OpSchedulerItem;
@@ -1131,7 +1130,6 @@ protected:
   // asok
   friend class OSDSocketHook;
   class OSDSocketHook *asok_hook;
-  friend class DataSocketHook;
   DataSocketHook *data_asok_hook = nullptr;
   using PGRefOrError = std::tuple<std::optional<PGRef>, int>;
     PGRefOrError locate_asok_target(const cmdmap_t& cmdmap,
