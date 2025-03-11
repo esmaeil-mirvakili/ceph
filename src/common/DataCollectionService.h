@@ -197,16 +197,12 @@ public:
       entries.clear();
     }
 
-    void start(std::function<void(std::string)> log_err){
+    void start(std::function<void(){
       if(!active.load()) {
-        log_err("start");
         shutdown_flag.store(false);
-        log_err("shutdown false");
         active.store(true);
-        log_err("active true");
         sys_state_thread = std::thread(&DataCollectionService::system_state_loop,
                                      this);
-        log_err("thread start");
       }
     }
 

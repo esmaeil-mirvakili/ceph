@@ -2412,8 +2412,6 @@ OSD::OSD(CephContext *cct_,
     ceph_assert(set_result == 0);
   }
 
-//  data_asok_hook = DataSocketHook::create(cct_, this);
-
   monc->set_messenger(client_messenger);
   op_tracker.set_complaint_and_threshold(cct->_conf->osd_op_complaint_time,
                                          cct->_conf->osd_op_log_threshold);
@@ -2617,7 +2615,6 @@ public:
 	   std::ostream& ss,
 	   bufferlist& out) override {
     ceph_abort("should use async hook");
-    return 0;
   }
   void call_async(
     std::string_view prefix,
@@ -2627,19 +2624,9 @@ public:
     asok_finisher on_finish) override {
     bufferlist outbl;
     stringstream ss;
-    if(!osd){
-      ss << "$$$$$$$$$$$$ OSD not found.";
-      on_finish(-1, ss.str(), outbl);
-      return;
-    }
-    osd->log_errors_hook(std::string(prefix));
     if (prefix == "start data collection")
     {
-      osd->log_errors_hook( "service starting");
-      osd->dataCollectionService.start(
-              std::bind(&OSD::log_errors_hook, osd, std::placeholders::_1)
-              );
-      osd->log_errors_hook( "service started");
+      osd->dataCollectionService.start();
       on_finish(0, ss.str(), outbl);
       return;
     } else if (prefix == "stop data collection") {
@@ -3626,10 +3613,6 @@ class OSD::C_Tick_WithoutOSDLock : public Context {
     osd->tick_without_osd_lock();
   }
 };
-
-void OSD::log_errors_hook(std::string msg){
-  derr << "$$$$$$$$$$$ " << msg << dendl;
-}
 
 int OSD::enable_disable_fuse(bool stop)
 {
