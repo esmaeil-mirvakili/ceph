@@ -197,7 +197,7 @@ public:
       entries.clear();
     }
 
-    void start(std::function<void(){
+    void start(){
       if(!active.load()) {
         shutdown_flag.store(false);
         active.store(true);
