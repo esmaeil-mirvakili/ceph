@@ -9879,6 +9879,10 @@ void OSD::enqueue_op(spg_t pg, OpRequestRef&& op, epoch_t epoch)
     op->dataEntry->getReqInfo().type = op->get_req()->get_type();
     op->dataEntry->getReqInfo().cost = op->get_req()->get_cost();
     op->dataEntry->getReqInfo().priority = op->get_req()->get_priority();
+    if(op->get_req()->get_type() == CEPH_MSG_OSD_OP){
+      auto m = op->get_req<MOSDOp>();
+      op->dataEntry->getReqInfo().ops_len = m->ops.size();
+    }
   }
 
   dout(15) << "enqueue_op " << *op->get_req() << " prio " << priority
