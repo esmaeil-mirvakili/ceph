@@ -9873,8 +9873,8 @@ void OSD::enqueue_op(spg_t pg, OpRequestRef&& op, epoch_t epoch)
     op->initializeDataEntry();
     op->dataEntry->getReqInfo().recv_stamp = op->get_req()->get_recv_stamp().to_nsec();
     op->dataEntry->getReqInfo().enqueue_stamp = ceph_clock_now().to_nsec();
-//    op->dataEntry->getReqInfo().data_len = op->get_req()->get_header().data_len;
-//    op->dataEntry->getReqInfo().data_off = op->get_req()->get_header().data_off;
+    op->dataEntry->getReqInfo().data_len = op->get_req()->get_header().data_len;
+    op->dataEntry->getReqInfo().data_off = op->get_req()->get_header().data_off;
     op->dataEntry->getReqInfo().owner = op->get_req()->get_source().num();
     op->dataEntry->getReqInfo().type = op->get_req()->get_type();
     op->dataEntry->getReqInfo().cost = op->get_req()->get_cost();

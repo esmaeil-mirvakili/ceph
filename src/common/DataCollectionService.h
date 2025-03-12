@@ -42,6 +42,7 @@ struct DataCollectionRequestInfo {
     uint64_t bluestore_cost = 0;
     int64_t throttle_current = 0;
     int64_t throttle_max = 0;
+    int ops_len = -1;
 
     DataCollectionRequestInfo &operator=(const DataCollectionRequestInfo &other) {
       if (this != &other) {
@@ -55,6 +56,9 @@ struct DataCollectionRequestInfo {
         type = other.type;
         cost = other.cost;
         priority = other.priority;
+        data_len = other.data_len;
+        data_off = other.data_off;
+        ops_len = other.ops_len;
       }
       return *this;
     }
@@ -64,6 +68,7 @@ struct DataCollectionRequestInfo {
       ss << enqueue_stamp << ", ";
       ss << dequeue_stamp << ", ";
       ss << dequeue_end_stamp << ", ";
+      ss << ops_len << ", ";
       ss << data_len << ", ";
       ss << data_off << ", ";
       ss << owner << ", ";
@@ -138,7 +143,7 @@ protected:
         return;
       }
 
-      entryFile << "id, recv_stamp, enqueue_stamp, dequeue_stamp, dequeue_end_stamp, data_len, data_off, owner, type, cost, priority" << std::endl;
+      entryFile << "id, recv_stamp, enqueue_stamp, dequeue_stamp, dequeue_end_stamp, ops_len, data_len, data_off, owner, type, cost, priority" << std::endl;
 
       for (auto &entry: entries) {
         entry.log(entryFile);
