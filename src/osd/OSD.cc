@@ -9868,6 +9868,14 @@ void OSD::enqueue_op(spg_t pg, OpRequestRef&& op, epoch_t epoch)
   const uint64_t owner = op->get_req()->get_source().num();
   const int type = op->get_req()->get_type();
 
+  if(op->get_req()->get_type() == CEPH_MSG_OSD_OP){
+    MOSDOp *msg = static_cast<MOSDOp*>(op->get_nonconst_req());
+    if (msg->finish_decode()) {
+      op->reset_desc();   // for TrackedOp
+      m->clear_payload();
+    }
+  }
+
   // data collection
   if(op && dataCollectionService.isActive()) {
     op->initializeDataEntry();
