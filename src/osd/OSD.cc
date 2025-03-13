@@ -9872,7 +9872,7 @@ void OSD::enqueue_op(spg_t pg, OpRequestRef&& op, epoch_t epoch)
     MOSDOp *msg = static_cast<MOSDOp*>(op->get_nonconst_req());
     if (msg->finish_decode()) {
       op->reset_desc();   // for TrackedOp
-      m->clear_payload();
+      msg->clear_payload();
     }
   }
 
