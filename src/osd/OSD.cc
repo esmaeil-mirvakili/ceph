@@ -9892,8 +9892,8 @@ void OSD::enqueue_op(spg_t pg, OpRequestRef&& op, epoch_t epoch)
       std::vector<OSDOp> osd_ops_vec = m->ops;
       for (auto p = osd_ops_vec.begin(); p != osd_ops_vec.end(); ++p){
         OSDOp& osd_op = *p;
-        ceph_osd_op& op = osd_op.op;
-        op->dataEntry->addop(op.op, op.extent.length, op.extent.offset);
+        ceph_osd_op& ceph_op = osd_op.op;
+        op->dataEntry->addop(ceph_op.op, ceph_op.extent.length, ceph_op.extent.offset);
       }
       op->dataEntry->getReqInfo().ops_len = osd_ops_vec.size();
     }
