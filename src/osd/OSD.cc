@@ -9889,7 +9889,7 @@ void OSD::enqueue_op(spg_t pg, OpRequestRef&& op, epoch_t epoch)
     op->dataEntry->getReqInfo().priority = op->get_req()->get_priority();
     if(op->get_req()->get_type() == CEPH_MSG_OSD_OP){
       MOSDOp *m = static_cast<MOSDOp*>(op->get_nonconst_req());
-      std::vector<OSDOp> osd_ops_vec = *m->ops;
+      std::vector<OSDOp> osd_ops_vec = m->ops;
       for (auto p = osd_ops_vec.begin(); p != osd_ops_vec.end(); ++p){
         OSDOp& osd_op = *p;
         ceph_osd_op& op = osd_op.op;
