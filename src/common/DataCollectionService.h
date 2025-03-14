@@ -25,6 +25,27 @@
 
 namespace fs = std::filesystem;
 
+struct DataCollectionOSDOp {
+    int op_type = 0;
+    uint64_t len = 0;
+    uint64_t off = 0;
+
+    DataCollectionOSDOp &operator=(const DataCollectionOSDOp &other) {
+      if (this != &other) {
+        op_type = other.op_type;
+        len = other.len;
+        off = other.off;
+      }
+      return *this;
+    }
+
+    void print(std::ofstream &ss) const {
+      ss << op_type << ", ";
+      ss << len << ", ";
+      ss << off;
+    }
+};
+
 struct DataCollectionRequestInfo {
     uint64_t recv_stamp = 0;
     uint64_t enqueue_stamp = 0;
@@ -82,12 +103,20 @@ class DataEntry {
 public:
     std::string id;
     DataCollectionRequestInfo reqInfo;
+    std::vector<DataCollectionOSDOp> ops;
 
-    void log(std::ofstream &entryStream) {
+    void log(std::ofstream &entryStream, std::ofstream &opStream) {
       entryStream << id;
       entryStream << ", ";
       reqInfo.print(entryStream);
       entryStream << std::endl;
+
+      for (int i = 0; i < ops.size(); i++) {
+        opStream << id;
+        opStream << ", ";
+        ops[i].print(opStream);
+        opStream << std::endl;
+      }
     }
 
 public:
@@ -104,8 +133,17 @@ public:
       if (this != &other) {
         id = other.id;
         reqInfo = other.reqInfo;
+        ops = other.ops;
       }
       return *this;
+    }
+
+    void addOp(int type, uint64_t len, uint64_t off){
+      DataCollectionOSDOp op;
+      op.op_type = type;
+      op.len = len;
+      op.off = off;
+      ops.push_back(op);
     }
 
     friend class DataCollectionService;
@@ -137,6 +175,7 @@ protected:
       boost::uuids::uuid u = boost::uuids::random_generator()();
       std::string uid = boost::uuids::to_string(u);
       std::ofstream entryFile(log_path + "entries_" + uid + ".csv");
+      std::ofstream opFile(log_path + "ops_" + uid + ".csv");
 
       if (!entryFile.is_open()) {
         std::cerr << "Error: Failed to open log files at " << log_path << std::endl;
@@ -144,11 +183,13 @@ protected:
       }
 
       entryFile << "id, recv_stamp, enqueue_stamp, dequeue_stamp, dequeue_end_stamp, ops_len, data_len, data_off, owner, type, cost, priority" << std::endl;
+      opFile << "id, type, len, off" << std::endl;
 
       for (auto &entry: entries) {
-        entry.log(entryFile);
+        entry.log(entryFile, opFile);
       }
       entryFile.close();
+      opFile.close();
     }
 
     void copy_file(const std::string &file_path, fs::path &destination_folder, const std::string &name){

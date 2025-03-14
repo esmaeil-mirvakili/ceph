@@ -9888,8 +9888,14 @@ void OSD::enqueue_op(spg_t pg, OpRequestRef&& op, epoch_t epoch)
     op->dataEntry->getReqInfo().cost = op->get_req()->get_cost();
     op->dataEntry->getReqInfo().priority = op->get_req()->get_priority();
     if(op->get_req()->get_type() == CEPH_MSG_OSD_OP){
-      auto m = op->get_req<MOSDOp>();
-      op->dataEntry->getReqInfo().ops_len = m->ops.size();
+      MOSDOp *m = static_cast<MOSDOp*>(op->get_nonconst_req());
+      std::vector<OSDOp> osd_ops_vec = *m->ops;
+      for (auto p = osd_ops_vec.begin(); p != osd_ops_vec.end(); ++p){
+        OSDOp& osd_op = *p;
+        ceph_osd_op& op = osd_op.op;
+        op->dataEntry->addop(op.op, op.extent.length, op.extent.offset);
+      }
+      op->dataEntry->getReqInfo().ops_len = osd_ops_vec.size();
     }
   }
 
