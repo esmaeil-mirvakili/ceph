@@ -9893,7 +9893,7 @@ void OSD::enqueue_op(spg_t pg, OpRequestRef&& op, epoch_t epoch)
       for (auto p = osd_ops_vec.begin(); p != osd_ops_vec.end(); ++p){
         OSDOp& osd_op = *p;
         ceph_osd_op& ceph_op = osd_op.op;
-        op->dataEntry->addop(ceph_op.op, ceph_op.extent.length, ceph_op.extent.offset);
+        op->dataEntry->addOp(ceph_op.op, ceph_op.extent.length, ceph_op.extent.offset);
       }
       op->dataEntry->getReqInfo().ops_len = osd_ops_vec.size();
     }
