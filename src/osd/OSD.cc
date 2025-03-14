@@ -2627,12 +2627,12 @@ public:
     if (prefix == "start data collection")
     {
       osd->dataCollectionService.start();
-      on_finish(0, ss.str(), outbl);
+//      on_finish(0, ss.str(), outbl);
       return;
     } else if (prefix == "stop data collection") {
       osd->dataCollectionService.stop();
       osd->dataCollectionService.dump();
-      on_finish(0, ss.str(), outbl);
+//      on_finish(0, ss.str(), outbl);
       return;
     }
     try {
