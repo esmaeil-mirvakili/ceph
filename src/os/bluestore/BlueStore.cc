@@ -5739,10 +5739,11 @@ public:
 
 private:
     SocketHook() {}
-    int call(std::string_view command, const cmdmap_t &cmdmap,
+    int call(std::string_view command, const cmdmap_t& cmdmap,
+             const bufferlist& inbl,
              Formatter *f,
-             std::ostream &ss,
-             bufferlist &out) override
+             std::ostream& ss,
+             bufferlist& out) override
     {
       if (command == "start data collection")
       {
