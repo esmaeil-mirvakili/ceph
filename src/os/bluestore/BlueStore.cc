@@ -5747,12 +5747,12 @@ private:
     {
       if (command == "start data collection")
       {
-        DataCollectionService.getInstance().start();
+        DataCollectionService::getInstance().start();
       }
       else if (command == "stop data collection")
       {
-        DataCollectionService.getInstance().stop();
-        DataCollectionService.getInstance().dump();
+        DataCollectionService::getInstance().stop();
+        DataCollectionService::getInstance().dump();
       }
       return 0;
     }
