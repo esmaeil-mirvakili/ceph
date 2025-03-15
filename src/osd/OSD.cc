@@ -2624,17 +2624,6 @@ public:
     asok_finisher on_finish) override {
     bufferlist outbl;
     stringstream ss;
-    if (prefix == "start data collection")
-    {
-      osd->dataCollectionService.start();
-//      on_finish(0, ss.str(), outbl);
-      return;
-    } else if (prefix == "stop data collection") {
-      osd->dataCollectionService.stop();
-      osd->dataCollectionService.dump();
-//      on_finish(0, ss.str(), outbl);
-      return;
-    }
     try {
       osd->asok_command(prefix, cmdmap, f, inbl, on_finish);
     } catch (const TOPNSPC::common::bad_cmd_get& e) {
@@ -4150,14 +4139,6 @@ void OSD::final_init()
   asok_hook = new OSDSocketHook(this);
   int r = admin_socket->register_command("status", asok_hook,
 					 "high-level status of OSD");
-  ceph_assert(r == 0);
-  r = admin_socket->register_command("stop data collection",
-                                     asok_hook,
-                                     "Stop collecting data");
-  ceph_assert(r == 0);
-  r = admin_socket->register_command("start data collection",
-                                     asok_hook,
-                                     "Start collecting data");
   ceph_assert(r == 0);
   r = admin_socket->register_command("flush_journal",
                                      asok_hook,
@@ -9877,7 +9858,7 @@ void OSD::enqueue_op(spg_t pg, OpRequestRef&& op, epoch_t epoch)
   }
 
   // data collection
-  if(op && dataCollectionService.isActive()) {
+  if(op && DataCollectionService.getInstance().isActive()) {
     op->initializeDataEntry();
     op->dataEntry->getReqInfo().recv_stamp = op->get_req()->get_recv_stamp().to_nsec();
     op->dataEntry->getReqInfo().enqueue_stamp = ceph_clock_now().to_nsec();
@@ -9962,7 +9943,7 @@ void OSD::dequeue_op(
   op->set_dequeued_time(now);
 
   // data collection
-  if(op && dataCollectionService.isActive()) {
+  if(op && DataCollectionService.getInstance().isActive()) {
     op->initializeDataEntry();
     op->dataEntry->getReqInfo().dequeue_stamp = ceph_clock_now().to_nsec();
   }
@@ -9989,10 +9970,10 @@ void OSD::dequeue_op(
 
   pg->do_request(op, handle);
 
-  if(op && dataCollectionService.isActive()) {
+  if(op && DataCollectionService.getInstance().isActive()) {
     op->initializeDataEntry();
     op->dataEntry->getReqInfo().dequeue_end_stamp = ceph_clock_now().to_nsec();
-    dataCollectionService.newEntry(*op->dataEntry);
+    DataCollectionService.getInstance().newEntry(*op->dataEntry);
   }
 
   // finish

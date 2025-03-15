@@ -57,6 +57,7 @@
 #include "kv/KeyValueHistogram.h"
 #include "Writer.h"
 #include "common/admin_socket.h"
+#include "common/DataCollectionService.h"
 
 #if defined(WITH_LTTNG)
 #define TRACEPOINT_DEFINE
@@ -5705,6 +5706,57 @@ void BlueStore::handle_discard(interval_set<uint64_t>& to_release)
   alloc->release(to_release);
 }
 
+class BlueStore::SocketHook : public AdminSocketHook
+{
+
+public:
+    static BlueStore::SocketHook *create(BlueStore *store)
+    {
+      BlueStore::SocketHook *hook = nullptr;
+      AdminSocket *admin_socket = store->cct->get_admin_socket();
+      if (admin_socket)
+      {
+        hook = new BlueStore::SocketHook();
+        int r = admin_socket->register_command("start data collection",
+                                               hook,
+                                               "data collection start");
+        r = admin_socket->register_command("stop data collection",
+                                           hook,
+                                           " data collection stop");
+        if (r != 0)
+        {
+          delete hook;
+          hook = nullptr;
+        }
+      }
+      return hook;
+    }
+    ~SocketHook()
+    {
+      AdminSocket *admin_socket = store->cct->get_admin_socket();
+      admin_socket->unregister_commands(this);
+    }
+
+private:
+    SocketHook() {}
+    int call(std::string_view command, const cmdmap_t &cmdmap,
+             Formatter *f,
+             std::ostream &ss,
+             bufferlist &out) override
+    {
+      if (command == "start data collection")
+      {
+        DataCollectionService.getInstance().start();
+      }
+      else if (command == "stop data collection")
+      {
+        DataCollectionService.getInstance().stop();
+        DataCollectionService.getInstance().dump();
+      }
+      return 0;
+    }
+};
+
 BlueStore::BlueStore(CephContext *cct, const string& path)
   : BlueStore(cct, path, 0) {}
 
@@ -5724,6 +5776,7 @@ BlueStore::BlueStore(CephContext *cct,
   cct->_conf.add_observer(this);
   set_cache_shards(1);
   bluestore_bdev_label_require_all = cct->_conf.get_val<bool>("bluestore_bdev_label_require_all");
+  asok_hook = SocketHook::create(this);
 }
 
 BlueStore::~BlueStore()

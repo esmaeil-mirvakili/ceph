@@ -156,6 +156,7 @@ protected:
     std::atomic<bool> active{false};
     std::atomic<bool> shutdown_flag{false};
     std::thread sys_state_thread;
+    static std::unique_ptr<DataCollectionService> _instance;
 
     bool load_disk_paths(const std::string &file_path, std::string &ssd_disk, std::string &hdd_disk) {
       std::ifstream file(file_path);
@@ -220,6 +221,13 @@ protected:
       }
     }
 public:
+    static DataCollectionService& getInstance(){
+      if(!_instance){
+        _instance = std::make_unique<DataCollectionService>("/users/esmaeil/data/");
+      }
+      return *_instance;
+    }
+
     DataCollectionService(std::string path)
             : log_path(path) {}
 

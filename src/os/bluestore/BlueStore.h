@@ -2398,6 +2398,8 @@ private:
   int path_fd = -1;  ///< open handle to $path
   int fsid_fd = -1;  ///< open handle (locked) to $path/fsid
   bool mounted = false;
+  class SocketHook;
+  SocketHook *asok_hook = nullptr;
 
   // store open_db options:
   bool db_was_opened_read_only = true;

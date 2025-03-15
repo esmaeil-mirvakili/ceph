@@ -1078,7 +1078,6 @@ class OSD : public Dispatcher,
   std::string gss_ktfile_client{};
 
 public:
-  DataCollectionService dataCollectionService{"/users/esmaeil/data/"};
   // config observer bits
   std::vector<std::string> get_tracked_keys() const noexcept override;
   void handle_conf_change(const ConfigProxy& conf,
