@@ -156,7 +156,7 @@ protected:
     std::atomic<bool> active{false};
     std::atomic<bool> shutdown_flag{false};
     std::thread sys_state_thread;
-    static std::unique_ptr<DataCollectionService> _instance;
+    static inline std::unique_ptr<DataCollectionService> _instance = nullptr;
 
     bool load_disk_paths(const std::string &file_path, std::string &ssd_disk, std::string &hdd_disk) {
       std::ifstream file(file_path);
