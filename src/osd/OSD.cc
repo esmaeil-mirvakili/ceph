@@ -9849,36 +9849,13 @@ void OSD::enqueue_op(spg_t pg, OpRequestRef&& op, epoch_t epoch)
   const uint64_t owner = op->get_req()->get_source().num();
   const int type = op->get_req()->get_type();
 
-  if(op->get_req()->get_type() == CEPH_MSG_OSD_OP){
-    MOSDOp *msg = static_cast<MOSDOp*>(op->get_nonconst_req());
-    if (msg->finish_decode()) {
-      op->reset_desc();   // for TrackedOp
-      msg->clear_payload();
-    }
-  }
-
-  // data collection
-  if(op && DataCollectionService::getInstance().isActive()) {
-    op->initializeDataEntry();
-    op->dataEntry->getReqInfo().recv_stamp = op->get_req()->get_recv_stamp().to_nsec();
-    op->dataEntry->getReqInfo().enqueue_stamp = ceph_clock_now().to_nsec();
-    op->dataEntry->getReqInfo().data_len = op->get_req()->get_header().data_len;
-    op->dataEntry->getReqInfo().data_off = op->get_req()->get_header().data_off;
-    op->dataEntry->getReqInfo().owner = op->get_req()->get_source().num();
-    op->dataEntry->getReqInfo().type = op->get_req()->get_type();
-    op->dataEntry->getReqInfo().cost = op->get_req()->get_cost();
-    op->dataEntry->getReqInfo().priority = op->get_req()->get_priority();
-    if(op->get_req()->get_type() == CEPH_MSG_OSD_OP){
-      MOSDOp *m = static_cast<MOSDOp*>(op->get_nonconst_req());
-      std::vector<OSDOp> osd_ops_vec = m->ops;
-      for (auto p = osd_ops_vec.begin(); p != osd_ops_vec.end(); ++p){
-        OSDOp& osd_op = *p;
-        ceph_osd_op& ceph_op = osd_op.op;
-        op->dataEntry->addOp(ceph_op.op, ceph_op.extent.length, ceph_op.extent.offset);
-      }
-      op->dataEntry->getReqInfo().ops_len = osd_ops_vec.size();
-    }
-  }
+//  if(op->get_req()->get_type() == CEPH_MSG_OSD_OP){
+//    MOSDOp *msg = static_cast<MOSDOp*>(op->get_nonconst_req());
+//    if (msg->finish_decode()) {
+//      op->reset_desc();   // for TrackedOp
+//      msg->clear_payload();
+//    }
+//  }
 
   dout(15) << "enqueue_op " << *op->get_req() << " prio " << priority
            << " type " << type
@@ -9942,12 +9919,6 @@ void OSD::dequeue_op(
   utime_t now = ceph_clock_now();
   op->set_dequeued_time(now);
 
-  // data collection
-  if(op && DataCollectionService::getInstance().isActive()) {
-    op->initializeDataEntry();
-    op->dataEntry->getReqInfo().dequeue_stamp = ceph_clock_now().to_nsec();
-  }
-
   utime_t latency = now - m->get_recv_stamp();
   dout(10) << "dequeue_op " << *op->get_req()
            << " prio " << m->get_priority()
@@ -9970,10 +9941,29 @@ void OSD::dequeue_op(
 
   pg->do_request(op, handle);
 
+  // data collection
   if(op && DataCollectionService::getInstance().isActive()) {
-    op->initializeDataEntry();
-    op->dataEntry->getReqInfo().dequeue_end_stamp = ceph_clock_now().to_nsec();
-    DataCollectionService::getInstance().newEntry(*op->dataEntry);
+    DataEntry dataEntry;
+    dataEntry.getReqInfo().recv_stamp = op->get_req()->get_recv_stamp().to_nsec();
+    dataEntry.getReqInfo().data_len = op->get_req()->get_header().data_len;
+    dataEntry.getReqInfo().data_off = op->get_req()->get_header().data_off;
+    dataEntry.getReqInfo().owner = op->get_req()->get_source().num();
+    dataEntry.getReqInfo().type = op->get_req()->get_type();
+    dataEntry.getReqInfo().cost = op->get_req()->get_cost();
+    dataEntry.getReqInfo().priority = op->get_req()->get_priority();
+    dataEntry.getReqInfo().dequeue_stamp = op->get_dequeued_time().to_nsec();
+    if(op->get_req()->get_type() == CEPH_MSG_OSD_OP){
+      MOSDOp *m = static_cast<MOSDOp*>(op->get_nonconst_req());
+      std::vector<OSDOp> osd_ops_vec = m->ops;
+      for (auto p = osd_ops_vec.begin(); p != osd_ops_vec.end(); ++p){
+        OSDOp& osd_op = *p;
+        ceph_osd_op& ceph_op = osd_op.op;
+        dataEntry.addOp(ceph_op.op, ceph_op.extent.length, ceph_op.extent.offset);
+      }
+      dataEntry.getReqInfo().ops_len = osd_ops_vec.size();
+    }
+    dataEntry.getReqInfo().dequeue_end_stamp = ceph_clock_now().to_nsec();
+    DataCollectionService::getInstance().newEntry(dataEntry);
   }
 
   // finish

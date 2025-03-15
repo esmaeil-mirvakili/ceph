@@ -234,8 +234,7 @@ public:
     void newEntry(DataEntry &entry) {
       if(!active.load())
         return;
-      DataEntry newEntry = entry;
-      entries.push_back(newEntry);
+      entries.push_back(entry);
     }
 
     void stop(){
