@@ -5708,7 +5708,7 @@ void BlueStore::handle_discard(interval_set<uint64_t>& to_release)
 
 class BlueStore::SocketHook : public AdminSocketHook
 {
-
+    BlueStore *store;
 public:
     static BlueStore::SocketHook *create(BlueStore *store)
     {
@@ -5716,7 +5716,7 @@ public:
       AdminSocket *admin_socket = store->cct->get_admin_socket();
       if (admin_socket)
       {
-        hook = new BlueStore::SocketHook();
+        hook = new BlueStore::SocketHook(store);
         int r = admin_socket->register_command("start data collection",
                                                hook,
                                                "data collection start");
@@ -5738,7 +5738,7 @@ public:
     }
 
 private:
-    SocketHook() {}
+    SocketHook(BlueStore *store) : store(store) {}
     int call(std::string_view command, const cmdmap_t& cmdmap,
              const bufferlist& inbl,
              Formatter *f,
