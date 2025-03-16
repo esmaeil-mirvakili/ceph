@@ -25,152 +25,17 @@
 
 namespace fs = std::filesystem;
 
-struct DataCollectionOSDOp {
-    int op_type = 0;
-    uint64_t len = 0;
-    uint64_t off = 0;
-
-    DataCollectionOSDOp &operator=(const DataCollectionOSDOp &other) {
-      if (this != &other) {
-        op_type = other.op_type;
-        len = other.len;
-        off = other.off;
-      }
-      return *this;
-    }
-
-    void print(std::ofstream &ss) const {
-      ss << op_type << ", ";
-      ss << len << ", ";
-      ss << off;
-    }
-};
-
-struct DataCollectionRequestInfo {
-    uint64_t recv_stamp = 0;
-    uint64_t enqueue_stamp = 0;
-    uint64_t dequeue_stamp = 0;
-    uint64_t commit_stamp = 0;
-    uint64_t dequeue_end_stamp = 0;
-    uint64_t data_len = 0;
-    uint64_t data_off = 0;
-    uint64_t owner = 0;
-    int type = 0;
-    int cost = 0;
-    unsigned priority = 0;
-    uint64_t bluestore_bytes = 0;
-    uint64_t bluestore_ios = 0;
-    uint64_t bluestore_cost = 0;
-    int64_t throttle_current = 0;
-    int64_t throttle_max = 0;
-    int ops_len = -1;
-
-    DataCollectionRequestInfo &operator=(const DataCollectionRequestInfo &other) {
-      if (this != &other) {
-        recv_stamp = other.recv_stamp;
-        enqueue_stamp = other.enqueue_stamp;
-        dequeue_stamp = other.dequeue_stamp;
-        dequeue_end_stamp = other.dequeue_end_stamp;
-        data_len = other.data_len;
-        data_off = other.data_off;
-        owner = other.owner;
-        type = other.type;
-        cost = other.cost;
-        priority = other.priority;
-        data_len = other.data_len;
-        data_off = other.data_off;
-        ops_len = other.ops_len;
-      }
-      return *this;
-    }
-
-    void print(std::ofstream &ss) const {
-      ss << recv_stamp << ", ";
-      ss << enqueue_stamp << ", ";
-      ss << dequeue_stamp << ", ";
-      ss << dequeue_end_stamp << ", ";
-      ss << ops_len << ", ";
-      ss << data_len << ", ";
-      ss << data_off << ", ";
-      ss << owner << ", ";
-      ss << type << ", ";
-      ss << cost << ", ";
-      ss << priority;
-    }
-};
-
-class DataEntry {
-public:
-    std::string id;
-    DataCollectionRequestInfo reqInfo;
-    std::vector<DataCollectionOSDOp> ops;
-
-    void log(std::ofstream &entryStream, std::ofstream &opStream) {
-      entryStream << id;
-      entryStream << ", ";
-      reqInfo.print(entryStream);
-      entryStream << std::endl;
-
-      for (int i = 0; i < ops.size(); i++) {
-        opStream << id;
-        opStream << ", ";
-        ops[i].print(opStream);
-        opStream << std::endl;
-      }
-    }
-
-public:
-    DataEntry() {
-      boost::uuids::uuid u = boost::uuids::random_generator()();
-      id = boost::uuids::to_string(u);
-    }
-
-    DataCollectionRequestInfo &getReqInfo() {
-      return reqInfo;
-    }
-
-    DataEntry &operator=(const DataEntry &other) {
-      if (this != &other) {
-        id = other.id;
-        reqInfo = other.reqInfo;
-        ops = other.ops;
-      }
-      return *this;
-    }
-
-    void addOp(int type, uint64_t len, uint64_t off){
-      DataCollectionOSDOp op;
-      op.op_type = type;
-      op.len = len;
-      op.off = off;
-      ops.push_back(op);
-    }
-
-    friend class DataCollectionService;
-};
-
 class DataCollectionService{
 protected:
     std::string log_path;
-    std::vector <DataEntry> entries;
     std::atomic<bool> active{false};
     std::atomic<bool> shutdown_flag{false};
     std::thread sys_state_thread;
+    std::unordered_map<std::string, std::vector<uint64_t>> entries;
+    std::unordered_map<std::string, std::vector<uint64_t>> ops;
+    std::mutex entryMutex;
+    std::atomic<int> entryCounter{0};
     static inline std::unique_ptr<DataCollectionService> _instance = nullptr;
-
-    bool load_disk_paths(const std::string &file_path, std::string &ssd_disk, std::string &hdd_disk) {
-      std::ifstream file(file_path);
-      if (!file) {
-        std::cerr << "Error opening disk info file: " << file_path << std::endl;
-        return false;
-      }
-      if (!std::getline(file, ssd_disk) || !std::getline(file, hdd_disk)) {
-        std::cerr << "Invalid disk info file format." << std::endl;
-        return false;
-      }
-      file.close();
-      return true;
-    }
 
     void logEntries() {
       boost::uuids::uuid u = boost::uuids::random_generator()();
@@ -178,19 +43,48 @@ protected:
       std::ofstream entryFile(log_path + "entries_" + uid + ".csv");
       std::ofstream opFile(log_path + "ops_" + uid + ".csv");
 
-      if (!entryFile.is_open()) {
+      if (!entryFile.is_open() || !opFile.is_open()) {
         std::cerr << "Error: Failed to open log files at " << log_path << std::endl;
         return;
       }
 
-      entryFile << "id, recv_stamp, enqueue_stamp, dequeue_stamp, dequeue_end_stamp, ops_len, data_len, data_off, owner, type, cost, priority" << std::endl;
-      opFile << "id, type, len, off" << std::endl;
+      save(entryFile, entries);
+      save(opFile, ops);
 
-      for (auto &entry: entries) {
-        entry.log(entryFile, opFile);
-      }
       entryFile.close();
       opFile.close();
+    }
+
+    static void save(std::ofstream &file, std::unordered_map<std::string, std::vector<uint64_t>> &data){
+      // Writing headers (keys)
+      bool first = true;
+      for (const auto& pair : data) {
+        if (!first) file << ",";
+        file << pair.first;
+        first = false;
+      }
+      file << std::endl;
+
+      // Find the maximum vector size
+      size_t maxSize = 0;
+      for (const auto& pair : data) {
+        maxSize = std::max(maxSize, pair.second.size());
+      }
+
+      // Writing row-wise data
+      for (size_t i = 0; i < maxSize; ++i) {
+        first = true;
+        for (const auto& pair : data) {
+          if (!first) file << ",";
+          if (i < pair.second.size()) {
+            file << pair.second[i];  // Write value if exists
+          } else {
+            file << "NaN";  // Default to NaN if no value
+          }
+          first = false;
+        }
+        file << std::endl;
+      }
     }
 
     void copy_file(const std::string &file_path, fs::path &destination_folder, const std::string &name){
@@ -231,10 +125,32 @@ public:
     DataCollectionService(std::string path)
             : log_path(path) {}
 
-    void newEntry(DataEntry &entry) {
-      if(!active.load())
-        return;
-      entries.push_back(entry);
+    int newEntry(uint64_t recv_stamp, uint64_t enqueue_stamp, uint64_t dequeue_stamp, uint64_t dequeue_end_stamp, int ops_len, uint64_t data_len, uint64_t data_off, uint64_t owner, int type, int cost, unsigned priority){
+      int currentCount = entryCounter.fetch_add(1, std::memory_order_relaxed);
+      std::lock_guard<std::mutex> lock(entryMutex);
+      entries["index"].push_back(currentCount);
+      entries["recv_stamp"].push_back(recv_stamp);
+      entries["enqueue_stamp"].push_back(enqueue_stamp);
+      entries["dequeue_stamp"].push_back(dequeue_stamp);
+      entries["dequeue_end_stamp"].push_back(dequeue_end_stamp);
+      entries["ops_len"].push_back(ops_len);
+      entries["data_len"].push_back(data_len);
+      entries["data_off"].push_back(data_off);
+      entries["owner"].push_back(owner);
+      entries["type"].push_back(static_cast<uint64_t>(type));
+      entries["cost"].push_back(static_cast<uint64_t>(cost));
+      entries["priority"].push_back(static_cast<uint64_t>(priority));
+      return currentCount;
+    }
+
+    void newOp(int index, int type, uint64_t len, uint64_t off){
+      int currentCount = entryCounter.fetch_add(1, std::memory_order_relaxed);
+      std::lock_guard<std::mutex> lock(entryMutex);
+      entries["index"].push_back(currentCount);
+      entries["type"].push_back(static_cast<uint64_t>(type));
+      entries["len"].push_back(len);
+      entries["off"].push_back(off);
+      return currentCount;
     }
 
     void stop(){
@@ -248,6 +164,7 @@ public:
     void dump() {
       logEntries();
       entries.clear();
+      ops.clear();
     }
 
     void start(){

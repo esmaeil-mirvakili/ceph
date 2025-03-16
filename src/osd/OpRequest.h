@@ -70,6 +70,7 @@ private:
   uint8_t latest_flag_point;
   const char* last_event_detail = nullptr;
   utime_t dequeued_time;
+  utime_t enqueued_time;
   static const uint8_t flag_queued_for_pg=1 << 0;
   static const uint8_t flag_reached_pg =  1 << 1;
   static const uint8_t flag_delayed =     1 << 2;
@@ -176,6 +177,13 @@ public:
   }
   void set_dequeued_time(utime_t deq_time) {
     dequeued_time = deq_time;
+  }
+
+  utime_t get_enqueued_time() const {
+    return enqueued_time;
+  }
+  void set_enqueued_time(utime_t deq_time) {
+    enqueued_time = deq_time;
   }
 
   osd_reqid_t get_reqid() const {
