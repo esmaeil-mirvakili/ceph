@@ -9956,8 +9956,10 @@ void OSD::dequeue_op(
     int op_cost = op->get_req()->get_cost();
     unsigned op_priority = op->get_req()->get_priority();
     int ops_len = 0;
-    if(op->get_req()->get_type() == CEPH_MSG_OSD_OP)
-      ops_len = static_cast<int>(osd_ops_vec.size());
+    if(op->get_req()->get_type() == CEPH_MSG_OSD_OP){
+      MOSDOp *m = static_cast<MOSDOp *>(op->get_nonconst_req());
+      ops_len = static_cast<int>(m->ops.size());
+    }
     int index = DataCollectionService::getInstance().newEntry(recv_stamp, enqueue_stamp, dequeue_stamp, dequeue_end_stamp, ops_len, data_len, data_off, op_owner, op_type, op_cost, op_priority);
     if(op->get_req()->get_type() == CEPH_MSG_OSD_OP) {
       MOSDOp *m = static_cast<MOSDOp *>(op->get_nonconst_req());
