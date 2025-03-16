@@ -145,10 +145,10 @@ public:
 
     void newOp(int index, int type, uint64_t len, uint64_t off){
       std::lock_guard<std::mutex> lock(entryMutex);
-      entries["index"].push_back(index);
-      entries["type"].push_back(static_cast<uint64_t>(type));
-      entries["len"].push_back(len);
-      entries["off"].push_back(off);
+      ops["index"].push_back(index);
+      ops["type"].push_back(static_cast<uint64_t>(type));
+      ops["len"].push_back(len);
+      ops["off"].push_back(off);
     }
 
     void stop(){
